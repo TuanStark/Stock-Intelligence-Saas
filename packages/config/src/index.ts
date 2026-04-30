@@ -26,6 +26,17 @@ const EnvSchema = z.object({
     // Market Data (optional — not needed in Phase 1)
     MARKET_DATA_API_KEY: z.string().optional(),
 
+    // MinIO (optional — not needed in Phase 1)
+    MINIO_ENDPOINT: z.string().default('localhost'),
+    MINIO_PORT: z.coerce.number().int().default(9000),
+    MINIO_ACCESS_KEY: z.string().default('minioadmin'),
+    MINIO_SECRET_KEY: z.string().default('minioadmin'),
+    MINIO_BUCKET: z.string().default('stockintel'),
+    MINIO_USE_SSL: z
+        .string()
+        .transform((v) => v === 'true')
+        .default('false'),
+
     // URLs
     WEB_URL: z.string().url().default('http://localhost:3000'),
     API_URL: z.string().url().default('http://localhost:3001'),
@@ -57,6 +68,7 @@ export const CacheKeys = {
     userWatchlists: (userId: string) => `si:user:${userId}:watchlists`,
     userPortfolio: (userId: string, portfolioId: string) =>
         `si:user:${userId}:portfolio:${portfolioId}`,
+    tokenBlacklist: (jti: string) => `si:auth:blacklist:${jti}`,
 } as const;
 
 // ─── Cache TTL (milliseconds) ─────────────────────────────
@@ -73,6 +85,7 @@ export const CacheTTL = {
     AI_SUMMARY: 6 * 60 * 60_000, // 6 hours
     NEWS_LIST: 2 * 60_000,    // 2 minutes
     NEWS_DETAIL: 60 * 60_000, // 1 hour
+    TOKEN_BLACKLIST: 15 * 60_000, // 15 minutes (match access token TTL)
 } as const;
 
 // ─── Queue Names ──────────────────────────────────────────
@@ -102,4 +115,5 @@ export const Constants = {
     DEFAULT_PAGE_SIZE: 20,
     MAX_PAGE_SIZE: 100,
     BCRYPT_SALT_ROUNDS: 12,
+    PASSWORD_MIN_LENGTH: 8,
 } as const;

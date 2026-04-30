@@ -108,3 +108,7 @@ export function randomHex(bytes: number = 32): string {
     crypto.getRandomValues(array);
     return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+// ─── Logger ───────────────────────────────────────────────
+
+export { Logger, createLogger } from './logger';

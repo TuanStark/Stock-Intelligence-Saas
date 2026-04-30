@@ -14,7 +14,13 @@
     "clean": "turbo clean && rm -rf node_modules",
     "db:generate": "pnpm --filter @stock-intel/db db:generate",
     "db:migrate": "pnpm --filter @stock-intel/db db:migrate",
-    "db:seed": "pnpm --filter @stock-intel/db db:seed"
+    "db:migrate:dev": "pnpm --filter @stock-intel/db db:migrate:dev",
+    "db:seed": "pnpm --filter @stock-intel/db db:seed",
+    "db:studio": "pnpm --filter @stock-intel/db db:studio",
+    "infra:up": "docker compose -f infra/docker/docker-compose.dev.yml up -d",
+    "infra:down": "docker compose -f infra/docker/docker-compose.dev.yml down",
+    "infra:reset": "docker compose -f infra/docker/docker-compose.dev.yml down -v && docker compose -f infra/docker/docker-compose.dev.yml up -d",
+    "setup": "./scripts/dev-setup.sh"
   },
   "devDependencies": {
     "prettier": "^3.4.0",

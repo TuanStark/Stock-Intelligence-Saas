@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-ingestion
+  labels:
+    app: stock-intel-worker-ingestion
+    component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stock-intel-worker-ingestion
+  template:
+    metadata:
+      labels:
+        app: stock-intel-worker-ingestion
+        component: worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/stock-intel/stock-intel-worker-ingestion:latest
+          envFrom:
+            - configMapRef:
+                name: stock-intel-config
+            - secretRef:
+                name: stock-intel-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      terminationGracePeriodSeconds: 60
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-processing
+  labels:
+    app: stock-intel-worker-processing
+    component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stock-intel-worker-processing
+  template:
+    metadata:
+      labels:
+        app: stock-intel-worker-processing
+        component: worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/stock-intel/stock-intel-worker-processing:latest
+          envFrom:
+            - configMapRef:
+                name: stock-intel-config
+            - secretRef:
+                name: stock-intel-secrets
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+      terminationGracePeriodSeconds: 60
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-ai
+  labels:
+    app: stock-intel-worker-ai
+    component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stock-intel-worker-ai
+  template:
+    metadata:
+      labels:
+        app: stock-intel-worker-ai
+        component: worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/stock-intel/stock-intel-worker-ai:latest
+          envFrom:
+            - configMapRef:
+                name: stock-intel-config
+            - secretRef:
+                name: stock-intel-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      terminationGracePeriodSeconds: 60

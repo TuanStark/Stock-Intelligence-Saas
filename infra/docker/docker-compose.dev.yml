@@ -1,5 +1,5 @@
 services:
-  # ─── PostgreSQL ────────────────────────────────────────────
+  # ─── PostgreSQL (TimescaleDB) ──────────────────────────────
   postgres:
     image: timescale/timescaledb:latest-pg17
     container_name: stockintel-postgres
@@ -17,12 +17,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - stockintel
 
-  # ─── Redis ─────────────────────────────────────────────────
+  # ─── Redis ──────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: stockintel-redis
     restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
     volumes:
@@ -32,8 +35,32 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - stockintel
 
-  # ─── Redis Commander (Web UI for Redis) ────────────────────
+  # ─── MinIO (S3-compatible Object Storage) ───────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: stockintel-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockintel
+
+  # ─── Redis Commander (Web UI for Redis) ─────────────────────
   redis-commander:
     image: rediscommander/redis-commander:latest
     container_name: stockintel-redis-ui
@@ -43,8 +70,27 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel
+
+  # ─── Mailpit (Local Email Testing) ──────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: stockintel-mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"   # Web UI
+      - "1025:1025"   # SMTP
+    networks:
+      - stockintel
+
+networks:
+  stockintel:
+    driver: bridge
 
 volumes:
   postgres_data:
   redis_data:
+  minio_data:
