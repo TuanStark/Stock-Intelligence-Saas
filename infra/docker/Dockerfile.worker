@@ -1,0 +1,24 @@
+# ─── Build stage ─────────────────────────────────────────
+FROM node:22-alpine AS builder
+ARG WORKER=ingestion
+RUN corepack enable pnpm
+
+WORKDIR /app
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY packages/ packages/
+COPY apps/worker-${WORKER}/ apps/worker-${WORKER}/
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @stock-intel/worker-${WORKER} build
+
+# ─── Production stage ────────────────────────────────────
+FROM node:22-alpine AS runner
+ARG WORKER=ingestion
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/apps/worker-${WORKER}/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+
+CMD ["node", "dist/main.js"]

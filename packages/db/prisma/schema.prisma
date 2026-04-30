@@ -1,0 +1,417 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  API
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+  TRIALING
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum InstrumentStatus {
+  ACTIVE
+  HALTED
+  DELISTED
+}
+
+enum PortfolioTxSide {
+  BUY
+  SELL
+}
+
+enum NewsSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum SignalStrength {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum SignalType {
+  RSI_OVERBOUGHT
+  RSI_OVERSOLD
+  MACD_BULLISH
+  MACD_BEARISH
+  BREAKOUT
+  BREAKDOWN
+  VOLUME_SPIKE
+}
+
+enum StockRating {
+  STRONG_BUY
+  BUY
+  HOLD
+  SELL
+  STRONG_SELL
+}
+
+enum AiSentiment {
+  BULLISH
+  NEUTRAL
+  BEARISH
+}
+
+enum AlertStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+// ─── Auth ─────────────────────────────────────────────────
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  subscription  Subscription?
+  apiKeys       ApiKey[]
+  refreshTokens RefreshToken[]
+  watchlists    Watchlist[]
+  portfolios    Portfolio[]
+  alertRules    AlertRule[]
+
+  @@map("users")
+}
+
+model Subscription {
+  id        String             @id @default(uuid())
+  userId    String             @unique @map("user_id")
+  tier      SubscriptionTier   @default(FREE)
+  status    SubscriptionStatus @default(ACTIVE)
+  renewalAt DateTime?          @map("renewal_at")
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("subscriptions")
+}
+
+model ApiKey {
+  id         String       @id @default(uuid())
+  userId     String       @map("user_id")
+  keyHash    String       @unique @map("key_hash")
+  status     ApiKeyStatus @default(ACTIVE)
+  lastUsedAt DateTime?    @map("last_used_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("api_keys")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  familyId  String   @map("family_id")
+  tokenHash String   @unique @map("token_hash")
+  used      Boolean  @default(false)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+// ─── Market Data ──────────────────────────────────────────
+
+model Exchange {
+  id     String @id @default(uuid())
+  code   String @unique
+  name   String
+  market String
+
+  instruments Instrument[]
+
+  @@map("exchanges")
+}
+
+model Sector {
+  id   String @id @default(uuid())
+  name String @unique
+
+  instruments Instrument[]
+
+  @@map("sectors")
+}
+
+model Instrument {
+  id         String           @id @default(uuid())
+  symbol     String
+  name       String
+  exchangeId String           @map("exchange_id")
+  sectorId   String?          @map("sector_id")
+  industry   String?
+  currency   String
+  isin       String?
+  status     InstrumentStatus @default(ACTIVE)
+  tradable   Boolean          @default(true)
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  exchange Exchange @relation(fields: [exchangeId], references: [id])
+  sector   Sector?  @relation(fields: [sectorId], references: [id])
+
+  watchlistItems     WatchlistItem[]
+  portfolioPositions PortfolioPosition[]
+  portfolioTxs       PortfolioTransaction[]
+  newsInstruments    NewsInstrument[]
+  signals            StockSignal[]
+  stockScores        StockScore[]
+  aiSummaries        AiSummary[]
+  alertRules         AlertRule[]
+
+  @@unique([symbol, exchangeId])
+  @@index([exchangeId])
+  @@index([sectorId])
+  @@map("instruments")
+}
+
+// ─── Watchlists ───────────────────────────────────────────
+
+model Watchlist {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User            @relation(fields: [userId], references: [id])
+  items WatchlistItem[]
+
+  @@index([userId])
+  @@map("watchlists")
+}
+
+model WatchlistItem {
+  id           String   @id @default(uuid())
+  watchlistId  String   @map("watchlist_id")
+  instrumentId String   @map("instrument_id")
+  addedAt      DateTime @default(now()) @map("added_at")
+
+  watchlist  Watchlist  @relation(fields: [watchlistId], references: [id])
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@unique([watchlistId, instrumentId])
+  @@index([instrumentId])
+  @@map("watchlist_items")
+}
+
+// ─── Portfolios ───────────────────────────────────────────
+
+model Portfolio {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  name         String
+  baseCurrency String   @map("base_currency")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user         User                   @relation(fields: [userId], references: [id])
+  positions    PortfolioPosition[]
+  transactions PortfolioTransaction[]
+
+  @@index([userId])
+  @@map("portfolios")
+}
+
+model PortfolioPosition {
+  id           String   @id @default(uuid())
+  portfolioId  String   @map("portfolio_id")
+  instrumentId String   @map("instrument_id")
+  quantity     Decimal  @db.Decimal(24, 8)
+  averageCost  Decimal  @map("average_cost") @db.Decimal(24, 8)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  portfolio  Portfolio  @relation(fields: [portfolioId], references: [id])
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@unique([portfolioId, instrumentId])
+  @@index([instrumentId])
+  @@map("portfolio_positions")
+}
+
+model PortfolioTransaction {
+  id           String          @id @default(uuid())
+  portfolioId  String          @map("portfolio_id")
+  instrumentId String          @map("instrument_id")
+  side         PortfolioTxSide
+  quantity     Decimal         @db.Decimal(24, 8)
+  price        Decimal         @db.Decimal(24, 8)
+  fee          Decimal         @default(0) @db.Decimal(24, 8)
+  executedAt   DateTime        @map("executed_at")
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  portfolio  Portfolio  @relation(fields: [portfolioId], references: [id])
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@index([portfolioId, executedAt])
+  @@index([instrumentId])
+  @@map("portfolio_transactions")
+}
+
+// ─── News ─────────────────────────────────────────────────
+
+model NewsArticle {
+  id             String         @id @default(uuid())
+  headline       String
+  summary        String?
+  content        String?
+  url            String         @unique
+  source         String
+  language       String
+  sentiment      NewsSentiment?
+  relevanceScore Decimal?       @map("relevance_score") @db.Decimal(10, 4)
+  publishedAt    DateTime       @map("published_at")
+  ingestedAt     DateTime       @default(now()) @map("ingested_at")
+
+  newsInstruments NewsInstrument[]
+
+  @@index([publishedAt])
+  @@index([source])
+  @@index([sentiment])
+  @@map("news_articles")
+}
+
+model NewsInstrument {
+  newsId       String @map("news_id")
+  instrumentId String @map("instrument_id")
+
+  newsArticle NewsArticle @relation(fields: [newsId], references: [id])
+  instrument  Instrument  @relation(fields: [instrumentId], references: [id])
+
+  @@id([newsId, instrumentId])
+  @@index([instrumentId])
+  @@map("news_instruments")
+}
+
+// ─── Intelligence ─────────────────────────────────────────
+
+model StockSignal {
+  id           String         @id @default(uuid())
+  instrumentId String         @map("instrument_id")
+  type         SignalType
+  strength     SignalStrength
+  score        Decimal        @db.Decimal(10, 4)
+  value        Decimal?       @db.Decimal(24, 8)
+  explanation  String?
+  detectedAt   DateTime       @map("detected_at")
+  expiresAt    DateTime?      @map("expires_at")
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@index([instrumentId, detectedAt])
+  @@index([type, detectedAt])
+  @@index([expiresAt])
+  @@map("signals")
+}
+
+model StockScore {
+  id                String      @id @default(uuid())
+  instrumentId      String      @map("instrument_id")
+  score             Decimal     @db.Decimal(10, 4)
+  rating            StockRating
+  technicalScore    Decimal     @map("technical_score") @db.Decimal(10, 4)
+  fundamentalsScore Decimal     @map("fundamentals_score") @db.Decimal(10, 4)
+  momentumScore     Decimal     @map("momentum_score") @db.Decimal(10, 4)
+  valuationScore    Decimal     @map("valuation_score") @db.Decimal(10, 4)
+  sentimentScore    Decimal     @map("sentiment_score") @db.Decimal(10, 4)
+  asOf              DateTime    @map("as_of")
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@index([instrumentId, asOf])
+  @@map("stock_scores")
+}
+
+model AiSummary {
+  id           String      @id @default(uuid())
+  instrumentId String      @map("instrument_id")
+  summary      String
+  sentiment    AiSentiment
+  confidence   Decimal     @db.Decimal(10, 4)
+  drivers      Json
+  risks        Json
+  model        String
+  generatedAt  DateTime    @map("generated_at")
+  expiresAt    DateTime?   @map("expires_at")
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@index([instrumentId, generatedAt])
+  @@index([expiresAt])
+  @@map("ai_summaries")
+}
+
+// ─── Alerts ───────────────────────────────────────────────
+
+model AlertRule {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  instrumentId String   @map("instrument_id")
+  type         String
+  condition    String
+  threshold    Decimal  @db.Decimal(24, 8)
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user       User         @relation(fields: [userId], references: [id])
+  instrument Instrument   @relation(fields: [instrumentId], references: [id])
+  events     AlertEvent[]
+
+  @@index([userId])
+  @@index([instrumentId])
+  @@map("alert_rules")
+}
+
+model AlertEvent {
+  id             String      @id @default(uuid())
+  alertRuleId    String      @map("alert_rule_id")
+  triggeredValue Decimal     @map("triggered_value") @db.Decimal(24, 8)
+  triggeredAt    DateTime    @map("triggered_at")
+  deliveredAt    DateTime?   @map("delivered_at")
+  status         AlertStatus @default(PENDING)
+
+  alertRule AlertRule @relation(fields: [alertRuleId], references: [id])
+
+  @@index([alertRuleId, triggeredAt])
+  @@map("alert_events")
+}
