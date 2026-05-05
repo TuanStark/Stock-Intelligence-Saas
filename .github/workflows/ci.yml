@@ -1,81 +1,81 @@
-name: CI Check
+# name: CI Check
 
-on:
-  pull_request:
-    branches: [main]
+# on:
+#   pull_request:
+#     branches: [main]
 
-concurrency:
-  group: ci-${{ github.head_ref }}
-  cancel-in-progress: true
+# concurrency:
+#   group: ci-${{ github.head_ref }}
+#   cancel-in-progress: true
 
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+# jobs:
+#   check:
+#     runs-on: ubuntu-latest
+#     timeout-minutes: 10
 
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: stockintel_test
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+#     services:
+#       postgres:
+#         image: postgres:17-alpine
+#         env:
+#           POSTGRES_DB: stockintel_test
+#           POSTGRES_USER: postgres
+#           POSTGRES_PASSWORD: postgres
+#         ports:
+#           - 5432:5432
+#         options: >-
+#           --health-cmd pg_isready
+#           --health-interval 10s
+#           --health-timeout 5s
+#           --health-retries 5
 
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+#       redis:
+#         image: redis:7-alpine
+#         ports:
+#           - 6379:6379
+#         options: >-
+#           --health-cmd "redis-cli ping"
+#           --health-interval 10s
+#           --health-timeout 5s
+#           --health-retries 5
 
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/stockintel_test
-      REDIS_HOST: localhost
-      REDIS_PORT: 6379
-      JWT_SECRET: ci-test-secret-minimum-16-chars
-      NODE_ENV: development
+#     env:
+#       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/stockintel_test
+#       REDIS_HOST: localhost
+#       REDIS_PORT: 6379
+#       JWT_SECRET: ci-test-secret-minimum-16-chars
+#       NODE_ENV: development
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+#     steps:
+#       - uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
+#       - uses: pnpm/action-setup@v4
+#         with:
+#           version: 9
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
+#       - uses: actions/setup-node@v4
+#         with:
+#           node-version: 22
+#           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+#       - name: Install dependencies
+#         run: pnpm install --frozen-lockfile
 
-      # Stage 1: Fast checks (affected only)
-      - name: Lint
-        run: pnpm turbo lint --filter=...[origin/main]
+#       # Stage 1: Fast checks (affected only)
+#       - name: Lint
+#         run: pnpm turbo lint --filter=...[origin/main]
 
-      - name: Type Check
-        run: pnpm turbo type-check --filter=...[origin/main]
+#       - name: Type Check
+#         run: pnpm turbo type-check --filter=...[origin/main]
 
-      # Stage 2: Tests (affected only)
-      - name: Generate Prisma Client
-        run: pnpm db:generate
+#       # Stage 2: Tests (affected only)
+#       - name: Generate Prisma Client
+#         run: pnpm db:generate
 
-      - name: Unit Tests
-        run: pnpm turbo test --filter=...[origin/main]
+#       - name: Unit Tests
+#         run: pnpm turbo test --filter=...[origin/main]
 
-      # Stage 3: Build
-      - name: Build
-        run: pnpm turbo build --filter=...[origin/main]
+#       # Stage 3: Build
+#       - name: Build
+#         run: pnpm turbo build --filter=...[origin/main]

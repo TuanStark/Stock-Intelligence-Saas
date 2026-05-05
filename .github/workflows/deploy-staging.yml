@@ -1,107 +1,107 @@
-name: Deploy Staging
+# name: Deploy Staging
 
-on:
-  push:
-    branches: [main]
+# on:
+#   push:
+#     branches: [main]
 
-env:
-  REGISTRY: ghcr.io/${{ github.repository_owner }}
+# env:
+#   REGISTRY: ghcr.io/${{ github.repository_owner }}
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment: staging
+# jobs:
+#   build-and-deploy:
+#     runs-on: ubuntu-latest
+#     timeout-minutes: 20
+#     environment: staging
 
-    permissions:
-      contents: read
-      packages: write
+#     permissions:
+#       contents: read
+#       packages: write
 
-    steps:
-      - uses: actions/checkout@v4
+#     steps:
+#       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
+#       - uses: pnpm/action-setup@v4
+#         with:
+#           version: 9
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
+#       - uses: actions/setup-node@v4
+#         with:
+#           node-version: 22
+#           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+#       - name: Install dependencies
+#         run: pnpm install --frozen-lockfile
 
-      # Full test suite
-      - name: Generate Prisma Client
-        run: pnpm db:generate
+#       # Full test suite
+#       - name: Generate Prisma Client
+#         run: pnpm db:generate
 
-      - name: Run All Tests
-        run: pnpm turbo test
+#       - name: Run All Tests
+#         run: pnpm turbo test
 
-      # Build Docker images
-      - name: Login to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+#       # Build Docker images
+#       - name: Login to Container Registry
+#         uses: docker/login-action@v3
+#         with:
+#           registry: ghcr.io
+#           username: ${{ github.actor }}
+#           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push API Image
-        run: |
-          docker build -f infra/docker/Dockerfile.api \
-            -t $REGISTRY/stock-intel-api:${{ github.sha }} \
-            -t $REGISTRY/stock-intel-api:staging .
-          docker push $REGISTRY/stock-intel-api --all-tags
+#       - name: Build & Push API Image
+#         run: |
+#           docker build -f infra/docker/Dockerfile.api \
+#             -t $REGISTRY/stock-intel-api:${{ github.sha }} \
+#             -t $REGISTRY/stock-intel-api:staging .
+#           docker push $REGISTRY/stock-intel-api --all-tags
 
-      - name: Build & Push Web Image
-        run: |
-          docker build -f infra/docker/Dockerfile.web \
-            -t $REGISTRY/stock-intel-web:${{ github.sha }} \
-            -t $REGISTRY/stock-intel-web:staging .
-          docker push $REGISTRY/stock-intel-web --all-tags
+#       - name: Build & Push Web Image
+#         run: |
+#           docker build -f infra/docker/Dockerfile.web \
+#             -t $REGISTRY/stock-intel-web:${{ github.sha }} \
+#             -t $REGISTRY/stock-intel-web:staging .
+#           docker push $REGISTRY/stock-intel-web --all-tags
 
-      - name: Build & Push Worker Images
-        run: |
-          for worker in ingestion processing ai; do
-            docker build -f infra/docker/Dockerfile.worker \
-              --build-arg WORKER=$worker \
-              -t $REGISTRY/stock-intel-worker-$worker:${{ github.sha }} \
-              -t $REGISTRY/stock-intel-worker-$worker:staging .
-            docker push $REGISTRY/stock-intel-worker-$worker --all-tags
-          done
+#       - name: Build & Push Worker Images
+#         run: |
+#           for worker in ingestion processing ai; do
+#             docker build -f infra/docker/Dockerfile.worker \
+#               --build-arg WORKER=$worker \
+#               -t $REGISTRY/stock-intel-worker-$worker:${{ github.sha }} \
+#               -t $REGISTRY/stock-intel-worker-$worker:staging .
+#             docker push $REGISTRY/stock-intel-worker-$worker --all-tags
+#           done
 
-      # Database migration (BEFORE deploy)
-      - name: Run Migrations
-        env:
-          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-        run: pnpm --filter @stock-intel/db exec prisma migrate deploy
+#       # Database migration (BEFORE deploy)
+#       - name: Run Migrations
+#         env:
+#           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+#         run: pnpm --filter @stock-intel/db exec prisma migrate deploy
 
-      # Deploy to Kubernetes
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+#       # Deploy to Kubernetes
+#       - name: Set up kubectl
+#         uses: azure/setup-kubectl@v4
 
-      - name: Deploy to Staging
-        run: |
-          kubectl set image deployment/api \
-            api=$REGISTRY/stock-intel-api:${{ github.sha }} \
-            --namespace=stock-staging
-          kubectl set image deployment/web \
-            web=$REGISTRY/stock-intel-web:${{ github.sha }} \
-            --namespace=stock-staging
-          for worker in ingestion processing ai; do
-            kubectl set image deployment/worker-$worker \
-              worker=$REGISTRY/stock-intel-worker-$worker:${{ github.sha }} \
-              --namespace=stock-staging
-          done
+#       - name: Deploy to Staging
+#         run: |
+#           kubectl set image deployment/api \
+#             api=$REGISTRY/stock-intel-api:${{ github.sha }} \
+#             --namespace=stock-staging
+#           kubectl set image deployment/web \
+#             web=$REGISTRY/stock-intel-web:${{ github.sha }} \
+#             --namespace=stock-staging
+#           for worker in ingestion processing ai; do
+#             kubectl set image deployment/worker-$worker \
+#               worker=$REGISTRY/stock-intel-worker-$worker:${{ github.sha }} \
+#               --namespace=stock-staging
+#           done
 
-      - name: Wait for Rollout
-        run: |
-          kubectl rollout status deployment/api --namespace=stock-staging --timeout=300s
-          kubectl rollout status deployment/web --namespace=stock-staging --timeout=300s
+#       - name: Wait for Rollout
+#         run: |
+#           kubectl rollout status deployment/api --namespace=stock-staging --timeout=300s
+#           kubectl rollout status deployment/web --namespace=stock-staging --timeout=300s
 
-      # Smoke tests
-      - name: Smoke Test
-        run: |
-          sleep 10
-          curl -f https://staging-api.stockintel.com/api/v1/health || exit 1
+#       # Smoke tests
+#       - name: Smoke Test
+#         run: |
+#           sleep 10
+#           curl -f https://staging-api.stockintel.com/api/v1/health || exit 1

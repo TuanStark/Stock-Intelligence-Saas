@@ -256,6 +256,7 @@ export const PortfolioSnapshotSchema = z.object({
 });
 export type PortfolioSnapshot = z.infer<typeof PortfolioSnapshotSchema>;
 
+
 // ─── Domain 8: System Events ──────────────────────────────
 
 export const DomainEventSchema = <T extends z.ZodType>(payloadSchema: T) =>
@@ -422,3 +423,7 @@ export class UpstreamError extends BaseError {
         super(`Upstream service unavailable: ${source}`, undefined, cause);
     }
 }
+
+// ─── Market Data Integration ──────────────────────────────
+export * from './market-data';
+export * from './market-data/interfaces';

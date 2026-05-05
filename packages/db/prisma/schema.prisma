@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // url      = env("DATABASE_URL")
 }
 
 // ─── Enums ────────────────────────────────────────────────
@@ -199,11 +199,58 @@ model Instrument {
   stockScores        StockScore[]
   aiSummaries        AiSummary[]
   alertRules         AlertRule[]
+  quotes             Quote[]
+  candles            Candle[]
 
   @@unique([symbol, exchangeId])
   @@index([exchangeId])
   @@index([sectorId])
   @@map("instruments")
+}
+
+model Quote {
+  id            String   @id @default(uuid())
+  instrumentId  String   @map("instrument_id")
+  symbol        String
+  price         Decimal  @db.Decimal(24, 8)
+  change        Decimal  @db.Decimal(24, 8)
+  changePercent Decimal  @map("change_percent") @db.Decimal(10, 4)
+  open          Decimal  @db.Decimal(24, 8)
+  high          Decimal  @db.Decimal(24, 8)
+  low           Decimal  @db.Decimal(24, 8)
+  previousClose Decimal  @map("previous_close") @db.Decimal(24, 8)
+  volume        Decimal  @db.Decimal(24, 8)
+  value         Decimal  @db.Decimal(24, 8)
+  timestamp     DateTime
+  asOf          DateTime @map("as_of")
+  source        String
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@index([instrumentId])
+  @@index([symbol, asOf])
+  @@map("quotes")
+}
+
+model Candle {
+  id           String   @id @default(uuid())
+  instrumentId String   @map("instrument_id")
+  timeframe    String // mapped to TimeframeEnum
+  open         Decimal  @db.Decimal(24, 8)
+  high         Decimal  @db.Decimal(24, 8)
+  low          Decimal  @db.Decimal(24, 8)
+  close        Decimal  @db.Decimal(24, 8)
+  volume       Decimal  @db.Decimal(24, 8)
+  value        Decimal? @db.Decimal(24, 8)
+  timestamp    DateTime
+  source       String
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@unique([instrumentId, timeframe, timestamp])
+  @@index([instrumentId, timeframe])
+  @@index([timestamp])
+  @@map("candles")
 }
 
 // ─── Watchlists ───────────────────────────────────────────
