@@ -19,9 +19,8 @@ export class AiSummaryProcessor extends WorkerHost {
 
   async process(job: Job<SummaryJobPayload, any, string>): Promise<any> {
     const { instrumentId, symbol } = job.data;
-    this.logger.log(`🤖 Processing AI Summary request for ${symbol}…`);
+    this.logger.log(` Processing AI Summary request for ${symbol}…`);
 
-    // 1. Cost & Token Saving Check: Check for active, non-expired cache (6 hours TTL)
     const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
     const existingSummary = await this.prisma.aiSummary.findFirst({
       where: {
@@ -32,7 +31,7 @@ export class AiSummaryProcessor extends WorkerHost {
     });
 
     if (existingSummary) {
-      this.logger.log(`⚡ Token Shield active: Found valid cached AI summary for ${symbol}. Skipping LLM API call.`);
+      this.logger.log(` Token Shield active: Found valid cached AI summary for ${symbol}. Skipping LLM API call.`);
       return { status: 'skipped', reason: 'cached', summaryId: existingSummary.id };
     }
 
@@ -59,7 +58,6 @@ export class AiSummaryProcessor extends WorkerHost {
         take: 3,
       });
 
-      // 3. Prompt Construction & Token Optimization (Clean, concise formats)
       const priceText = latestQuote
         ? `${Number(latestQuote.price).toLocaleString()} VND (${Number(latestQuote.changePercent) >= 0 ? '+' : ''}${(Number(latestQuote.changePercent) * 100).toFixed(2)}%)`
         : 'N/A';
@@ -89,8 +87,8 @@ Your response must be a valid JSON object matching the following schema EXACTLY:
 }
 Do not write any introductory or concluding text. Write only the raw JSON.`;
 
-      // 4. LiteLLM / OpenAI Integration with Fallbacks
       const apiKey = process.env.OPENAI_API_KEY;
+      const model = process.env.OPENAI_MODEL;
       const apiBase = process.env.LITELLM_API_BASE || 'https://api.openai.com/v1';
 
       if (!apiKey || apiKey === 'REPLACE_AT_DEPLOY_TIME' || apiKey.startsWith('sk-...')) {
@@ -106,13 +104,13 @@ Do not write any introductory or concluding text. Write only the raw JSON.`;
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini', // Ultra-cheap, fast, optimal JSON output model
+          model: model || 'gpt-4o-mini',
           messages: [
             { role: 'system', content: 'You are an elite financial analyst. You output raw JSON only.' },
             { role: 'user', content: prompt }
           ],
-          temperature: 0.1, // High consistency and deterministic outputs
-          response_format: { type: 'json_object' } // Enforce structured output natively
+          temperature: 0.1,
+          response_format: { type: 'json_object' }
         }),
       });
 
@@ -128,7 +126,6 @@ Do not write any introductory or concluding text. Write only the raw JSON.`;
 
       const parsed = JSON.parse(rawContent.trim());
 
-      // 5. Parse and persist inside db
       let dbSentiment: AiSentiment = AiSentiment.NEUTRAL;
       if (parsed.sentiment === 'BULLISH') dbSentiment = AiSentiment.BULLISH;
       else if (parsed.sentiment === 'BEARISH') dbSentiment = AiSentiment.BEARISH;
@@ -143,24 +140,20 @@ Do not write any introductory or concluding text. Write only the raw JSON.`;
           risks: parsed.risks || [],
           model: 'gpt-4o-mini',
           generatedAt: new Date(),
-          expiresAt: new Date(Date.now() + 6 * 60 * 60 * 1000), // 6 hours expiration
+          expiresAt: new Date(Date.now() + 6 * 60 * 60 * 1000),
         },
       });
 
-      this.logger.log(`✅ Successfully generated and saved new AI summary for ${symbol}. ID: ${newSummary.id}`);
+      this.logger.log(`Successfully generated and saved new AI summary for ${symbol}. ID: ${newSummary.id}`);
       return { status: 'success', summaryId: newSummary.id };
 
     } catch (error) {
-      this.logger.error(`❌ Failed to generate AI summary for ${symbol}: ${(error as Error).message}`);
-      this.logger.warn(`🔄 Falling back to simulation for ${symbol} to protect User Experience.`);
+      this.logger.error(` Failed to generate AI summary for ${symbol}: ${(error as Error).message}`);
+      this.logger.warn(` Falling back to simulation for ${symbol} to protect User Experience.`);
       return await this.simulateFallbackSummary(instrumentId, symbol);
     }
   }
 
-  /**
-   * Generates highly realistic fallback summaries to ensure the platform
-   * remains fully functional and visual even without active LLM keys or during outages.
-   */
   private async simulateFallbackSummary(instrumentId: string, symbol: string) {
     let summaryText = `Technical indicators for ${symbol} suggest a period of short-term consolidation. RSI levels are moderate and volume remains stable. Catalysts include strong sector dynamics, though broader macro friction poses moderate resistance. Recommendation is HOLD.`;
     let sentiment: AiSentiment = AiSentiment.NEUTRAL;
@@ -214,7 +207,7 @@ Do not write any introductory or concluding text. Write only the raw JSON.`;
       },
     });
 
-    this.logger.log(`✅ Simulated fallback AI summary created for ${symbol}. ID: ${newSummary.id}`);
+    this.logger.log(` Simulated fallback AI summary created for ${symbol}. ID: ${newSummary.id}`);
     return { status: 'success', summaryId: newSummary.id, fallback: true };
   }
 }
