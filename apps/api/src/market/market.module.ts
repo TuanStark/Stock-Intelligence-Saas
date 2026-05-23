@@ -3,9 +3,15 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { MarketService } from './market.service';
 import { MarketController } from './market.controller';
 import { MarketGateway } from './market.gateway';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [
+    PrismaModule,
+    BullModule.registerQueue({
+      name: 'ai-summary',
+    }),
+  ],
   controllers: [MarketController],
   providers: [MarketService, MarketGateway],
   exports: [MarketService, MarketGateway],

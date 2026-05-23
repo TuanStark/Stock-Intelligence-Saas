@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class MarketService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @InjectQueue('ai-summary') private readonly aiSummaryQueue: Queue,
+  ) {}
 
   async getOverview() {
     // 1. Get Top Movers (Based on highest changePercent in the last 24h)
@@ -79,13 +84,34 @@ export class MarketService {
 
     if (!instrument) return null;
 
+    // Reactive Cache Shield: Trigger background AI summary generation if missing or expired (6 hours TTL)
+    const latestSummary = instrument.aiSummaries[0];
+    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+    const isExpired = latestSummary ? new Date(latestSummary.generatedAt) < sixHoursAgo : true;
+
+    if (isExpired) {
+      // Dispatch to BullMQ queue asynchronously in a non-blocking way to keep HTTP request extremely fast
+      this.aiSummaryQueue.add(
+        'generate-summary',
+        {
+          instrumentId: instrument.id,
+          symbol: instrument.symbol,
+        },
+        {
+          removeOnComplete: 50,
+          removeOnFail: 100,
+          attempts: 2,
+        }
+      ).catch(err => console.error(`Failed to enqueue AI summary job for ${symbol}:`, err));
+    }
+
     return {
       success: true,
       data: {
         instrument,
         latestQuote: instrument.quotes[0] || null,
         signals: instrument.signals,
-        aiSummary: instrument.aiSummaries[0] || null
+        aiSummary: latestSummary || null
       }
     };
   }

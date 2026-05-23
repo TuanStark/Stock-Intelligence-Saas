@@ -27,6 +27,8 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.1.23",
     "@nestjs/websockets": "^11.1.23",
+    "@nestjs/bullmq": "^11.0.0",
+    "bullmq": "^5.0.0",
     "@stock-intel/config": "workspace:*",
     "@stock-intel/contracts": "workspace:*",
     "@stock-intel/db": "workspace:*",

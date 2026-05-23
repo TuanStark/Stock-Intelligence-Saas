@@ -8,6 +8,7 @@ import { SubscriptionModule } from './subscription/subscription.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
 import { AlertModule } from './alerts/alerts.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
     imports: [
@@ -19,6 +20,13 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
         SubscriptionModule,
         WatchlistModule,
         AlertModule,
+        BullModule.forRoot({
+            connection: {
+                host: process.env.REDIS_HOST || 'localhost',
+                port: parseInt(process.env.REDIS_PORT || '6379', 10),
+                password: process.env.REDIS_PASSWORD || undefined,
+            },
+        }),
     ],
 })
 export class AppModule implements NestModule {
