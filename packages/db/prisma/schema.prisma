@@ -260,6 +260,16 @@ model Candle {
   @@map("candles")
 }
 
+model RawTick {
+  time   DateTime
+  symbol String
+  price  Decimal  @db.Decimal(24, 8)
+  volume Int
+
+  @@id([symbol, time])
+  @@map("raw_ticks")
+}
+
 // ─── Watchlists ───────────────────────────────────────────
 
 model Watchlist {

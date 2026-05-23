@@ -3,17 +3,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useTranslation } from '@/lib/i18n/i18n-context';
-import { 
-  TrendingUp, 
-  Activity, 
-  Bell, 
-  Search, 
-  Building2, 
-  Sparkles, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  LineChart, 
-  ChevronRight, 
+import {
+  TrendingUp,
+  Activity,
+  Bell,
+  Search,
+  Building2,
+  Sparkles,
+  ArrowUpRight,
+  ArrowDownRight,
+  LineChart,
+  ChevronRight,
   Loader2,
   Bookmark,
   Plus,
@@ -94,7 +94,7 @@ export default function Dashboard() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [loadingSearch, setLoadingSearch] = useState(false);
-  
+
   // Data State
   const [topMovers, setTopMovers] = useState<Mover[]>([]);
   const [recentSignals, setRecentSignals] = useState<Signal[]>([]);
@@ -138,7 +138,7 @@ export default function Dashboard() {
     if (isAnalyzing) return;
     setIsAnalyzing(true);
     setAnalysisStep(1);
-    
+
     // Simulate multi-step senior AI scan workflow
     await new Promise((resolve) => setTimeout(resolve, 800));
     setAnalysisStep(2);
@@ -147,7 +147,7 @@ export default function Dashboard() {
     await new Promise((resolve) => setTimeout(resolve, 800));
     setAnalysisStep(4);
     await new Promise((resolve) => setTimeout(resolve, 800));
-    
+
     try {
       const feedRes = await personalizationApi.getFeed();
       if (feedRes.success) {
@@ -157,7 +157,7 @@ export default function Dashboard() {
       if (intelRes.success) {
         setPortfolioIntel(intelRes.data);
       }
-      
+
       // Track AI trigger behavior
       await personalizationApi.trackActivity('INTERACT_AI', undefined, undefined, { type: 'MANUAL_AI_SCAN' });
     } catch (err) {
@@ -214,7 +214,7 @@ export default function Dashboard() {
     try {
       setErrorMsg('');
       const resData = await marketApi.getOverview();
-      
+
       if (resData.success && resData.data) {
         // Deduplicate topMovers by symbol
         const movers: Mover[] = resData.data.topMovers || [];
@@ -310,7 +310,7 @@ export default function Dashboard() {
   // 2. Fetch Watchlist
   useEffect(() => {
     if (activeTab !== 'watchlist') return;
-    
+
     const fetchWatchlist = async () => {
       setLoadingWatchlist(true);
       if (session && token) {
@@ -424,7 +424,7 @@ export default function Dashboard() {
   const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
-    
+
     if (value.trim().length === 0) {
       setSearchResults([]);
       setShowAutocomplete(false);
@@ -433,7 +433,7 @@ export default function Dashboard() {
 
     setLoadingSearch(true);
     setShowAutocomplete(true);
-    
+
     try {
       const resData = await marketApi.search(value);
       if (resData.success && resData.data) {
@@ -532,7 +532,7 @@ export default function Dashboard() {
   return (
     <div className="app-container">
       {/* Sidebar Mobile Backdrop Overlay */}
-      <div 
+      <div
         className={`sidebar-backdrop ${isSidebarOpen ? 'active' : ''}`}
         onClick={() => setIsSidebarOpen(false)}
       />
@@ -570,7 +570,7 @@ export default function Dashboard() {
 
         {/* Tab Buttons */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexGrow: 1 }}>
-          <button 
+          <button
             onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}
             style={{
               display: 'flex',
@@ -593,8 +593,8 @@ export default function Dashboard() {
             <TrendingUp size={18} />
             {t('sidebar.dashboard')}
           </button>
-          
-          <button 
+
+          <button
             onClick={() => { setActiveTab('watchlist'); setIsSidebarOpen(false); }}
             style={{
               display: 'flex',
@@ -618,7 +618,7 @@ export default function Dashboard() {
             {t('sidebar.watchlist')}
           </button>
 
-          <button 
+          <button
             onClick={() => { setActiveTab('signals'); setIsSidebarOpen(false); }}
             style={{
               display: 'flex',
@@ -642,7 +642,7 @@ export default function Dashboard() {
             {t('sidebar.signals')}
           </button>
 
-          <button 
+          <button
             onClick={() => { setActiveTab('alerts'); setIsSidebarOpen(false); }}
             style={{
               display: 'flex',
@@ -666,7 +666,7 @@ export default function Dashboard() {
             {t('sidebar.alerts')}
           </button>
 
-          <button 
+          <button
             onClick={() => { setActiveTab('personalization'); setIsSidebarOpen(false); }}
             style={{
               display: 'flex',
@@ -691,7 +691,7 @@ export default function Dashboard() {
           </button>
 
           <Link href="/pricing" style={{ textDecoration: 'none' }}>
-            <button 
+            <button
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -720,7 +720,7 @@ export default function Dashboard() {
 
         {/* Dynamic Locale Selector */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', justifyContent: 'center' }}>
-          <button 
+          <button
             onClick={() => setLocale('vi')}
             style={{
               padding: '4px 10px',
@@ -735,7 +735,7 @@ export default function Dashboard() {
           >
             VI
           </button>
-          <button 
+          <button
             onClick={() => setLocale('en')}
             style={{
               padding: '4px 10px',
@@ -768,7 +768,7 @@ export default function Dashboard() {
                 <span className="badge badge-bullish" style={{ fontSize: '10px', padding: '2px 8px' }}>
                   {userTier}
                 </span>
-                <button 
+                <button
                   onClick={() => signOut()}
                   style={{
                     background: 'transparent',
@@ -802,12 +802,12 @@ export default function Dashboard() {
 
       {/* ─── MAIN CONTENT CONTAINER ─── */}
       <main className="main-content">
-        
+
         {/* ─── TOP HEADER BAR with SEARCH ─── */}
         <header className="app-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1 }}>
             {/* Hamburger Button for mobile */}
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="btn-secondary toggle-sidebar-btn"
               style={{ padding: '10px' }}
@@ -817,87 +817,87 @@ export default function Dashboard() {
 
             {/* Autocomplete Input Container */}
             <div className="header-search-container" ref={autocompleteRef}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-md)',
-              padding: '8px 16px',
-              transition: 'var(--transition-smooth)',
-            }} className="glass-panel">
-              <Search size={18} style={{ color: 'var(--text-muted)' }} />
-              <input 
-                type="text" 
-                placeholder={t('common.searchPlaceholder')} 
-                value={searchQuery}
-                onChange={handleSearchChange}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                  width: '100%',
-                }}
-              />
-              {loadingSearch && <Loader2 size={16} className="pulse" style={{ color: 'var(--text-muted)' }} />}
-            </div>
-
-            {/* Search Autocomplete Panel */}
-            {showAutocomplete && (
-              <div className="glass-panel" style={{
-                position: 'absolute',
-                top: 'calc(100% + 8px)',
-                left: 0,
-                right: 0,
-                maxHeight: '300px',
-                overflowY: 'auto',
-                padding: '8px',
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-color)',
                 borderRadius: 'var(--radius-md)',
-                zIndex: 100,
-                border: '1px solid var(--border-color-active)',
-                boxShadow: 'var(--shadow-premium)',
-              }}>
-                {searchResults.length === 0 ? (
-                  <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
-                    {loadingSearch ? 'Searching database...' : 'No symbols found'}
-                  </div>
-                ) : (
-                  searchResults.map((item) => (
-                    <Link key={item.id} href={`/instruments/${item.symbol}`} style={{ textDecoration: 'none' }} onClick={() => setShowAutocomplete(false)}>
-                      <button 
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          width: '100%',
-                          padding: '10px 16px',
-                          background: 'transparent',
-                          border: 'none',
-                          borderRadius: 'var(--radius-sm)',
-                          color: 'var(--text-primary)',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          transition: 'var(--transition-smooth)',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <div>
-                          <span style={{ fontWeight: 800, color: 'var(--color-accent)', marginRight: '10px' }}>{item.symbol}</span>
-                          <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{item.name}</span>
-                        </div>
-                        <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
-                      </button>
-                    </Link>
-                  ))
-                )}
+                padding: '8px 16px',
+                transition: 'var(--transition-smooth)',
+              }} className="glass-panel">
+                <Search size={18} style={{ color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder={t('common.searchPlaceholder')}
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                    width: '100%',
+                  }}
+                />
+                {loadingSearch && <Loader2 size={16} className="pulse" style={{ color: 'var(--text-muted)' }} />}
               </div>
-            )}
+
+              {/* Search Autocomplete Panel */}
+              {showAutocomplete && (
+                <div className="glass-panel" style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  left: 0,
+                  right: 0,
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  padding: '8px',
+                  borderRadius: 'var(--radius-md)',
+                  zIndex: 100,
+                  border: '1px solid var(--border-color-active)',
+                  boxShadow: 'var(--shadow-premium)',
+                }}>
+                  {searchResults.length === 0 ? (
+                    <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                      {loadingSearch ? 'Searching database...' : 'No symbols found'}
+                    </div>
+                  ) : (
+                    searchResults.map((item) => (
+                      <Link key={item.id} href={`/instruments/${item.symbol}`} style={{ textDecoration: 'none' }} onClick={() => setShowAutocomplete(false)}>
+                        <button
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            width: '100%',
+                            padding: '10px 16px',
+                            background: 'transparent',
+                            border: 'none',
+                            borderRadius: 'var(--radius-sm)',
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'var(--transition-smooth)',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <div>
+                            <span style={{ fontWeight: 800, color: 'var(--color-accent)', marginRight: '10px' }}>{item.symbol}</span>
+                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{item.name}</span>
+                          </div>
+                          <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
+                        </button>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
           <div className="header-ticker-hide" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
@@ -920,7 +920,7 @@ export default function Dashboard() {
 
         {/* ─── DYNAMIC SUBVIEW ─── */}
         <div style={{ marginTop: '24px' }}>
-          
+
           {/* TAB 1: DASHBOARD OVERVIEW */}
           {activeTab === 'dashboard' && (
             <div>
@@ -952,7 +952,7 @@ export default function Dashboard() {
 
               {/* Grid Content */}
               <div className="responsive-grid-2-1">
-                
+
                 {/* LEFT COLUMN: Top Movers (Quotes) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <h3 className="font-outfit" style={{ fontSize: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -974,7 +974,7 @@ export default function Dashboard() {
                         const isUp = mover.changePercent >= 0;
                         return (
                           <Link key={mover.symbol} href={`/instruments/${mover.symbol}`} style={{ textDecoration: 'none' }}>
-                            <div 
+                            <div
                               className="glass-panel"
                               style={{
                                 padding: '20px',
@@ -1038,13 +1038,13 @@ export default function Dashboard() {
                         const isBuy = signal.type === 'BUY';
                         return (
                           <Link key={signal.id} href={`/instruments/${signal.symbol}`} style={{ textDecoration: 'none' }}>
-                            <div 
-                              className="glass-panel" 
-                              style={{ 
-                                padding: '16px', 
-                                borderRadius: 'var(--radius-md)', 
-                                border: '1px solid var(--border-color)', 
-                                cursor: 'pointer' 
+                            <div
+                              className="glass-panel"
+                              style={{
+                                padding: '16px',
+                                borderRadius: 'var(--radius-md)',
+                                border: '1px solid var(--border-color)',
+                                cursor: 'pointer'
                               }}
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -1086,8 +1086,8 @@ export default function Dashboard() {
 
               {/* Add Symbol Bar */}
               <form onSubmit={handleAddWatchlist} style={{ display: 'flex', gap: '12px', maxWidth: '480px', marginBottom: '32px' }}>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder={t('watchlist.symbolPlaceholder')}
                   value={watchlistInput}
                   onChange={(e) => setWatchlistInput(e.target.value)}
@@ -1125,12 +1125,12 @@ export default function Dashboard() {
                   {watchlistItems.map((item) => {
                     const isUp = item.instrument.changePercent >= 0;
                     return (
-                      <div 
-                        key={item.id} 
-                        className="glass-panel" 
+                      <div
+                        key={item.id}
+                        className="glass-panel"
                         style={{ padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', position: 'relative' }}
                       >
-                        <button 
+                        <button
                           onClick={() => handleRemoveWatchlist(item.instrument.symbol)}
                           style={{
                             position: 'absolute',
@@ -1261,7 +1261,7 @@ export default function Dashboard() {
                             </td>
                             <td style={{ padding: '16px 20px', fontWeight: 600 }}>{signal.indicator}</td>
                             <td style={{ padding: '16px 20px' }}>
-                              <span style={{ 
+                              <span style={{
                                 color: signal.strength === 'HIGH' ? 'var(--color-bullish)' : signal.strength === 'MEDIUM' ? 'var(--color-warning)' : 'var(--text-muted)',
                                 fontWeight: 700,
                                 fontSize: '12px'
@@ -1313,12 +1313,12 @@ export default function Dashboard() {
                   {/* Create rule form */}
                   <div className="glass-panel font-inter" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', height: 'fit-content' }}>
                     <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 800, marginBottom: '20px' }}>{t('alerts.createRule')}</h3>
-                    
+
                     <form onSubmit={handleCreateAlert} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>{t('alerts.symbol')}</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           required
                           placeholder="e.g. FPT"
                           value={alertSymbol}
@@ -1337,7 +1337,7 @@ export default function Dashboard() {
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>{t('alerts.type')}</label>
-                        <select 
+                        <select
                           value={alertType}
                           onChange={(e) => setAlertType(e.target.value)}
                           style={{
@@ -1358,8 +1358,8 @@ export default function Dashboard() {
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>{t('alerts.threshold')}</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           required
                           placeholder="e.g. 85000"
                           value={alertThreshold}
@@ -1384,7 +1384,7 @@ export default function Dashboard() {
 
                   {/* Rules and logs view */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                    
+
                     {/* Rules section */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <h3 className="font-outfit" style={{ fontSize: '20px', fontWeight: 800 }}>{t('alerts.activeRules')}</h3>
@@ -1422,7 +1422,7 @@ export default function Dashboard() {
                                     </span>
                                   </td>
                                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                                    <button 
+                                    <button
                                       onClick={() => handleDeleteAlert(rule.id)}
                                       style={{
                                         background: 'transparent',
@@ -1496,32 +1496,32 @@ export default function Dashboard() {
           {activeTab === 'personalization' && (
             <div>
               {/* Header section with manual scan action */}
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'stretch', 
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'stretch',
                 flexDirection: 'column',
                 gap: '16px',
                 marginBottom: '32px'
               }} className="md:flex-row md:items-center">
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span className="badge" style={{ 
-                      fontSize: '11px', 
-                      fontWeight: 800, 
-                      padding: '3px 8px', 
+                    <span className="badge" style={{
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      padding: '3px 8px',
                       background: 'rgba(16, 185, 129, 0.15)',
                       color: 'var(--color-bullish)',
                       border: '1px solid rgba(16, 185, 129, 0.3)'
                     }}>
                       ⚡ POWERED BY AI DEEP ADVISORY v2.4
                     </span>
-                    <span style={{ 
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
                       gap: '4px',
-                      fontSize: '11px', 
-                      color: 'var(--text-muted)' 
+                      fontSize: '11px',
+                      color: 'var(--text-muted)'
                     }}>
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
                       Học máy học tập động
@@ -1536,7 +1536,7 @@ export default function Dashboard() {
                 </div>
 
                 <div>
-                  <button 
+                  <button
                     onClick={handleAIScan}
                     disabled={isAnalyzing || loadingPersonalization}
                     style={{
@@ -1640,10 +1640,10 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 font-inter">
-                  
+
                   {/* Left Column: Portfolio Diversification Intelligence (7 columns on desktop) */}
                   <div className="lg:col-span-7 xl:col-span-8" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                    
+
                     {/* Portfolio overview and HHI analysis */}
                     <div className="glass-panel" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
@@ -1690,21 +1690,21 @@ export default function Dashboard() {
                               fontSize: '11px',
                               padding: '2px 8px',
                               fontWeight: 700,
-                              background: portfolioIntel?.concentrationRating === 'DIVERSIFIED' 
-                                ? 'rgba(16, 185, 129, 0.15)' 
+                              background: portfolioIntel?.concentrationRating === 'DIVERSIFIED'
+                                ? 'rgba(16, 185, 129, 0.15)'
                                 : portfolioIntel?.concentrationRating === 'MODERATELY_CONCENTRATED'
-                                ? 'rgba(245, 158, 11, 0.15)'
-                                : 'rgba(239, 68, 68, 0.15)',
+                                  ? 'rgba(245, 158, 11, 0.15)'
+                                  : 'rgba(239, 68, 68, 0.15)',
                               color: portfolioIntel?.concentrationRating === 'DIVERSIFIED'
                                 ? 'var(--color-bullish)'
                                 : portfolioIntel?.concentrationRating === 'MODERATELY_CONCENTRATED'
-                                ? 'var(--color-warning)'
-                                : 'var(--color-bearish)',
-                              border: `1px solid ${portfolioIntel?.concentrationRating === 'DIVERSIFIED' 
-                                ? 'rgba(16, 185, 129, 0.3)' 
+                                  ? 'var(--color-warning)'
+                                  : 'var(--color-bearish)',
+                              border: `1px solid ${portfolioIntel?.concentrationRating === 'DIVERSIFIED'
+                                ? 'rgba(16, 185, 129, 0.3)'
                                 : portfolioIntel?.concentrationRating === 'MODERATELY_CONCENTRATED'
-                                ? 'rgba(245, 158, 11, 0.3)'
-                                : 'rgba(239, 68, 68, 0.3)'}`
+                                  ? 'rgba(245, 158, 11, 0.3)'
+                                  : 'rgba(239, 68, 68, 0.3)'}`
                             }}>
                               {portfolioIntel?.concentrationLabel || 'Rủi ro tập trung cao'}
                             </span>
@@ -1713,12 +1713,12 @@ export default function Dashboard() {
                       </div>
 
                       {/* Descriptive Layman explanatory subtext */}
-                      <p style={{ 
-                        fontSize: '12px', 
-                        color: 'var(--text-secondary)', 
+                      <p style={{
+                        fontSize: '12px',
+                        color: 'var(--text-secondary)',
                         background: 'rgba(255,255,255,0.02)',
                         border: '1px solid rgba(255,255,255,0.05)',
-                        padding: '10px 14px', 
+                        padding: '10px 14px',
                         borderRadius: 'var(--radius-sm)',
                         lineHeight: '1.5',
                         marginBottom: '24px'
@@ -1733,7 +1733,7 @@ export default function Dashboard() {
                           <span>🟡 TRUNG BÌNH (Tập trung nhẹ)</span>
                           <span>🔴 RỦI RO CAO (Dồn vốn lớn)</span>
                         </div>
-                        
+
                         {/* The Multi-zone Bar */}
                         <div style={{
                           height: '12px',
@@ -1762,7 +1762,7 @@ export default function Dashboard() {
                             }}>▲</span>
                           </div>
                         </div>
-                        
+
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px' }}>
                           <span>0</span>
                           <span>1500</span>
@@ -1798,8 +1798,8 @@ export default function Dashboard() {
                               </div>
                               {/* Sleek Percentage Bar */}
                               <div style={{ height: '6px', background: 'var(--bg-surface)', borderRadius: '3px', overflow: 'hidden' }}>
-                                <div style={{ 
-                                  height: '100%', 
+                                <div style={{
+                                  height: '100%',
                                   width: `${item.percentage}%`,
                                   background: 'linear-gradient(90deg, var(--color-accent) 0%, #3b82f6 100%)',
                                   borderRadius: '3px',
@@ -1837,16 +1837,16 @@ export default function Dashboard() {
                           Ý Kiến Tư Vấn Quản Trị Rủi Ro AI
                         </h4>
                       </div>
-                      <p style={{ 
-                        fontSize: '14px', 
-                        lineHeight: '1.65', 
-                        color: 'var(--text-primary)', 
+                      <p style={{
+                        fontSize: '14px',
+                        lineHeight: '1.65',
+                        color: 'var(--text-primary)',
                         fontStyle: 'italic',
                         whiteSpace: 'pre-wrap'
                       }}>
                         "{portfolioIntel?.thesis || 'Hệ thống AI Advisor đang quét danh mục tài sản nắm giữ để sinh luận điểm rủi ro. Hãy bấm nút Kích hoạt quét AI ở phía trên.'}"
                       </p>
-                      
+
                       <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
                         — Chứng nhận bởi OpenAI GPT-4o Risk Engine
                       </div>
@@ -1877,13 +1877,13 @@ export default function Dashboard() {
                           const isUp = hasChange && item.changePercent >= 0;
 
                           return (
-                            <Link 
+                            <Link
                               key={idx}
                               href={`/instruments/${item.symbol}`}
                               onClick={() => handleSelectRecommended(item.symbol)}
                               style={{ textDecoration: 'none', color: 'inherit' }}
                             >
-                              <div 
+                              <div
                                 className="glass-panel"
                                 style={{
                                   padding: '16px',
@@ -1923,9 +1923,9 @@ export default function Dashboard() {
                                       <span style={{ color: 'var(--text-muted)' }}>---</span>
                                     )}
                                     {hasChange && (
-                                      <span style={{ 
-                                        fontSize: '11px', 
-                                        fontWeight: 800, 
+                                      <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 800,
                                         color: isUp ? 'var(--color-bullish)' : 'var(--color-bearish)',
                                         display: 'flex',
                                         alignItems: 'center',
@@ -1941,10 +1941,10 @@ export default function Dashboard() {
                                 {/* Linear score indicator */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                                   <div style={{ flexGrow: 1, height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                                    <div style={{ 
-                                      height: '100%', 
-                                      width: `${item.score}%`, 
-                                      background: 'linear-gradient(90deg, #a855f7 0%, var(--color-accent) 100%)' 
+                                    <div style={{
+                                      height: '100%',
+                                      width: `${item.score}%`,
+                                      background: 'linear-gradient(90deg, #a855f7 0%, var(--color-accent) 100%)'
                                     }} />
                                   </div>
                                   <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-warning)' }}>
@@ -1963,9 +1963,9 @@ export default function Dashboard() {
                                     else if (reason === 'POPULAR_MEMBER') { icon = '🔥'; text = 'Được xem nhiều'; }
 
                                     return (
-                                      <span key={rIdx} style={{ 
-                                        fontSize: '10px', 
-                                        fontWeight: 700, 
+                                      <span key={rIdx} style={{
+                                        fontSize: '10px',
+                                        fontWeight: 700,
                                         color: 'var(--text-secondary)',
                                         background: 'var(--bg-surface-hover)',
                                         border: '1px solid var(--border-color)',
@@ -1983,11 +1983,11 @@ export default function Dashboard() {
 
                                 {/* Active AI signal if present */}
                                 {hasSignal && (
-                                  <div style={{ 
-                                    marginTop: '8px', 
+                                  <div style={{
+                                    marginTop: '8px',
                                     background: isBuy ? 'var(--color-bullish-bg)' : 'var(--color-bearish-bg)',
                                     border: `1px solid ${isBuy ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}`,
-                                    padding: '8px 10px', 
+                                    padding: '8px 10px',
                                     borderRadius: '4px',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -2029,3 +2029,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+

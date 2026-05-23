@@ -8,7 +8,7 @@ export class MarketService {
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue('ai-summary') private readonly aiSummaryQueue: Queue,
-  ) {}
+  ) { }
 
   async getOverview() {
     // 1. Get Top Movers (Based on highest changePercent in the last 24h)
@@ -179,7 +179,7 @@ export class MarketService {
     const generated = [];
     const date = new Date();
     date.setDate(date.getDate() - 60); // 60 days ago
-    
+
     // Base price depending on symbol (e.g. FPT ~ 75k, VND ~ 17k, HPG ~ 24k)
     let basePrice = 25000;
     const cleanSym = symbol.toUpperCase();
@@ -190,7 +190,7 @@ export class MarketService {
     else if (cleanSym === 'MWG') basePrice = 79000;
 
     let currentPrice = basePrice;
-    
+
     for (let i = 0; i < 60; i++) {
       // Skip weekends
       const day = date.getDay();

@@ -11,6 +11,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -26,10 +27,10 @@ export class MarketGateway
     @WebSocketServer()
     server!: Server;
 
-    // Track active price simulation state in memory to maintain continuous, realistic random walks
-    private simulatedPrices: Record<string, { price: number; original: number }> = {};
-
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly redis: RedisService,
+    ) {}
 
     afterInit(server: Server) {
         console.log('⚡ WebSockets MarketGateway initialized successfully');
@@ -67,56 +68,37 @@ export class MarketGateway
         return { status: 'unsubscribed', room };
     }
 
-    // Initialize mock real-time high frequency ticker stream on start
+    // Initialize Redis subscription for real-time high frequency ticker stream on start
     async onModuleInit() {
-        // Retrieve seeded base prices from quotes or initialize defaults
-        const symbols = ['HPG', 'FPT', 'VND', 'MSN', 'VNM', 'MWG'];
+        console.log('🔗 Connecting WebSocket Gateway to Redis Pub/Sub...');
+        const subClient = this.redis.getClient().duplicate();
         
-        for (const sym of symbols) {
-            const latestQuote = await this.prisma.quote.findFirst({
-                where: { symbol: sym },
-                orderBy: { asOf: 'desc' },
-            });
-            const basePrice = latestQuote ? Number(latestQuote.price) : 25000;
-            this.simulatedPrices[sym] = {
-                price: basePrice,
-                original: basePrice,
-            };
-        }
+        // Subscribe to all instrument pubsub channels
+        await subClient.psubscribe('market:pubsub:*');
+        
+        subClient.on('pmessage', (pattern, channel, message) => {
+            try {
+                const tickData = JSON.parse(message);
+                
+                const broadcastPayload = {
+                    symbol: tickData.symbol,
+                    price: Number(tickData.price),
+                    change: Number(tickData.change),
+                    changePercent: Number(tickData.changePercent),
+                    timestamp: new Date(tickData.time).getTime(),
+                };
 
-        // Broadcaster Interval: Simulate realistic price walk every 1.5 seconds
-        setInterval(() => {
-            const randomSymbol = symbols[Math.floor(Math.random() * symbols.length)];
-            const state = this.simulatedPrices[randomSymbol];
-            if (!state) return;
+                // 1. Broadcast to specific symbol room (e.g. room:HPG)
+                const room = `room:${tickData.symbol.toUpperCase()}`;
+                this.server.to(room).emit('instrument_tick', broadcastPayload);
 
-            // Small daily standard random walk (max 0.12% tick volatility)
-            const tickVolatility = 0.0012;
-            const changePercent = (Math.random() - 0.49) * tickVolatility; // mild upward bias
-            const lastPrice = state.price;
-            const newPrice = lastPrice * (1 + changePercent);
-            
-            // Update tracking state
-            state.price = Math.round(newPrice);
+                // 2. Broadcast globally to update Dashboard Movers
+                this.server.emit('global_market_tick', broadcastPayload);
+            } catch (err) {
+                console.error('❌ Failed to parse and broadcast Redis tick message:', err);
+            }
+        });
 
-            const change = state.price - state.original;
-            const changePct = change / state.original;
-
-            const tickData = {
-                symbol: randomSymbol,
-                price: state.price,
-                change: change,
-                changePercent: changePct,
-                timestamp: Date.now(),
-            };
-
-            // 1. Broadcast to specific symbol channel (e.g. room:HPG)
-            const room = `room:${randomSymbol}`;
-            this.server.to(room).emit('instrument_tick', tickData);
-
-            // 2. Broadcast globally to update Dashboard Movers
-            this.server.emit('global_market_tick', tickData);
-
-        }, 1500);
+        console.log('✅ WebSocket Gateway successfully listening to Redis Pub/Sub channels');
     }
 }

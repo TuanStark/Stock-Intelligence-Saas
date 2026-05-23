@@ -4,10 +4,12 @@ import { MarketService } from './market.service';
 import { MarketController } from './market.controller';
 import { MarketGateway } from './market.gateway';
 import { BullModule } from '@nestjs/bullmq';
+import { RedisModule } from '../redis/redis.module';
 
 @Module({
   imports: [
     PrismaModule,
+    RedisModule,
     BullModule.registerQueue({
       name: 'ai-summary',
     }),

@@ -4,11 +4,15 @@ import { BullModule } from '@nestjs/bullmq';
 import { IngestionService } from './ingestion.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProviderFallbackService } from './adapters/provider.service';
+import { RedisModule } from './redis/redis.module';
+import { MarketDataBatchIngestor } from './ingestor/market-data-batch.ingestor';
+import { CandleAggregatorService } from './aggregator/candle-aggregator.service';
 
 @Module({
     imports: [
         ScheduleModule.forRoot(),
         PrismaModule,
+        RedisModule,
         BullModule.forRoot({
             connection: {
                 host: process.env.REDIS_HOST || 'localhost',
@@ -23,6 +27,8 @@ import { ProviderFallbackService } from './adapters/provider.service';
     providers: [
         IngestionService,
         ProviderFallbackService,
+        MarketDataBatchIngestor,
+        CandleAggregatorService,
     ],
 })
 export class AppModule { }

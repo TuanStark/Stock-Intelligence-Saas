@@ -5,6 +5,8 @@ import { Queue } from 'bullmq';
 import type { Instrument } from '@stock-intel/db';
 import { PrismaService } from './prisma/prisma.service';
 import { ProviderFallbackService } from './adapters/provider.service';
+import { RedisService } from './redis/redis.service';
+import { MarketDataBatchIngestor } from './ingestor/market-data-batch.ingestor';
 
 const DEFAULT_VN_SYMBOLS = [
   'VNM', 'VCB', 'FPT', 'MWG', 'HPG',
@@ -20,6 +22,8 @@ export class IngestionService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly provider: ProviderFallbackService,
+    private readonly redis: RedisService,
+    private readonly batchIngestor: MarketDataBatchIngestor,
     @InjectQueue('stock-processing') private readonly processingQueue: Queue,
   ) { }
 
@@ -123,29 +127,76 @@ export class IngestionService implements OnModuleInit {
 
   // ─── Single Instrument Pipeline ───────────────────────────
 
-
   private async ingestSingleInstrument(instrumentId: string, symbol: string): Promise<void> {
     const quote = await this.provider.getQuote(symbol);
 
-    const createdQuote = await this.prisma.quote.create({
-      data: {
-        instrumentId,
-        symbol,
-        price: quote.price,
-        change: quote.change,
-        changePercent: quote.changePercent,
-        open: quote.open,
-        high: quote.high,
-        low: quote.low,
-        previousClose: quote.previousClose,
-        volume: quote.volume,
-        value: quote.value || 0,
-        timestamp: quote.timestamp,
-        asOf: new Date(),
-        source: quote.source,
-      },
+    // 1. Ghi gom cụm ticks vào raw_ticks (TimescaleDB hypertable) phục vụ biểu đồ và phân tích
+    this.batchIngestor.pushTick({
+      time: quote.timestamp,
+      symbol,
+      price: quote.price,
+      volume: Math.round(quote.volume),
     });
 
+    // 2. Xuất bản tick lên Redis Pub/Sub phục vụ WebSocket Gateways thời gian thực
+    await this.redis.publishTick(symbol, {
+      symbol,
+      price: quote.price,
+      change: quote.change,
+      changePercent: quote.changePercent,
+      volume: quote.volume,
+      time: quote.timestamp,
+    });
+
+    // 3. Đồng bộ giá Latest Quote vào Redis Hash Cache phục vụ truy vấn Dashboard cực nhanh
+    await this.redis.setLatestQuote(symbol, quote);
+
+    // 4. Đồng bộ vào PostgreSQL table 'quotes' theo cơ chế single-row cache (duy nhất 1 hàng mỗi symbol)
+    const existingQuote = await this.prisma.quote.findFirst({
+      where: { symbol },
+    });
+
+    let createdQuote;
+    if (existingQuote) {
+      createdQuote = await this.prisma.quote.update({
+        where: { id: existingQuote.id },
+        data: {
+          price: quote.price,
+          change: quote.change,
+          changePercent: quote.changePercent,
+          open: quote.open,
+          high: quote.high,
+          low: quote.low,
+          previousClose: quote.previousClose,
+          volume: quote.volume,
+          value: quote.value || 0,
+          timestamp: quote.timestamp,
+          asOf: new Date(),
+          source: quote.source,
+        },
+      });
+    } else {
+      createdQuote = await this.prisma.quote.create({
+        data: {
+          instrumentId,
+          symbol,
+          price: quote.price,
+          change: quote.change,
+          changePercent: quote.changePercent,
+          open: quote.open,
+          high: quote.high,
+          low: quote.low,
+          previousClose: quote.previousClose,
+          volume: quote.volume,
+          value: quote.value || 0,
+          timestamp: quote.timestamp,
+          asOf: new Date(),
+          source: quote.source,
+        },
+      });
+    }
+
+    // 5. Đẩy tác vụ xử lý các chỉ số kỹ thuật vào BullMQ hàng đợi bất đồng bộ
     await this.processingQueue.add(
       'process-indicators',
       {
