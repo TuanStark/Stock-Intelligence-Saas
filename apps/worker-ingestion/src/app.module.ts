@@ -25,4 +25,4 @@ import { ProviderFallbackService } from './adapters/provider.service';
         ProviderFallbackService,
     ],
 })
-export class AppModule {}
+export class AppModule { }
