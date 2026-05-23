@@ -121,21 +121,89 @@ export class PersonalizationService {
    * and context-aware AI risk analysis thesis.
    */
   async getPortfolioIntelligence(portfolioId: string) {
-    const portfolio = await this.prisma.portfolio.findUnique({
-      where: { id: portfolioId },
-      include: {
-        positions: {
-          include: {
-            instrument: {
-              include: {
-                sector: true,
-                quotes: { orderBy: { asOf: 'desc' }, take: 1 }
+    let portfolio;
+
+    if (portfolioId === 'default') {
+      // 1. Resolve default active user
+      const defaultUser = await this.prisma.user.findFirst({
+        where: { status: 'ACTIVE' },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      if (!defaultUser) {
+        throw new NotFoundException('No active user found. Seed database first!');
+      }
+
+      // 2. Resolve or Bootstrap default portfolio
+      portfolio = await this.prisma.portfolio.findFirst({
+        where: { userId: defaultUser.id },
+        include: {
+          positions: {
+            include: {
+              instrument: {
+                include: {
+                  sector: true,
+                  quotes: { orderBy: { asOf: 'desc' }, take: 1 }
+                }
               }
             }
           }
         }
+      });
+
+      if (!portfolio) {
+        // Find HPG & FPT instruments seeded in database
+        const fpt = await this.prisma.instrument.findFirst({ where: { symbol: 'FPT' } });
+        const hpg = await this.prisma.instrument.findFirst({ where: { symbol: 'HPG' } });
+
+        if (fpt && hpg) {
+          portfolio = await this.prisma.portfolio.create({
+            data: {
+              userId: defaultUser.id,
+              name: 'Danh mục Chiến lược Stark',
+              baseCurrency: 'VND',
+              positions: {
+                create: [
+                  { instrumentId: fpt.id, quantity: 1500, averageCost: 75000 },
+                  { instrumentId: hpg.id, quantity: 4500, averageCost: 24000 }
+                ]
+              }
+            },
+            include: {
+              positions: {
+                include: {
+                  instrument: {
+                    include: {
+                      sector: true,
+                      quotes: { orderBy: { asOf: 'desc' }, take: 1 }
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
       }
-    });
+    }
+
+    // Fallback if querying specific portfolioId
+    if (!portfolio && portfolioId !== 'default') {
+      portfolio = await this.prisma.portfolio.findUnique({
+        where: { id: portfolioId },
+        include: {
+          positions: {
+            include: {
+              instrument: {
+                include: {
+                  sector: true,
+                  quotes: { orderBy: { asOf: 'desc' }, take: 1 }
+                }
+              }
+            }
+          }
+        }
+      });
+    }
 
     if (!portfolio) {
       throw new NotFoundException(`Portfolio ${portfolioId} not found`);

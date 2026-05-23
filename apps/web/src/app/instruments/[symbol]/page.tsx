@@ -21,14 +21,18 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { marketApi } from '@/lib/api/market.api';
+import { personalizationApi } from '@/lib/api/personalization.api';
 
 interface Signal {
   id: string;
+  symbol: string;
   type: string;
   strength: string;
   score: number;
+  value: number | null;
   explanation: string;
   detectedAt: string;
+  indicator: string;
 }
 
 interface Quote {
@@ -143,6 +147,9 @@ export default function StockDetail() {
           setLatestQuote(resData.data.latestQuote);
           setSignals(resData.data.signals || []);
           setAiSummary(resData.data.aiSummary);
+          
+          // E2E Tracking Event: Fire-and-forget activity capture
+          personalizationApi.trackActivity('VIEW_STOCK', symbol as string).catch(() => {});
         } else {
           setErrorMsg(t('stockDetail.notFound'));
         }

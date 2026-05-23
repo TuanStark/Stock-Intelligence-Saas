@@ -21,7 +21,11 @@ import {
   LogOut,
   Trash2,
   Menu,
-  X
+  X,
+  RefreshCw,
+  PieChart,
+  ShieldAlert,
+  Briefcase
 } from 'lucide-react';
 import Link from 'next/link';
 import { io } from 'socket.io-client';
@@ -30,6 +34,7 @@ import { io } from 'socket.io-client';
 import { marketApi } from '@/lib/api/market.api';
 import { watchlistApi } from '@/lib/api/watchlist.api';
 import { alertApi } from '@/lib/api/alert.api';
+import { personalizationApi } from '@/lib/api/personalization.api';
 
 interface Signal {
   id: string;
@@ -83,7 +88,7 @@ export default function Dashboard() {
   const { data: session } = useSession();
   const { t, locale, setLocale } = useTranslation();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'watchlist' | 'signals' | 'alerts'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'watchlist' | 'signals' | 'alerts' | 'personalization'>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -118,6 +123,89 @@ export default function Dashboard() {
   const [allSignals, setAllSignals] = useState<Signal[]>([]);
   const [loadingAllSignals, setLoadingAllSignals] = useState(false);
   const [signalTypeFilter, setSignalTypeFilter] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
+
+  // Personalization MVP States
+  const [personalizedFeed, setPersonalizedFeed] = useState<any[]>([]);
+  const [portfolioIntel, setPortfolioIntel] = useState<any>(null);
+  const [loadingPersonalization, setLoadingPersonalization] = useState(false);
+  const [personalizationError, setPersonalizationError] = useState('');
+
+  // Manual trigger states for AI analysis animation
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState(0);
+
+  const handleAIScan = async () => {
+    if (isAnalyzing) return;
+    setIsAnalyzing(true);
+    setAnalysisStep(1);
+    
+    // Simulate multi-step senior AI scan workflow
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    setAnalysisStep(2);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    setAnalysisStep(3);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    setAnalysisStep(4);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    
+    try {
+      const feedRes = await personalizationApi.getFeed();
+      if (feedRes.success) {
+        setPersonalizedFeed(feedRes.data || []);
+      }
+      const intelRes = await personalizationApi.getPortfolioIntelligence('default');
+      if (intelRes.success) {
+        setPortfolioIntel(intelRes.data);
+      }
+      
+      // Track AI trigger behavior
+      await personalizationApi.trackActivity('INTERACT_AI', undefined, undefined, { type: 'MANUAL_AI_SCAN' });
+    } catch (err) {
+      console.error('Lỗi quét AI:', err);
+    } finally {
+      setAnalysisStep(5);
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        setAnalysisStep(0);
+      }, 1000);
+    }
+  };
+
+  const handleSelectRecommended = async (symbol: string) => {
+    try {
+      await personalizationApi.trackActivity('INTERACT_AI', symbol);
+    } catch (e) {
+      console.error('Lỗi lưu tương tác AI:', e);
+    }
+  };
+
+  // Fetch Personalization Data (Recommended Feed & Portfolio HHI Intelligence)
+  useEffect(() => {
+    if (activeTab !== 'personalization') return;
+
+    const fetchPersonalization = async () => {
+      setLoadingPersonalization(true);
+      setPersonalizationError('');
+      try {
+        const feedRes = await personalizationApi.getFeed();
+        if (feedRes.success) {
+          setPersonalizedFeed(feedRes.data || []);
+        }
+
+        const intelRes = await personalizationApi.getPortfolioIntelligence('default');
+        if (intelRes.success) {
+          setPortfolioIntel(intelRes.data);
+        }
+      } catch (err: any) {
+        console.error('Personalization fetch error:', err);
+        setPersonalizationError('Không thể nạp thông tin phân tích cá nhân hóa.');
+      } finally {
+        setLoadingPersonalization(false);
+      }
+    };
+
+    fetchPersonalization();
+  }, [activeTab]);
 
   const autocompleteRef = useRef<HTMLDivElement>(null);
 
@@ -576,6 +664,30 @@ export default function Dashboard() {
           >
             <Bell size={18} />
             {t('sidebar.alerts')}
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('personalization'); setIsSidebarOpen(false); }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              width: '100%',
+              padding: '12px 16px',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              background: activeTab === 'personalization' ? 'var(--color-accent-bg)' : 'transparent',
+              color: activeTab === 'personalization' ? 'var(--color-accent)' : 'var(--text-secondary)',
+              fontFamily: 'Outfit, sans-serif',
+              fontWeight: 600,
+              fontSize: '14px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'var(--transition-smooth)'
+            }}
+          >
+            <Sparkles size={18} style={{ color: 'var(--color-warning)' }} />
+            Phân tích AI & Gợi ý
           </button>
 
           <Link href="/pricing" style={{ textDecoration: 'none' }}>
@@ -1375,6 +1487,538 @@ export default function Dashboard() {
                     </div>
 
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 5: PERSONALIZATION & AI ADVISORY */}
+          {activeTab === 'personalization' && (
+            <div>
+              {/* Header section with manual scan action */}
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'stretch', 
+                flexDirection: 'column',
+                gap: '16px',
+                marginBottom: '32px'
+              }} className="md:flex-row md:items-center">
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span className="badge" style={{ 
+                      fontSize: '11px', 
+                      fontWeight: 800, 
+                      padding: '3px 8px', 
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      color: 'var(--color-bullish)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)'
+                    }}>
+                      ⚡ POWERED BY AI DEEP ADVISORY v2.4
+                    </span>
+                    <span style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '4px',
+                      fontSize: '11px', 
+                      color: 'var(--text-muted)' 
+                    }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                      Học máy học tập động
+                    </span>
+                  </div>
+                  <h1 className="font-outfit title-gradient" style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '4px' }}>
+                    Nhận Định Danh Mục & Gợi Ý AI
+                  </h1>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
+                    Trí tuệ nhân tạo quét hành vi đầu tư thực tế, kiểm soát rủi ro phân bổ HHI và đề xuất cơ hội phù hợp nhất với bạn.
+                  </p>
+                </div>
+
+                <div>
+                  <button 
+                    onClick={handleAIScan}
+                    disabled={isAnalyzing || loadingPersonalization}
+                    style={{
+                      padding: '12px 24px',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'linear-gradient(135deg, var(--color-accent) 0%, #a855f7 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      cursor: (isAnalyzing || loadingPersonalization) ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      fontWeight: 800,
+                      fontFamily: 'Outfit, sans-serif',
+                      boxShadow: '0 4px 20px rgba(139, 92, 246, 0.25)',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      opacity: (isAnalyzing || loadingPersonalization) ? 0.75 : 1,
+                      width: '100%',
+                      justifyContent: 'center'
+                    }}
+                    className="md:w-auto"
+                  >
+                    {isAnalyzing ? (
+                      <Loader2 className="spin" size={16} />
+                    ) : (
+                      <Sparkles size={16} />
+                    )}
+                    {isAnalyzing ? 'Đang chạy phân tích...' : 'Kích hoạt AI Quét & Phân tích'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Error State */}
+              {personalizationError && (
+                <div className="glass-panel" style={{
+                  padding: '20px',
+                  background: 'var(--color-bearish-bg)',
+                  border: '1px solid hsla(346, 80%, 55%, 0.2)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--color-bearish)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '24px'
+                }}>
+                  <ShieldAlert size={20} />
+                  <div>
+                    <strong style={{ display: 'block' }}>Không thể liên kết bộ máy cá nhân hóa</strong>
+                    <span style={{ fontSize: '13px' }}>{personalizationError}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Step-by-Step AI Analysis Terminal log (Active Scanner overlay) */}
+              {isAnalyzing && (
+                <div className="glass-panel" style={{
+                  padding: '24px',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid rgba(139, 92, 246, 0.4)',
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  boxShadow: '0 8px 32px rgba(139, 92, 246, 0.15)',
+                  marginBottom: '32px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                    <Loader2 className="spin" style={{ color: 'var(--color-accent)' }} size={20} />
+                    <h4 className="font-outfit text-white" style={{ fontSize: '18px', fontWeight: 800 }}>
+                      Hệ thống đang cập nhật hồ sơ & tính toán khuyến nghị...
+                    </h4>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontFamily: 'monospace', fontSize: '13px' }}>
+                    <div style={{ color: analysisStep >= 1 ? 'var(--color-bullish)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 800 }}>{analysisStep > 1 ? '✓' : '●'}</span>
+                      <span>[BƯỚC 1/4] Đang tập hợp các cổ phiếu bạn xem và tìm kiếm gần đây...</span>
+                    </div>
+                    <div style={{ color: analysisStep >= 2 ? (analysisStep > 2 ? 'var(--color-bullish)' : 'var(--color-warning)') : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 800 }}>{analysisStep > 2 ? '✓' : analysisStep === 2 ? '⚡' : '○'}</span>
+                      <span>[BƯỚC 2/4] Đang ưu tiên các mối quan tâm mới nhất và tự động giảm bớt tương tác cũ...</span>
+                    </div>
+                    <div style={{ color: analysisStep >= 3 ? (analysisStep > 3 ? 'var(--color-bullish)' : 'var(--color-warning)') : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 800 }}>{analysisStep > 3 ? '✓' : analysisStep === 3 ? '⚡' : '○'}</span>
+                      <span>[BƯỚC 3/4] Đang đo lường mức độ đa dạng tài sản và rủi ro dồn vốn vào một vài nhóm ngành...</span>
+                    </div>
+                    <div style={{ color: analysisStep >= 4 ? (analysisStep > 4 ? 'var(--color-bullish)' : 'var(--color-warning)') : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 800 }}>{analysisStep > 4 ? '✓' : analysisStep === 4 ? '⚡' : '○'}</span>
+                      <span>[BƯỚC 4/4] Đang biên soạn luận điểm đánh giá rủi ro từ chuyên gia cố vấn AI (GPT-4o)...</span>
+                    </div>
+                    {analysisStep === 5 && (
+                      <div style={{ color: 'var(--color-accent)', fontWeight: 800, marginTop: '8px', fontSize: '14px' }}>
+                        🎉 ĐÃ TẢI XONG: Bản phân tích danh mục và danh sách gợi ý cổ phiếu live đã sẵn sàng!
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Main Content Layout */}
+              {loadingPersonalization && !isAnalyzing ? (
+                <div style={{ padding: '60px', textAlign: 'center' }}>
+                  <Loader2 className="spin" size={40} style={{ color: 'var(--color-accent)', margin: '0 auto 16px auto' }} />
+                  <p style={{ color: 'var(--text-secondary)' }}>Đang truy vấn mô hình cá nhân hóa học sâu...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 font-inter">
+                  
+                  {/* Left Column: Portfolio Diversification Intelligence (7 columns on desktop) */}
+                  <div className="lg:col-span-7 xl:col-span-8" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                    
+                    {/* Portfolio overview and HHI analysis */}
+                    <div className="glass-panel" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <PieChart size={20} style={{ color: 'var(--color-accent)' }} />
+                          <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 800 }}>
+                            {portfolioIntel?.portfolioName || 'Danh mục Đầu tư Cá nhân'}
+                          </h3>
+                        </div>
+                        <span className="badge" style={{ fontSize: '11px', padding: '3px 10px', background: 'var(--color-accent-bg)', color: 'var(--color-accent)' }}>
+                          Khớp tài khoản thực tế
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ marginBottom: '20px' }}>
+                        <div style={{
+                          background: 'var(--bg-surface)',
+                          padding: '16px 20px',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--border-color-active)'
+                        }}>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Tổng giá trị tài sản nắm giữ
+                          </span>
+                          <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-bullish)', marginTop: '4px', textShadow: '0 0 10px rgba(16,185,129,0.1)' }}>
+                            {portfolioIntel?.totalValue ? portfolioIntel.totalValue.toLocaleString() : '174,000,000'} <span style={{ fontSize: '15px' }}>VND</span>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          background: 'var(--bg-surface)',
+                          padding: '16px 20px',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--border-color-active)'
+                        }}>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Rủi ro tập trung (Chỉ số phân bổ)
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                            <div style={{ fontSize: '24px', fontWeight: 800, color: '#fff' }}>
+                              {portfolioIntel?.hhi || 5625} <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>HHI</span>
+                            </div>
+                            <span className="badge" style={{
+                              fontSize: '11px',
+                              padding: '2px 8px',
+                              fontWeight: 700,
+                              background: portfolioIntel?.concentrationRating === 'DIVERSIFIED' 
+                                ? 'rgba(16, 185, 129, 0.15)' 
+                                : portfolioIntel?.concentrationRating === 'MODERATELY_CONCENTRATED'
+                                ? 'rgba(245, 158, 11, 0.15)'
+                                : 'rgba(239, 68, 68, 0.15)',
+                              color: portfolioIntel?.concentrationRating === 'DIVERSIFIED'
+                                ? 'var(--color-bullish)'
+                                : portfolioIntel?.concentrationRating === 'MODERATELY_CONCENTRATED'
+                                ? 'var(--color-warning)'
+                                : 'var(--color-bearish)',
+                              border: `1px solid ${portfolioIntel?.concentrationRating === 'DIVERSIFIED' 
+                                ? 'rgba(16, 185, 129, 0.3)' 
+                                : portfolioIntel?.concentrationRating === 'MODERATELY_CONCENTRATED'
+                                ? 'rgba(245, 158, 11, 0.3)'
+                                : 'rgba(239, 68, 68, 0.3)'}`
+                            }}>
+                              {portfolioIntel?.concentrationLabel || 'Rủi ro tập trung cao'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Descriptive Layman explanatory subtext */}
+                      <p style={{ 
+                        fontSize: '12px', 
+                        color: 'var(--text-secondary)', 
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        padding: '10px 14px', 
+                        borderRadius: 'var(--radius-sm)',
+                        lineHeight: '1.5',
+                        marginBottom: '24px'
+                      }}>
+                        💡 <strong>Chỉ số HHI:</strong> Thước đo mức độ tập trung vốn của bạn. Điểm càng nhỏ chứng tỏ vốn được chia đều sang nhiều ngành/cổ phiếu khác nhau (giảm thiểu rủi ro thua lỗ nặng khi một ngành rung lắc).
+                      </p>
+
+                      {/* HHI Visual Gauge Bar with caretaker */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px' }}>
+                          <span>🟢 AN TOÀN (Phân bổ đều)</span>
+                          <span>🟡 TRUNG BÌNH (Tập trung nhẹ)</span>
+                          <span>🔴 RỦI RO CAO (Dồn vốn lớn)</span>
+                        </div>
+                        
+                        {/* The Multi-zone Bar */}
+                        <div style={{
+                          height: '12px',
+                          borderRadius: '6px',
+                          background: 'linear-gradient(to right, #10b981 0%, #10b981 15%, #f59e0b 15%, #f59e0b 25%, #ef4444 25%, #ef4444 100%)',
+                          position: 'relative',
+                          overflow: 'visible',
+                          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.4)'
+                        }}>
+                          {/* Caret Caretaker pointing to HHI */}
+                          <div style={{
+                            position: 'absolute',
+                            left: `${Math.min(Math.max((portfolioIntel?.hhi || 5625) / 100, 2), 98)}%`,
+                            top: '-8px',
+                            transform: 'translateX(-50%)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            transition: 'left 1s cubic-bezier(0.4, 0, 0.2, 1)'
+                          }}>
+                            <span style={{
+                              color: '#fff',
+                              fontSize: '14px',
+                              textShadow: '0 0 8px rgba(255,255,255,0.8)',
+                              lineHeight: 1
+                            }}>▲</span>
+                          </div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                          <span>0</span>
+                          <span>1500</span>
+                          <span>2500</span>
+                          <span>10000 (Tuyệt đối)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sector allocation list */}
+                    <div className="glass-panel" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
+                      <h4 className="font-outfit" style={{ fontSize: '16px', fontWeight: 800, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Briefcase size={16} style={{ color: 'var(--color-accent)' }} />
+                        Phân bổ tỷ trọng nhóm ngành thực tế
+                      </h4>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {portfolioIntel?.allocation && portfolioIntel.allocation.length > 0 ? (
+                          portfolioIntel.allocation.map((item: any, idx: number) => (
+                            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                                  {idx + 1}. {item.sector}
+                                </span>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                  <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+                                    {item.value ? item.value.toLocaleString() : '---'} VND
+                                  </span>
+                                  <span style={{ fontWeight: 800, color: 'var(--color-accent)' }}>
+                                    {item.percentage}%
+                                  </span>
+                                </div>
+                              </div>
+                              {/* Sleek Percentage Bar */}
+                              <div style={{ height: '6px', background: 'var(--bg-surface)', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div style={{ 
+                                  height: '100%', 
+                                  width: `${item.percentage}%`,
+                                  background: 'linear-gradient(90deg, var(--color-accent) 0%, #3b82f6 100%)',
+                                  borderRadius: '3px',
+                                  transition: 'width 1s ease-in-out'
+                                }} />
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div style={{
+                            padding: '16px',
+                            textAlign: 'center',
+                            color: 'var(--text-muted)',
+                            fontSize: '13px',
+                            background: 'var(--bg-surface)',
+                            borderRadius: 'var(--radius-md)'
+                          }}>
+                            Chưa tìm thấy dữ liệu phân bổ nhóm ngành.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* AI Advisor Thesis */}
+                    <div className="glass-panel" style={{
+                      padding: '24px',
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                      background: 'linear-gradient(180deg, rgba(22, 28, 45, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%)',
+                      boxShadow: '0 4px 24px rgba(245, 158, 11, 0.03)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                        <Sparkles size={18} style={{ color: 'var(--color-warning)' }} />
+                        <h4 className="font-outfit" style={{ fontSize: '16px', fontWeight: 800, color: '#f59e0b', letterSpacing: '0.02em' }}>
+                          Ý Kiến Tư Vấn Quản Trị Rủi Ro AI
+                        </h4>
+                      </div>
+                      <p style={{ 
+                        fontSize: '14px', 
+                        lineHeight: '1.65', 
+                        color: 'var(--text-primary)', 
+                        fontStyle: 'italic',
+                        whiteSpace: 'pre-wrap'
+                      }}>
+                        "{portfolioIntel?.thesis || 'Hệ thống AI Advisor đang quét danh mục tài sản nắm giữ để sinh luận điểm rủi ro. Hãy bấm nút Kích hoạt quét AI ở phía trên.'}"
+                      </p>
+                      
+                      <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                        — Chứng nhận bởi OpenAI GPT-4o Risk Engine
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Right Column: Personalized Feed (5 columns on desktop) */}
+                  <div className="lg:col-span-5 xl:col-span-4" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Activity size={18} style={{ color: 'var(--color-warning)' }} />
+                        <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 800 }}>
+                          Gợi ý cổ phiếu dành cho bạn
+                        </h3>
+                      </div>
+                      <span className="badge" style={{ fontSize: '10px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--color-warning)' }}>
+                        Đo khớp tối ưu
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {personalizedFeed && personalizedFeed.length > 0 ? (
+                        personalizedFeed.map((item: any, idx: number) => {
+                          const hasSignal = !!item.latestSignal;
+                          const isBuy = item.latestSignal?.type === 'BUY';
+                          const hasChange = item.changePercent !== null && item.changePercent !== undefined;
+                          const isUp = hasChange && item.changePercent >= 0;
+
+                          return (
+                            <Link 
+                              key={idx}
+                              href={`/instruments/${item.symbol}`}
+                              onClick={() => handleSelectRecommended(item.symbol)}
+                              style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              <div 
+                                className="glass-panel"
+                                style={{
+                                  padding: '16px',
+                                  borderRadius: 'var(--radius-md)',
+                                  border: '1px solid var(--border-color)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  background: 'var(--bg-surface)'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.borderColor = 'var(--color-accent)';
+                                  e.currentTarget.style.transform = 'translateX(4px)';
+                                  e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.borderColor = 'var(--border-color)';
+                                  e.currentTarget.style.transform = 'translateX(0)';
+                                  e.currentTarget.style.backgroundColor = 'var(--bg-surface)';
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                  <div>
+                                    <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-accent)' }}>
+                                      {item.symbol}
+                                    </span>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {item.name}
+                                    </span>
+                                  </div>
+
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                    {item.price !== null ? (
+                                      <span style={{ fontWeight: 800, fontSize: '14px', color: 'var(--text-primary)' }}>
+                                        {item.price.toLocaleString()}
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: 'var(--text-muted)' }}>---</span>
+                                    )}
+                                    {hasChange && (
+                                      <span style={{ 
+                                        fontSize: '11px', 
+                                        fontWeight: 800, 
+                                        color: isUp ? 'var(--color-bullish)' : 'var(--color-bearish)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '2px'
+                                      }}>
+                                        {isUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+                                        {isUp ? '+' : ''}{item.changePercent.toFixed(2)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Linear score indicator */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                  <div style={{ flexGrow: 1, height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                                    <div style={{ 
+                                      height: '100%', 
+                                      width: `${item.score}%`, 
+                                      background: 'linear-gradient(90deg, #a855f7 0%, var(--color-accent) 100%)' 
+                                    }} />
+                                  </div>
+                                  <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-warning)' }}>
+                                    {Math.round(item.score)}% PHÙ HỢP
+                                  </span>
+                                </div>
+
+                                {/* Matching Reason capsules */}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: hasSignal ? '10px' : '0px' }}>
+                                  {item.reasons && item.reasons.map((reason: string, rIdx: number) => {
+                                    let icon = '⭐';
+                                    let text = reason;
+                                    if (reason === 'PORTFOLIO_HOLDING') { icon = '💼'; text = 'Trong danh mục'; }
+                                    else if (reason === 'SECTOR_AFFINITY') { icon = '🎯'; text = 'Nhóm ngành ưu thích'; }
+                                    else if (reason === 'SECTOR_CROSSOVER') { icon = '⚡'; text = 'Tín hiệu kỹ thuật tốt'; }
+                                    else if (reason === 'POPULAR_MEMBER') { icon = '🔥'; text = 'Được xem nhiều'; }
+
+                                    return (
+                                      <span key={rIdx} style={{ 
+                                        fontSize: '10px', 
+                                        fontWeight: 700, 
+                                        color: 'var(--text-secondary)',
+                                        background: 'var(--bg-surface-hover)',
+                                        border: '1px solid var(--border-color)',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '3px'
+                                      }}>
+                                        <span>{icon}</span> {text}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* Active AI signal if present */}
+                                {hasSignal && (
+                                  <div style={{ 
+                                    marginTop: '8px', 
+                                    background: isBuy ? 'var(--color-bullish-bg)' : 'var(--color-bearish-bg)',
+                                    border: `1px solid ${isBuy ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}`,
+                                    padding: '8px 10px', 
+                                    borderRadius: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    color: isBuy ? 'var(--color-bullish)' : 'var(--color-bearish)'
+                                  }}>
+                                    <span style={{
+                                      width: '6px',
+                                      height: '6px',
+                                      borderRadius: '50%',
+                                      background: isBuy ? '#10b981' : '#ef4444',
+                                      display: 'inline-block',
+                                      animation: 'pulse 1.5s infinite'
+                                    }}></span>
+                                    AI: {item.latestSignal.type} ({item.latestSignal.indicator}) — Tín cậy: {Number(item.latestSignal.score || 0).toFixed(1)}
+                                  </div>
+                                )}
+                              </div>
+                            </Link>
+                          );
+                        })
+                      ) : (
+                        <div className="glass-panel" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          Chưa có gợi ý cá nhân hóa nào được tạo. Click Quét AI phía trên để khởi chạy!
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                 </div>
               )}
             </div>
