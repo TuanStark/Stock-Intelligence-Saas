@@ -318,7 +318,7 @@ export default function StockDetail() {
       </header>
 
       {/* BLOCK 1: Stock Heading Detail & Real-time Quote */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', marginBottom: '24px' }}>
+      <div className="responsive-grid-1-5-1" style={{ marginBottom: '24px' }}>
         {/* Name and sector */}
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px solid var(--border-color)' }}>
           <h1 className="font-outfit title-gradient" style={{ fontSize: '36px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '6px' }}>
@@ -366,7 +366,7 @@ export default function StockDetail() {
       </div>
 
       {/* BLOCK 2: Stock Technical Chart & AI Thesis Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr', gap: '24px', marginBottom: '24px' }}>
+      <div className="responsive-grid-2-1" style={{ marginBottom: '24px' }}>
 
         {/* Left: TradingView Chart */}
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid var(--border-color)' }}>
@@ -411,7 +411,7 @@ export default function StockDetail() {
               </div>
 
               {/* Drivers & Risks Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: 'auto' }}>
+              <div className="responsive-grid-1-1" style={{ gap: '12px', marginTop: 'auto' }}>
                 <div className="glass-panel" style={{ padding: '12px', backgroundColor: 'rgba(16, 185, 129, 0.04)', borderColor: 'rgba(16, 185, 129, 0.1)' }}>
                   <p style={{ color: 'var(--color-bullish)', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px' }}>Catalysts</p>
                   <ul style={{ fontSize: '11px', color: 'var(--text-secondary)', paddingLeft: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -444,7 +444,7 @@ export default function StockDetail() {
       </div>
 
       {/* BLOCK 3: Market Stats & Signals History */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px' }}>
+      <div className="responsive-grid-1-2-2">
 
         {/* Left: Financial Fundamentals */}
         {latestQuote && (

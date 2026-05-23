@@ -205,3 +205,168 @@ h1, h2, h3, h4, h5, h6, .font-outfit {
   border-color: var(--text-muted);
   background: var(--bg-surface-hover);
 }
+
+/* ─── RESPONSIVE SYSTEM (SENIOR GRADE) ─── */
+
+/* 1. Header Responsive Structure */
+.app-header {
+  position: fixed;
+  top: 24px;
+  left: calc(var(--sidebar-width) + 48px);
+  right: 24px;
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 40;
+  transition: var(--transition-smooth);
+}
+
+.header-search-container {
+  position: relative;
+  width: 380px;
+  transition: var(--transition-smooth);
+}
+
+.toggle-sidebar-btn {
+  display: none !important;
+  margin-right: 12px;
+}
+
+/* 2. Responsive Grid Utilities */
+.responsive-grid-2-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.responsive-grid-1-5-1 {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 24px;
+}
+
+.responsive-grid-1-2-2 {
+  display: grid;
+  grid-template-columns: 1.2fr 2fr;
+  gap: 24px;
+}
+
+.responsive-grid-1-1 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* 3. Backdrop Overlay for mobile drawer */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 90;
+  transition: var(--transition-smooth);
+}
+
+/* ─── MEDIA QUERY TABLET & MOBILE (<= 1024px) ─── */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-width: 0px;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 16px;
+    padding-top: calc(var(--header-height) + 24px);
+  }
+
+  /* Fixed Header shifts to full width */
+  .app-header {
+    left: 24px;
+    top: 16px;
+    right: 24px;
+  }
+
+  .header-search-container {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  /* Toggle Button emerges */
+  .toggle-sidebar-btn {
+    display: inline-flex !important;
+  }
+
+  /* Sidebar converts to elegant floating drawer */
+  aside.glass-panel {
+    position: fixed !important;
+    left: -280px !important; /* Fully hidden offscreen */
+    top: 16px !important;
+    bottom: 16px !important;
+    width: 260px !important;
+    z-index: 100 !important;
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8) !important;
+  }
+
+  aside.glass-panel.sidebar-open {
+    left: 16px !important; /* Slide in smoothly */
+  }
+
+  .sidebar-backdrop.active {
+    display: block;
+  }
+
+  /* Force responsive layouts on grids */
+  .responsive-grid-2-1,
+  .responsive-grid-1-5-1,
+  .responsive-grid-1-2-2,
+  .responsive-grid-1-1 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─── MEDIA QUERY PHONE (<= 768px) ─── */
+@media (max-width: 768px) {
+  .app-header {
+    flex-direction: row;
+    gap: 8px;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    height: auto;
+    padding: 8px 12px;
+    background: var(--bg-surface);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+  }
+
+  .main-content {
+    padding: 12px;
+    padding-top: 100px;
+  }
+
+  .header-search-container {
+    max-width: 200px;
+  }
+
+  /* Hide raw tickers on small mobile to avoid layout breaking */
+  .header-ticker-hide {
+    display: none !important;
+  }
+
+  /* Adjust visual titles for readability */
+  h1 {
+    font-size: 24px !important;
+  }
+
+  h2 {
+    font-size: 18px !important;
+  }
+
+  .title-gradient {
+    font-size: 28px !important;
+  }
+}
+

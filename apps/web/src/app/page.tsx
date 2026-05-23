@@ -19,7 +19,9 @@ import {
   Plus,
   HelpCircle,
   LogOut,
-  Trash2
+  Trash2,
+  Menu,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import { io } from 'socket.io-client';
@@ -82,6 +84,7 @@ export default function Dashboard() {
   const { t, locale, setLocale } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'watchlist' | 'signals' | 'alerts'>('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -440,8 +443,14 @@ export default function Dashboard() {
 
   return (
     <div className="app-container">
+      {/* Sidebar Mobile Backdrop Overlay */}
+      <div 
+        className={`sidebar-backdrop ${isSidebarOpen ? 'active' : ''}`}
+        onClick={() => setIsSidebarOpen(false)}
+      />
+
       {/* ─── SIDEBAR NAVIGATION ─── */}
-      <aside className="glass-panel" style={{
+      <aside className={`glass-panel ${isSidebarOpen ? 'sidebar-open' : ''}`} style={{
         position: 'fixed',
         left: '24px',
         top: '24px',
@@ -474,7 +483,7 @@ export default function Dashboard() {
         {/* Tab Buttons */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexGrow: 1 }}>
           <button 
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -498,7 +507,7 @@ export default function Dashboard() {
           </button>
           
           <button 
-            onClick={() => setActiveTab('watchlist')}
+            onClick={() => { setActiveTab('watchlist'); setIsSidebarOpen(false); }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -522,7 +531,7 @@ export default function Dashboard() {
           </button>
 
           <button 
-            onClick={() => setActiveTab('signals')}
+            onClick={() => { setActiveTab('signals'); setIsSidebarOpen(false); }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -546,7 +555,7 @@ export default function Dashboard() {
           </button>
 
           <button 
-            onClick={() => setActiveTab('alerts')}
+            onClick={() => { setActiveTab('alerts'); setIsSidebarOpen(false); }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -683,19 +692,19 @@ export default function Dashboard() {
       <main className="main-content">
         
         {/* ─── TOP HEADER BAR with SEARCH ─── */}
-        <header style={{
-          position: 'fixed',
-          top: '24px',
-          left: 'calc(var(--sidebar-width) + 48px)',
-          right: '24px',
-          height: 'var(--header-height)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          zIndex: 40,
-        }}>
-          {/* Autocomplete Input Container */}
-          <div style={{ position: 'relative', width: '380px' }} ref={autocompleteRef}>
+        <header className="app-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1 }}>
+            {/* Hamburger Button for mobile */}
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="btn-secondary toggle-sidebar-btn"
+              style={{ padding: '10px' }}
+            >
+              {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+
+            {/* Autocomplete Input Container */}
+            <div className="header-search-container" ref={autocompleteRef}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -776,8 +785,9 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="header-ticker-hide" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -829,7 +839,7 @@ export default function Dashboard() {
               </div>
 
               {/* Grid Content */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+              <div className="responsive-grid-2-1">
                 
                 {/* LEFT COLUMN: Top Movers (Quotes) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -847,7 +857,7 @@ export default function Dashboard() {
                       {t('dashboard.noMovers')}
                     </div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="responsive-grid-1-1">
                       {topMovers.map((mover) => {
                         const isUp = mover.changePercent >= 0;
                         return (
