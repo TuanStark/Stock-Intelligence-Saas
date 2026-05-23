@@ -106,6 +106,12 @@ model User {
   portfolios    Portfolio[]
   alertRules    AlertRule[]
 
+  // Personalization Relations
+  activities           UserActivity[]
+  interestProfile      UserInterestProfile?
+  recommendationScores RecommendationScore[]
+  notifications        PersonalizedNotification[]
+
   @@map("users")
 }
 
@@ -201,6 +207,7 @@ model Instrument {
   alertRules         AlertRule[]
   quotes             Quote[]
   candles            Candle[]
+  recommendationScores RecommendationScore[]
 
   @@unique([symbol, exchangeId])
   @@index([exchangeId])
@@ -294,6 +301,7 @@ model Portfolio {
   user         User                   @relation(fields: [userId], references: [id])
   positions    PortfolioPosition[]
   transactions PortfolioTransaction[]
+  snapshots    PortfolioSnapshot[]
 
   @@index([userId])
   @@map("portfolios")
@@ -462,3 +470,104 @@ model AlertEvent {
   @@index([alertRuleId, triggeredAt])
   @@map("alert_events")
 }
+
+// ─── Cá nhân hóa & Hành vi Người dùng ──────────────────────────
+
+enum ActivityType {
+  VIEW_STOCK
+  CLICK_NEWS
+  SEARCH_SYMBOL
+  VIEW_SECTOR
+  INTERACT_AI
+  ADD_WATCHLIST
+  ADD_PORTFOLIO
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model UserActivity {
+  id           String       @id @default(uuid())
+  userId       String       @map("user_id")
+  activityType ActivityType @map("activity_type")
+  symbol       String?
+  sectorId     String?      @map("sector_id")
+  metadata     Json?
+  timestamp    DateTime     @default(now()) @map("timestamp")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@index([symbol])
+  @@map("user_activities")
+}
+
+model UserInterestProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  preferredSectors Json
+  viewedStocks    Json
+  investmentStyle String   @default("NEUTRAL")
+  riskTolerance   Decimal  @default(0.50) @map("risk_tolerance") @db.Decimal(5, 2)
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_interest_profiles")
+}
+
+model RecommendationScore {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  instrumentId String   @map("instrument_id")
+  symbol       String
+  score        Decimal  @db.Decimal(10, 4)
+  reasons      Json
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, instrumentId])
+  @@index([userId, score])
+  @@map("recommendation_scores")
+}
+
+model PortfolioSnapshot {
+  id            String   @id @default(uuid())
+  portfolioId   String   @map("portfolio_id")
+  totalValue    Decimal  @map("total_value") @db.Decimal(24, 8)
+  cashBalance   Decimal  @map("cash_balance") @db.Decimal(24, 8)
+  unrealizedPnl Decimal  @map("unrealized_pnl") @db.Decimal(24, 8)
+  realizedPnl   Decimal  @map("realized_pnl") @db.Decimal(24, 8)
+  volatility    Decimal  @db.Decimal(10, 4)
+  allocation    Json
+  recordedAt    DateTime @default(now()) @map("recorded_at")
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, recordedAt])
+  @@map("portfolio_snapshots")
+}
+
+model PersonalizedNotification {
+  id            String               @id @default(uuid())
+  userId        String               @map("user_id")
+  title         String
+  body          String
+  priority      NotificationPriority @default(MEDIUM)
+  relatedSymbol String?              @map("related_symbol")
+  metadata      Json?
+  isRead        Boolean              @default(false) @map("is_read")
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@map("personalized_notifications")
+}
+

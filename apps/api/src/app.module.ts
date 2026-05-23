@@ -9,6 +9,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
 import { AlertModule } from './alerts/alerts.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { BullModule } from '@nestjs/bullmq';
+import { PersonalizationModule } from './personalization/personalization.module';
 
 @Module({
     imports: [
@@ -20,6 +21,7 @@ import { BullModule } from '@nestjs/bullmq';
         SubscriptionModule,
         WatchlistModule,
         AlertModule,
+        PersonalizationModule,
         BullModule.forRoot({
             connection: {
                 host: process.env.REDIS_HOST || 'localhost',
