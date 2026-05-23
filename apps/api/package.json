@@ -25,6 +25,8 @@
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.0",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-socket.io": "^11.1.23",
+    "@nestjs/websockets": "^11.1.23",
     "@stock-intel/config": "workspace:*",
     "@stock-intel/contracts": "workspace:*",
     "@stock-intel/db": "workspace:*",
@@ -37,6 +39,7 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.3",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
