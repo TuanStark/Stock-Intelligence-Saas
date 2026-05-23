@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from './prisma/prisma.module';
-import { AiSummaryProcessor } from './processors/ai-summary.processor';
+import { AiSummaryModule } from './features/ai-summary/ai-summary.module';
 
 @Module({
     imports: [
         PrismaModule,
+        AiSummaryModule,
         BullModule.forRoot({
             connection: {
                 host: process.env.REDIS_HOST || 'localhost',
@@ -16,9 +17,6 @@ import { AiSummaryProcessor } from './processors/ai-summary.processor';
         BullModule.registerQueue({
             name: 'ai-summary',
         }),
-    ],
-    providers: [
-        AiSummaryProcessor,
     ],
 })
 export class AppModule { }
