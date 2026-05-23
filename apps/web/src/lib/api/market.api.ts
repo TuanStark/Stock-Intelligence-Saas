@@ -17,4 +17,7 @@ export const marketApi = {
     const url = type && type !== 'ALL' ? `/market/signals?type=${type}` : '/market/signals';
     return apiClient.get(url);
   },
+  triggerAiSummary: async (symbol: string): Promise<any> => {
+    return apiClient.post(`/market/instruments/${symbol.toUpperCase()}/ai-summary`, {});
+  },
 };

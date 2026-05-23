@@ -84,14 +84,44 @@ export class MarketService {
 
     if (!instrument) return null;
 
-    // Reactive Cache Shield: Trigger background AI summary generation if missing or expired (6 hours TTL)
     const latestSummary = instrument.aiSummaries[0];
-    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
-    const isExpired = latestSummary ? new Date(latestSummary.generatedAt) < sixHoursAgo : true;
+    return {
+      success: true,
+      data: {
+        instrument,
+        latestQuote: instrument.quotes[0] || null,
+        signals: instrument.signals,
+        aiSummary: latestSummary || null
+      }
+    };
+  }
 
-    if (isExpired) {
-      // Dispatch to BullMQ queue asynchronously in a non-blocking way to keep HTTP request extremely fast
-      this.aiSummaryQueue.add(
+  async triggerAiSummary(symbol: string) {
+    const instrument = await this.prisma.instrument.findFirst({
+      where: { symbol: symbol.toUpperCase() },
+      include: {
+        aiSummaries: { orderBy: { generatedAt: 'desc' }, take: 1 }
+      }
+    });
+
+    if (!instrument) return null;
+
+    const latestSummary = instrument.aiSummaries[0];
+
+    // Anti-spam Cooldown: Enforce a 1-minute window between AI summaries to prevent rapid billing/token waste
+    if (latestSummary) {
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+      if (new Date(latestSummary.generatedAt) >= oneMinuteAgo) {
+        return {
+          success: false,
+          message: 'Phân tích AI vừa mới được cập nhật. Vui lòng thử lại sau ít phút!'
+        };
+      }
+    }
+
+    // Dispatch background calculation job securely to BullMQ
+    try {
+      await this.aiSummaryQueue.add(
         'generate-summary',
         {
           instrumentId: instrument.id,
@@ -102,18 +132,20 @@ export class MarketService {
           removeOnFail: 100,
           attempts: 2,
         }
-      ).catch(err => console.error(`Failed to enqueue AI summary job for ${symbol}:`, err));
-    }
+      );
 
-    return {
-      success: true,
-      data: {
-        instrument,
-        latestQuote: instrument.quotes[0] || null,
-        signals: instrument.signals,
-        aiSummary: latestSummary || null
-      }
-    };
+      return {
+        success: true,
+        message: 'Tác vụ phân tích AI đã được kích hoạt thành công!',
+        data: { status: 'queued' }
+      };
+    } catch (err) {
+      console.error(`Failed to enqueue manual AI summary for ${symbol}:`, err);
+      return {
+        success: false,
+        message: 'Không thể xếp hàng tác vụ AI vào lúc này. Vui lòng kiểm tra Redis!'
+      };
+    }
   }
 
   async getCandles(symbol: string, timeframe: string = '1D') {

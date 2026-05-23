@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, NotFoundException } from '@nestjs/common';
 import { MarketService } from './market.service';
 
 @Controller('market')
@@ -37,5 +37,14 @@ export class MarketController {
       throw new NotFoundException(`Instrument ${symbol} candles not found`);
     }
     return candles;
+  }
+
+  @Post('instruments/:symbol/ai-summary')
+  async triggerAiSummary(@Param('symbol') symbol: string) {
+    const result = await this.marketService.triggerAiSummary(symbol);
+    if (!result) {
+      throw new NotFoundException(`Instrument ${symbol} not found`);
+    }
+    return result;
   }
 }

@@ -30,7 +30,7 @@
 ## 🚀 Tính năng chính (Key Features)
 
 *   **📊 Dữ liệu thị trường thời gian thực (Real-time Market Data):** Cung cấp biểu đồ nến (Historical Candles) đa khung thời gian và thông tin giá thị trường cập nhật liên tục từ các sàn giao dịch.
-*   **🧠 Báo cáo Phân tích AI (AI-Powered Stock Insights):** Tự động tóm tắt tin tức, trích xuất động lực tăng trưởng (`drivers`), rủi ro (`risks`), xếp hạng tâm lý (`BULLISH/NEUTRAL/BEARISH`) của doanh nghiệp thông qua OpenAI và LiteLLM.
+*   **🧠 Báo cáo Phân tích AI (AI-Powered Stock Insights):** Tự động tóm tắt tin tức, trích xuất động lực tăng trưởng (`drivers`), rủi ro (`risks`), xếp hạng tâm lý (`BULLISH/NEUTRAL/BEARISH`) của doanh nghiệp thông qua OpenAI và LiteLLM. Xem chi tiết tại [Tài liệu AI Service (docs/27-AI-Service.md)](file:///c:/Users/Stark/Documents/Middle%20FullStack/Stock-Intelligence-Saas/docs/27-AI-Service.md).
 *   **⚡ Hệ thống Tín hiệu Tự động (Automated Technical Signals):** Phát hiện tức thời các cơ hội giao dịch dựa trên các tín hiệu chỉ báo phổ biến: RSI quá mua/quá bán, đường trung bình cắt nhau, MACD Bullish/Bearish, Volume Spike, breakout đột biến.
 *   **📈 Quản lý Danh mục & Giao dịch (Portfolio & Transaction Tracking):** Theo dõi danh mục đầu tư thực tế, ghi nhận các giao dịch mua/bán, tính toán tỷ lệ lợi nhuận, giá vốn trung bình (Average Cost) và phí giao dịch.
 *   **🔔 Thiết lập Cảnh báo Tự động (Smart Alert Rules):** Người dùng tự định nghĩa quy tắc cảnh báo (giá tăng/giảm qua ngưỡng, tín hiệu kỹ thuật mới kích hoạt) để nhận thông báo tức thời qua Email.

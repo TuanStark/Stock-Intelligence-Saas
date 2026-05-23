@@ -16,7 +16,8 @@ import {
   Calendar,
   Layers,
   DollarSign,
-  HelpCircle
+  HelpCircle,
+  RefreshCw
 } from 'lucide-react';
 import Link from 'next/link';
 import { marketApi } from '@/lib/api/market.api';
@@ -73,12 +74,59 @@ export default function StockDetail() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // AI manual trigger states
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiMessage, setAiMessage] = useState('');
+
   // TradingView Chart State
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   
   // Real-time chart bar tracking
   const latestBarRef = useRef<{ time: number; open: number; high: number; low: number; close: number } | null>(null);
+
+  // Active On-Demand AI generation with real-time database polling
+  const handleTriggerAi = async () => {
+    if (!symbol) return;
+    try {
+      setAiLoading(true);
+      setAiMessage('');
+      const res = await marketApi.triggerAiSummary(symbol as string);
+      
+      if (res && res.success) {
+        let attempts = 0;
+        const maxAttempts = 10; // Poll for 20 seconds maximum
+        const intervalId = setInterval(async () => {
+          attempts++;
+          try {
+            const resData = await marketApi.getDetail(symbol as string);
+            if (resData.success && resData.data && resData.data.aiSummary) {
+              setAiSummary(resData.data.aiSummary);
+              setAiLoading(false);
+              clearInterval(intervalId);
+            }
+          } catch (err) {
+            console.error('Error polling AI summary:', err);
+          }
+          
+          if (attempts >= maxAttempts) {
+            setAiLoading(false);
+            setAiMessage('Quá trình phân tích mất nhiều thời gian hơn dự kiến. Vui lòng refresh lại trang sau ít phút!');
+            clearInterval(intervalId);
+          }
+        }, 2000);
+      } else {
+        setAiLoading(false);
+        setAiMessage(res?.message || 'Không thể yêu cầu phân tích AI lúc này.');
+        setTimeout(() => setAiMessage(''), 5000);
+      }
+    } catch (err) {
+      console.error('Failed to trigger AI summary:', err);
+      setAiLoading(false);
+      setAiMessage('Không thể kết nối đến máy chủ để phân tích AI.');
+      setTimeout(() => setAiMessage(''), 5000);
+    }
+  };
 
   // 1. Fetch stock detailed data
   useEffect(() => {
@@ -378,13 +426,90 @@ export default function StockDetail() {
         </div>
 
         {/* Right: AI In-depth Thesis Summary */}
-        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', border: '1px solid var(--border-color)' }}>
-          <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={18} style={{ color: 'var(--color-warning)' }} />
-            {t('stockDetail.aiThesis')}
-          </h3>
+        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', border: '1px solid var(--border-color)', position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <Sparkles size={18} style={{ color: 'var(--color-warning)' }} />
+              {t('stockDetail.aiThesis')}
+            </h3>
+            {aiSummary && !aiLoading && (
+              <button 
+                onClick={handleTriggerAi}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  color: 'var(--color-warning)',
+                  cursor: 'pointer',
+                  padding: '6px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.1)';
+                  e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                }}
+                title="Làm mới phân tích AI"
+              >
+                <RefreshCw size={14} />
+              </button>
+            )}
+          </div>
 
-          {aiSummary ? (
+          {aiMessage && (
+            <div style={{
+              padding: '10px 14px',
+              backgroundColor: 'rgba(239, 68, 68, 0.06)',
+              border: '1px solid rgba(239, 68, 68, 0.15)',
+              borderRadius: 'var(--radius-sm)',
+              color: '#f87171',
+              fontSize: '12px',
+              textAlign: 'center',
+              lineHeight: 1.4
+            }}>
+              {aiMessage}
+            </div>
+          )}
+
+          {aiLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flexGrow: 1 }} className="animate-pulse">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="glass-panel" style={{ width: '120px', height: '24px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '4px', border: 'none' }}></div>
+                <div className="glass-panel" style={{ width: '80px', height: '16px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '4px', border: 'none' }}></div>
+              </div>
+              <div className="glass-panel" style={{
+                padding: '24px 16px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'rgba(245, 158, 11, 0.02)',
+                border: '1px dashed rgba(245, 158, 11, 0.15)',
+                flexGrow: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center',
+                minHeight: '140px'
+              }}>
+                <Loader2 className="animate-spin text-amber-500" size={28} style={{ color: 'var(--color-warning)' }} />
+                <div>
+                  <p className="font-outfit" style={{ fontWeight: 600, color: 'var(--color-warning)', fontSize: '14px', marginBottom: '4px' }}>AI đang phân tích dữ liệu...</p>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Đang nén các chỉ số RSI/MACD & tin tức mới</p>
+                </div>
+              </div>
+              <div className="responsive-grid-1-1" style={{ gap: '12px', marginTop: 'auto' }}>
+                <div className="glass-panel" style={{ height: '70px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}></div>
+                <div className="glass-panel" style={{ height: '70px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}></div>
+              </div>
+            </div>
+          ) : aiSummary ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flexGrow: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className={`badge ${aiSummary.sentiment === 'BULLISH' ? 'badge-bullish' :
@@ -432,11 +557,66 @@ export default function StockDetail() {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flexGrow: 1, padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
-              <HelpCircle size={32} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
-              <p style={{ fontSize: '13px', lineHeight: 1.5 }}>
-                AI Summary has not been generated for {instrument.symbol}. Run the database seed to ingest sample summaries!
-              </p>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexGrow: 1,
+              padding: '30px 10px',
+              color: 'var(--text-muted)',
+              textAlign: 'center',
+              gap: '16px'
+            }}>
+              <div className="glass-panel" style={{
+                padding: '16px',
+                borderRadius: '50%',
+                backgroundColor: 'hsla(35, 90%, 52%, 0.03)',
+                border: '1px solid hsla(35, 90%, 52%, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Sparkles size={36} style={{ color: 'var(--color-warning)' }} className="animate-pulse" />
+              </div>
+              <div>
+                <h4 className="font-outfit" style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
+                  Chưa có Luận điểm Phân tích AI
+                </h4>
+                <p style={{ fontSize: '12px', lineHeight: 1.6, maxWidth: '280px', margin: '0 auto' }}>
+                  Yêu cầu AI tổng hợp giá, tín hiệu kỹ thuật & tin tức của {instrument?.symbol || symbol} để xuất bản luận điểm đầu tư chuyên sâu.
+                </p>
+              </div>
+              
+              <button
+                onClick={handleTriggerAi}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--color-warning)',
+                  color: '#0f172a',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  boxShadow: '0 0 12px hsla(35, 90%, 52%, 0.25)',
+                  transition: 'transform 0.2s, box-shadow 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 0 18px hsla(35, 90%, 52%, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.boxShadow = '0 0 12px hsla(35, 90%, 52%, 0.25)';
+                }}
+              >
+                <Sparkles size={14} />
+                Yêu cầu AI phân tích {instrument?.symbol || symbol}
+              </button>
             </div>
           )}
         </div>
