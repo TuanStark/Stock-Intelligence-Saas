@@ -43,25 +43,19 @@
 ### 💻 Frontend
 *   **Next.js (App Router)** - Framework React tối ưu SEO và Server-Side Rendering.
 *   **TypeScript** & **TailwindCSS** - Đảm bảo tính nhất quán của code và giao diện responsive, hiện đại.
-*   **Shadcn/ui** & **Lucide React** - Hệ thống components tinh tế, mượt mà.
+*   **Shadcn/ui** & **Lucide React** - Giao diện tinh tế, mượt mà.
 
 ### ⚙️ Backend & Workers
 *   **NestJS (v11)** - Framework Node.js kiến trúc module chặt chẽ cho API Gateway và dịch vụ lõi.
-*   **Worker AI (`worker-ai`)** - Xử lý tích hợp OpenAI API và LiteLLM để phân tích ngữ nghĩa, phân tích tâm lý tin tức và sinh báo cáo.
-*   **Worker Ingestion (`worker-ingestion`)** - Chuyên trách thu thập dữ liệu thô từ các API chứng khoán bên ngoài.
-*   **Worker Processing (`worker-processing`)** - Chạy nền xử lý số liệu, tính toán các chỉ báo kỹ thuật và tạo tín hiệu giao dịch.
+*   **Worker AI (`worker-ai`)** - NestJS app xử lý các background jobs phân tích LLM (OpenAI API, LiteLLM) từ hàng đợi Redis (BullMQ).
+*   **Worker Ingestion (`worker-ingestion`)** - NestJS scheduler thu thập dữ liệu định kỳ từ Yahoo Finance và đẩy jobs sang queue.
+*   **Worker Processing (`worker-processing`)** - NestJS worker xử lý tính toán số liệu chỉ báo kỹ thuật nặng và sinh tín hiệu giao dịch.
 
 ### 🗄️ Database & Cache & Storage
 *   **PostgreSQL & TimescaleDB** - Cơ sở dữ liệu chính tối ưu hóa cho dữ liệu Time-series.
 *   **Prisma ORM** - Công cụ quản lý schema, di chuyển dữ liệu (Migrations) và Seeding dữ liệu nhanh.
-*   **Redis** - Bộ nhớ đệm (Caching) tốc độ cao, quản lý phiên và làm hàng đợi điều phối tác vụ (Queues).
+*   **Redis** - Bộ nhớ đệm (Caching) tốc độ cao, quản lý phiên và làm hàng đợi điều phối tác vụ (BullMQ).
 *   **MinIO** - Hệ thống Object Storage tương thích S3 lưu trữ các báo cáo tài chính tài liệu PDF/JSON tĩnh.
-
-### 🐳 Infrastructure & Development Tools
-*   **Docker & Docker Compose** - Đóng gói toàn bộ hạ tầng phát triển (Postgres, Redis, MinIO, Mailpit).
-*   **Mailpit** - SMTP Server cục bộ dùng cho việc giả lập và kiểm thử gửi email/cảnh báo.
-*   **Redis Commander** - Giao diện Web trực quan quản lý dữ liệu lưu trong Redis.
-*   **Turborepo** & **PNPM Workspaces** - Quản lý cấu trúc Monorepo hiệu năng cao, tối ưu hóa thời gian build và chia sẻ mã nguồn dùng chung (`packages/*`).
 
 ---
 
@@ -95,13 +89,26 @@ Stock-Intelligence-Saas/
 
 Trước khi bắt đầu, hãy đảm bảo máy tính của bạn đã cài đặt các công cụ sau:
 *   [Node.js](https://nodejs.org/) (Phiên bản `>= 18.0.0`)
-*   [PNPM](https://pnpm.io/) (Phiên bản `>= 9.15.0`)
 *   [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
 *   [Git](https://git-scm.com/)
+*   **PNPM** (Phiên bản `>= 9.15.0`)
+
+> [!WARNING]
+> **Giải quyết lỗi `pnpm: command not found`:**
+> 
+> Nếu bạn gặp lỗi khi chạy `pnpm`, có thể hệ thống của bạn chưa cài đặt PNPM toàn cục. Bạn có hai cách để xử lý:
+> 1. **Cách 1 (Khuyên dùng):** Cài đặt PNPM toàn cục bằng npm:
+>    ```bash
+>    npm install -g pnpm
+>    ```
+>    Sau đó chạy lại các lệnh bình thường.
+> 2. **Cách 2 (Không cần cài global):** Sử dụng `npx` đi kèm Node.js để chạy gián tiếp:
+>    - Thay vì chạy `pnpm install`, hãy dùng: `npx pnpm install`
+>    - Thay vì chạy `pnpm dev`, hãy dùng: `npx pnpm dev`
 
 ---
 
-## 🔧 Hướng dẫn cài đặt và khởi chạy (Installation & Setup)
+## 🔧 Hướng dẫn cài đặt và khởi chạy nhanh (Installation & Setup)
 
 ### Bước 1: Clone Repository
 ```bash
@@ -118,14 +125,6 @@ chmod +x ./scripts/dev-setup.sh
 # Chạy script cài đặt tự động
 ./scripts/dev-setup.sh
 ```
-> [!NOTE]
-> **Script trên sẽ tự động:**
-> 1. Tạo file `.env` từ file `.env.example`.
-> 2. Cài đặt các dependencies toàn hệ thống qua `pnpm install`.
-> 3. Khởi động các container Docker (TimescaleDB, Redis, MinIO, Mailpit).
-> 4. Chờ cho Database và Redis sẵn sàng.
-> 5. Khởi tạo Prisma Client và chạy Database Migrations.
-> 6. Chạy database seed tạo dữ liệu mẫu ban đầu.
 
 *Nếu bạn sử dụng Windows (PowerShell/Command Prompt) hoặc muốn chạy từng bước thủ công:*
 ```powershell
@@ -133,10 +132,10 @@ chmod +x ./scripts/dev-setup.sh
 copy .env.example .env
 
 # 2. Cài đặt các gói thư viện
-pnpm install
+pnpm install   # Hoặc: npx pnpm install
 
 # 3. Khởi chạy các dịch vụ Docker
-pnpm infra:up
+pnpm infra:up  # Hoặc: npx pnpm infra:up
 
 # 4. Tạo Prisma Client
 pnpm db:generate
@@ -148,13 +147,94 @@ pnpm db:migrate:dev
 pnpm db:seed
 ```
 
-### Bước 3: Chạy ứng dụng ở chế độ Development
-Khởi động đồng loạt Web, API và các Worker trong môi trường phát triển:
+### Bước 3: Chạy ứng dụng ở chế độ Development (Toàn bộ dự án)
+Khởi động đồng loạt Web, API và các Worker trong môi trường phát triển thông qua Turborepo:
 ```bash
-pnpm dev
+pnpm dev   # Hoặc: npx pnpm dev
 ```
 
-### 📍 Các cổng kết nối cục bộ (Local Services Mapping)
+---
+
+## ⚙️ Chi tiết thiết lập và chạy riêng lẻ từng Service (`apps/`)
+
+Trong môi trường Monorepo, bạn có thể chạy riêng lẻ từng dịch vụ bằng lệnh lọc `--filter` của Turborepo tại thư mục gốc, hoặc di chuyển trực tiếp (`cd`) vào thư mục của ứng dụng đó.
+
+### 1. 📊 API Server (`apps/api`)
+API Server là cổng trung chuyển chính xử lý xác thực, yêu cầu từ Frontend, kết nối dữ liệu từ Database và quản lý Cache.
+*   **Cổng phát triển (Port):** `3001`
+*   **Các biến môi trường chính cần có (`.env` ở root):**
+    *   `DATABASE_URL`: Đường dẫn kết nối database PostgreSQL/TimescaleDB.
+    *   `JWT_SECRET`: Khóa bí mật dùng để ký token xác thực người dùng.
+    *   `REDIS_HOST` & `REDIS_PORT`: Kết nối bộ nhớ đệm Redis.
+*   **Lệnh chạy từ root:**
+    ```bash
+    pnpm --filter @stock-intel/api dev
+    ```
+*   **Lệnh chạy thủ công (sau khi di chuyển vào thư mục):**
+    ```bash
+    cd apps/api
+    pnpm dev
+    ```
+
+### 2. 🧠 AI Worker (`apps/worker-ai`)
+Worker này chịu trách nhiệm lắng nghe hàng đợi BullMQ để thực hiện phân tích tài chính phức tạp, phân tích tâm lý tin tức và sinh báo cáo tự động bằng AI.
+*   **Các biến môi trường chính cần có (`.env` ở root):**
+    *   `OPENAI_API_KEY`: API Key kết nối dịch vụ OpenAI.
+    *   `LITELLM_API_BASE`: Endpoint định tuyến đa mô hình LiteLLM (mặc định: `http://localhost:4000`).
+    *   `REDIS_HOST` & `REDIS_PORT`: Lắng nghe queue BullMQ trong Redis.
+*   **Lệnh chạy từ root:**
+    ```bash
+    pnpm --filter @stock-intel/worker-ai dev
+    ```
+*   **Lệnh chạy thủ công:**
+    ```bash
+    cd apps/worker-ai
+    pnpm dev
+    ```
+
+### 3. 📥 Ingestion Worker (`apps/worker-ingestion`)
+Scheduler thực hiện cào và thu thập dữ liệu định kỳ từ Yahoo Finance và các nguồn dữ liệu thị trường khác. Nó phân phối tác vụ xuống queue để xử lý song song.
+*   **Các biến môi trường chính cần có (`.env` ở root):**
+    *   `MARKET_DATA_API_KEY`: Khóa kết nối API dữ liệu thị trường bên ngoài (nếu có).
+    *   `REDIS_HOST` & `REDIS_PORT`: Đẩy jobs vào Redis BullMQ.
+*   **Lệnh chạy từ root:**
+    ```bash
+    pnpm --filter @stock-intel/worker-ingestion dev
+    ```
+*   **Lệnh chạy thủ công:**
+    ```bash
+    cd apps/worker-ingestion
+    pnpm dev
+    ```
+
+### 4. ⚡ Processing Worker (`apps/worker-processing`)
+Xử lý dữ liệu thô nhận được từ Ingestion Worker để tính toán các chỉ báo kỹ thuật như RSI, MACD, SMA, EMA và sinh các tín hiệu giao dịch tự động lưu lại vào Database.
+*   **Các biến môi trường chính cần có (`.env` ở root):**
+    *   `DATABASE_URL`: Ghi kết quả tín hiệu tính toán vào PostgreSQL/TimescaleDB.
+    *   `REDIS_HOST` & `REDIS_PORT`: Lắng nghe task queue BullMQ trong Redis.
+*   **Lệnh chạy từ root:**
+    ```bash
+    pnpm --filter @stock-intel/worker-processing dev
+    ```
+*   **Lệnh chạy thủ công:**
+    ```bash
+    cd apps/worker-processing
+    pnpm dev
+    ```
+
+### 🌐 5. Web App Frontend (`apps/web`) - *Sắp ra mắt*
+Ứng dụng Next.js giao tiếp với API Server để hiển thị biểu đồ, danh mục theo dõi và báo cáo phân tích AI đến người dùng cuối.
+*   **Cổng phát triển (Port):** `3000`
+*   **Các biến môi trường chính cần có (`.env` ở root):**
+    *   `API_URL`: Điểm cuối kết nối với API Server (mặc định: `http://localhost:3001/api/v1`).
+*   **Lệnh chạy từ root:**
+    ```bash
+    pnpm --filter web dev
+    ```
+
+---
+
+## 📍 Các cổng kết nối cục bộ (Local Services Mapping)
 
 | Dịch vụ | Địa chỉ truy cập | Ghi chú |
 | :--- | :--- | :--- |
