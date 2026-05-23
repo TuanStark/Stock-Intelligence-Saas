@@ -7,12 +7,12 @@
   --bg-surface-hover: hsla(222, 47%, 16%, 0.8);
   --border-color: hsla(222, 47%, 20%, 0.5);
   --border-color-active: hsla(220, 90%, 56%, 0.4);
-  
+
   /* Text */
   --text-primary: hsl(210, 40%, 98%);
   --text-secondary: hsl(215, 20%, 75%);
   --text-muted: hsl(215, 16%, 55%);
-  
+
   /* Semantic Colors */
   --color-bullish: hsl(142, 72%, 45%);
   --color-bullish-bg: hsla(142, 72%, 45%, 0.1);
@@ -22,14 +22,14 @@
   --color-warning-bg: hsla(35, 90%, 52%, 0.1);
   --color-accent: hsl(220, 90%, 56%);
   --color-accent-bg: hsla(220, 90%, 56%, 0.15);
-  
+
   /* Layout & Spacing */
   --sidebar-width: 260px;
   --header-height: 70px;
   --radius-lg: 16px;
   --radius-md: 10px;
   --radius-sm: 6px;
-  
+
   /* Shadow & Blur */
   --shadow-premium: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   --glass-blur: blur(12px);
@@ -51,7 +51,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, h5, h6, .font-outfit {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-outfit {
   font-family: 'Outfit', sans-serif;
 }
 
@@ -60,13 +66,16 @@ h1, h2, h3, h4, h5, h6, .font-outfit {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: var(--bg-obsidian);
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--border-color);
   border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
@@ -104,7 +113,7 @@ h1, h2, h3, h4, h5, h6, .font-outfit {
 .app-container {
   display: flex;
   min-height: 100vh;
-  background-image: 
+  background-image:
     radial-gradient(at 0% 0%, hsla(220, 90%, 56%, 0.05) 0px, transparent 50%),
     radial-gradient(at 100% 0%, hsla(142, 72%, 45%, 0.03) 0px, transparent 50%);
 }
@@ -112,7 +121,7 @@ h1, h2, h3, h4, h5, h6, .font-outfit {
 .main-content {
   flex-grow: 1;
   margin-left: var(--sidebar-width);
-  padding: 24px;
+  padding: 50px;
   padding-top: calc(var(--header-height) + 24px);
   min-height: 100vh;
 }
@@ -156,8 +165,15 @@ h1, h2, h3, h4, h5, h6, .font-outfit {
 
 /* Micro-animations */
 @keyframes pulse-soft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .pulse {
@@ -301,7 +317,8 @@ h1, h2, h3, h4, h5, h6, .font-outfit {
   /* Sidebar converts to elegant floating drawer */
   aside.glass-panel {
     position: fixed !important;
-    left: -280px !important; /* Fully hidden offscreen */
+    left: -280px !important;
+    /* Fully hidden offscreen */
     top: 16px !important;
     bottom: 16px !important;
     width: 260px !important;
@@ -310,7 +327,8 @@ h1, h2, h3, h4, h5, h6, .font-outfit {
   }
 
   aside.glass-panel.sidebar-open {
-    left: 16px !important; /* Slide in smoothly */
+    left: 16px !important;
+    /* Slide in smoothly */
   }
 
   .sidebar-backdrop.active {
@@ -369,4 +387,3 @@ h1, h2, h3, h4, h5, h6, .font-outfit {
     font-size: 28px !important;
   }
 }
-
