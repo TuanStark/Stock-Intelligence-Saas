@@ -23,6 +23,7 @@ export const vi = {
     freeBadge: 'MIỄN PHÍ',
     proBadge: 'PRO THÀNH VIÊN',
     apiBadge: 'API PHÁT TRIỂN',
+    title1: 'Biểu Đồ Giá Nến (60 Ngày Giao Dịch)'
   },
   sidebar: {
     dashboard: 'Bảng Điều Khiển',

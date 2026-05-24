@@ -35,6 +35,7 @@ import { marketApi } from '@/lib/api/market.api';
 import { watchlistApi } from '@/lib/api/watchlist.api';
 import { alertApi } from '@/lib/api/alert.api';
 import { personalizationApi } from '@/lib/api/personalization.api';
+import { TickerDetailModal } from '@/components/TickerDetailModal';
 
 interface Signal {
   id: string;
@@ -133,6 +134,11 @@ export default function Dashboard() {
   // Manual trigger states for AI analysis animation
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
+
+  // iBoard Details Modal States
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [flashingSymbols, setFlashingSymbols] = useState<Record<string, 'up' | 'down'>>({});
 
   const handleAIScan = async () => {
     if (isAnalyzing) return;
@@ -267,6 +273,17 @@ export default function Dashboard() {
     });
 
     socket.on('global_market_tick', (tick) => {
+      // Trigger real-time flashing highlights
+      const isUp = tick.changePercent >= 0;
+      setFlashingSymbols((prev) => ({ ...prev, [tick.symbol]: isUp ? 'up' : 'down' }));
+      setTimeout(() => {
+        setFlashingSymbols((prev) => {
+          const copy = { ...prev };
+          delete copy[tick.symbol];
+          return copy;
+        });
+      }, 500);
+
       // Update Top Movers card values instantly on the dashboard
       setTopMovers((prevMovers) => {
         return prevMovers.map((mover) => {
@@ -969,50 +986,123 @@ export default function Dashboard() {
                       {t('dashboard.noMovers')}
                     </div>
                   ) : (
-                    <div className="responsive-grid-1-1">
-                      {topMovers.map((mover) => {
-                        const isUp = mover.changePercent >= 0;
-                        return (
-                          <Link key={mover.symbol} href={`/instruments/${mover.symbol}`} style={{ textDecoration: 'none' }}>
-                            <div
-                              className="glass-panel"
-                              style={{
-                                padding: '20px',
-                                borderRadius: 'var(--radius-lg)',
-                                cursor: 'pointer',
-                                transition: 'var(--transition-smooth)',
-                                border: '1px solid var(--border-color)'
-                              }}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                                <div>
-                                  <h4 className="font-outfit" style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>{mover.symbol}</h4>
-                                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{mover.name}</p>
-                                </div>
-                                <span className={`badge ${isUp ? 'badge-bullish' : 'badge-bearish'}`}>
-                                  {isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                                  {(mover.changePercent * 100).toFixed(2)}%
-                                </span>
-                              </div>
+                    <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-board)', boxShadow: 'var(--shadow-premium)' }}>
+                      <table className="iboard-table" style={{ width: '100%', minWidth: '950px' }}>
+                        <thead>
+                          <tr>
+                            <th rowSpan={2} style={{ textAlign: 'left', paddingLeft: '12px' }}>Mã CK</th>
+                            <th rowSpan={2}>Trần</th>
+                            <th rowSpan={2}>Sàn</th>
+                            <th rowSpan={2}>TC</th>
+                            <th colSpan={6} style={{ backgroundColor: 'rgba(0, 230, 118, 0.05)' }}>Bên mua</th>
+                            <th colSpan={3} style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}>Khớp lệnh</th>
+                            <th colSpan={6} style={{ backgroundColor: 'rgba(255, 23, 68, 0.05)' }}>Bên bán</th>
+                            <th rowSpan={2} style={{ paddingRight: '12px' }}>Tổng KL</th>
+                          </tr>
+                          <tr>
+                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>Giá 3</th>
+                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>KL 3</th>
+                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>Giá 2</th>
+                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>KL 2</th>
+                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>Giá 1</th>
+                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>KL 1</th>
+                            <th style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>Giá</th>
+                            <th style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>KL</th>
+                            <th style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>+/-</th>
+                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>Giá 1</th>
+                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>KL 1</th>
+                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>Giá 2</th>
+                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>KL 2</th>
+                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>Giá 3</th>
+                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>KL 3</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {topMovers.map((mover) => {
+                            const isUp = mover.changePercent >= 0;
+                            const tc = Math.round(Number(mover.price) - Number(mover.change));
+                            const tran = Math.round(tc * 1.07);
+                            const san = Math.round(tc * 0.93);
 
-                              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                                <div>
-                                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('dashboard.lastPrice')}</p>
-                                  <p className="font-outfit" style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)' }}>
-                                    {mover.price.toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>VND</span>
-                                  </p>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('dashboard.changeLabel')}</p>
-                                  <p style={{ fontWeight: 600, color: isUp ? 'var(--color-bullish)' : 'var(--color-bearish)', fontSize: '14px' }}>
-                                    {isUp ? '+' : ''}{mover.change.toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </Link>
-                        );
-                      })}
+                            // Flashing styling
+                            const flashClass = flashingSymbols[mover.symbol] === 'up' ? 'animate-flash-up' : flashingSymbols[mover.symbol] === 'down' ? 'animate-flash-down' : '';
+
+                            // Semantic price color class
+                            const currentPrice = Number(mover.price);
+                            const priceColor = currentPrice > tc ? 'text-up' : currentPrice < tc ? 'text-down' : 'text-ref';
+                            
+                            // Mock Bid/Ask deterministic depth values fluctuated by symbol and price
+                            const bid1Price = Math.round(currentPrice - 50);
+                            const bid1Vol = Math.floor(25000 + (currentPrice % 300) * 100);
+                            const bid2Price = Math.round(currentPrice - 100);
+                            const bid2Vol = Math.floor(18000 + (currentPrice % 400) * 100);
+                            const bid3Price = Math.round(currentPrice - 150);
+                            const bid3Vol = Math.floor(12000 + (currentPrice % 500) * 100);
+
+                            const ask1Price = Math.round(currentPrice + 50);
+                            const ask1Vol = Math.floor(22000 + (currentPrice % 300) * 100);
+                            const ask2Price = Math.round(currentPrice + 100);
+                            const ask2Vol = Math.floor(16000 + (currentPrice % 400) * 100);
+                            const ask3Price = Math.round(currentPrice + 150);
+                            const ask3Vol = Math.floor(10000 + (currentPrice % 500) * 100);
+
+                            const totalVolume = Math.floor(1000000 + (currentPrice % 500) * 8500);
+
+                            return (
+                              <tr 
+                                key={mover.symbol} 
+                                onClick={() => {
+                                  setSelectedSymbol(mover.symbol);
+                                  setIsModalOpen(true);
+                                }}
+                                style={{ cursor: 'pointer' }}
+                              >
+                                {/* Mã CK */}
+                                <td style={{ textAlign: 'left', fontWeight: 800, paddingLeft: '12px', color: 'var(--text-primary)' }}>
+                                  ★ {mover.symbol}
+                                </td>
+                                
+                                {/* Trần / Sàn / TC */}
+                                <td className="text-ceil" style={{ fontWeight: 700 }}>{tran.toLocaleString()}</td>
+                                <td className="text-floor" style={{ fontWeight: 700 }}>{san.toLocaleString()}</td>
+                                <td className="text-ref" style={{ fontWeight: 700 }}>{tc.toLocaleString()}</td>
+
+                                {/* Bên mua 3-2-1 */}
+                                <td className={bid3Price > tc ? 'text-up' : bid3Price < tc ? 'text-down' : 'text-ref'}>{bid3Price.toLocaleString()}</td>
+                                <td style={{ color: 'var(--text-muted)' }}>{bid3Vol.toLocaleString()}</td>
+                                <td className={bid2Price > tc ? 'text-up' : bid2Price < tc ? 'text-down' : 'text-ref'}>{bid2Price.toLocaleString()}</td>
+                                <td style={{ color: 'var(--text-muted)' }}>{bid2Vol.toLocaleString()}</td>
+                                <td className={bid1Price > tc ? 'text-up' : bid1Price < tc ? 'text-down' : 'text-ref'}>{bid1Price.toLocaleString()}</td>
+                                <td style={{ color: 'var(--text-muted)' }}>{bid1Vol.toLocaleString()}</td>
+
+                                {/* Khớp lệnh */}
+                                <td className={`${priceColor} ${flashClass}`} style={{ fontWeight: 800, backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
+                                  {currentPrice.toLocaleString()}
+                                </td>
+                                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                  {Math.floor(100 + (currentPrice % 10) * 100).toLocaleString()}
+                                </td>
+                                <td className={priceColor} style={{ fontWeight: 700 }}>
+                                  {isUp ? '+' : ''}{Number(mover.change).toLocaleString()}
+                                </td>
+
+                                {/* Bên bán 1-2-3 */}
+                                <td className={ask1Price > tc ? 'text-up' : ask1Price < tc ? 'text-down' : 'text-ref'}>{ask1Price.toLocaleString()}</td>
+                                <td style={{ color: 'var(--text-muted)' }}>{ask1Vol.toLocaleString()}</td>
+                                <td className={ask2Price > tc ? 'text-up' : ask2Price < tc ? 'text-down' : 'text-ref'}>{ask2Price.toLocaleString()}</td>
+                                <td style={{ color: 'var(--text-muted)' }}>{ask2Vol.toLocaleString()}</td>
+                                <td className={ask3Price > tc ? 'text-up' : ask3Price < tc ? 'text-down' : 'text-ref'}>{ask3Price.toLocaleString()}</td>
+                                <td style={{ color: 'var(--text-muted)' }}>{ask3Vol.toLocaleString()}</td>
+
+                                {/* Tổng KL */}
+                                <td style={{ fontWeight: 600, paddingRight: '12px', color: 'var(--text-primary)' }}>
+                                  {totalVolume.toLocaleString()}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
@@ -2026,6 +2116,18 @@ export default function Dashboard() {
 
         </div>
       </main>
+
+      {/* Ticker Detail High-Fidelity Popup Modal */}
+      {selectedSymbol && (
+        <TickerDetailModal
+          symbol={selectedSymbol}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedSymbol(null);
+          }}
+        />
+      )}
     </div>
   );
 }

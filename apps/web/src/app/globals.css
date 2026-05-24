@@ -387,3 +387,78 @@ h6,
     font-size: 28px !important;
   }
 }
+
+/* ─── SSI IBOARD PREMIUM STYLING SYSTEM ─── */
+:root {
+  --board-bg: #0b0e14;
+  --board-header: #141923;
+  --board-row-even: #0e121a;
+  --board-row-hover: #171d2a;
+  --color-ref: #ffd000;
+  --color-ceil: #f006ff;
+  --color-floor: #00cfff;
+  --color-up: #00e676;
+  --color-down: #ff1744;
+  --border-board: #1a2233;
+}
+
+@keyframes flash-bg-up {
+  0% { background-color: rgba(0, 230, 118, 0.4); }
+  100% { background-color: transparent; }
+}
+
+@keyframes flash-bg-down {
+  0% { background-color: rgba(255, 23, 68, 0.4); }
+  100% { background-color: transparent; }
+}
+
+.animate-flash-up {
+  animation: flash-bg-up 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.animate-flash-down {
+  animation: flash-bg-down 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.text-ceil { color: var(--color-ceil) !important; }
+.text-floor { color: var(--color-floor) !important; }
+.text-ref { color: var(--color-ref) !important; }
+.text-up { color: var(--color-up) !important; }
+.text-down { color: var(--color-down) !important; }
+
+/* Custom class for sleek table */
+.iboard-table {
+  background-color: var(--board-bg);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.iboard-table th {
+  background-color: var(--board-header);
+  color: hsl(215, 20%, 75%);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 4px;
+  border: 1px solid var(--border-board);
+  text-align: center;
+  user-select: none;
+}
+
+.iboard-table td {
+  padding: 4px 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--border-board);
+  border-right: 1px solid var(--border-board);
+  text-align: right;
+  font-family: 'Inter', monospace;
+  transition: background-color 0.15s ease;
+}
+
+.iboard-table tr:nth-child(even) td {
+  background-color: var(--board-row-even);
+}
+
+.iboard-table tr:hover td {
+  background-color: var(--board-row-hover) !important;
+}

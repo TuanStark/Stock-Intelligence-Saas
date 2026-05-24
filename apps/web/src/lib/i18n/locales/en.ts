@@ -1,3 +1,5 @@
+import { title } from "process";
+
 export const en = {
   common: {
     title: 'Stock Intelligence SaaS',
@@ -23,6 +25,7 @@ export const en = {
     freeBadge: 'FREE',
     proBadge: 'PRO',
     apiBadge: 'API',
+    title1: 'Candlestick Price Stream (60 Trading Days)',
   },
   sidebar: {
     dashboard: 'Dashboard',

@@ -85,7 +85,7 @@ export default function StockDetail() {
   // TradingView Chart State
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  
+
   // Real-time chart bar tracking
   const latestBarRef = useRef<{ time: number; open: number; high: number; low: number; close: number } | null>(null);
 
@@ -96,7 +96,7 @@ export default function StockDetail() {
       setAiLoading(true);
       setAiMessage('');
       const res = await marketApi.triggerAiSummary(symbol as string);
-      
+
       if (res && res.success) {
         let attempts = 0;
         const maxAttempts = 10; // Poll for 20 seconds maximum
@@ -112,7 +112,7 @@ export default function StockDetail() {
           } catch (err) {
             console.error('Error polling AI summary:', err);
           }
-          
+
           if (attempts >= maxAttempts) {
             setAiLoading(false);
             setAiMessage('Quá trình phân tích mất nhiều thời gian hơn dự kiến. Vui lòng refresh lại trang sau ít phút!');
@@ -147,9 +147,9 @@ export default function StockDetail() {
           setLatestQuote(resData.data.latestQuote);
           setSignals(resData.data.signals || []);
           setAiSummary(resData.data.aiSummary);
-          
+
           // E2E Tracking Event: Fire-and-forget activity capture
-          personalizationApi.trackActivity('VIEW_STOCK', symbol as string).catch(() => {});
+          personalizationApi.trackActivity('VIEW_STOCK', symbol as string).catch(() => { });
         } else {
           setErrorMsg(t('stockDetail.notFound'));
         }
@@ -325,7 +325,7 @@ export default function StockDetail() {
     }}>
       {/* Floating dynamic language selector */}
       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginBottom: '16px' }}>
-        <button 
+        <button
           onClick={() => setLocale('vi')}
           style={{
             padding: '4px 10px',
@@ -340,7 +340,7 @@ export default function StockDetail() {
         >
           VI
         </button>
-        <button 
+        <button
           onClick={() => setLocale('en')}
           style={{
             padding: '4px 10px',
@@ -427,7 +427,7 @@ export default function StockDetail() {
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid var(--border-color)' }}>
           <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Activity size={18} style={{ color: 'var(--color-accent)' }} />
-            Candlestick Price Stream (60 Trading Days)
+            {t('common.title1')}
           </h3>
           <div ref={chartContainerRef} style={{ width: '100%', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}></div>
         </div>
@@ -440,7 +440,7 @@ export default function StockDetail() {
               {t('stockDetail.aiThesis')}
             </h3>
             {aiSummary && !aiLoading && (
-              <button 
+              <button
                 onClick={handleTriggerAi}
                 style={{
                   background: 'rgba(255, 255, 255, 0.03)',
@@ -520,7 +520,7 @@ export default function StockDetail() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flexGrow: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className={`badge ${aiSummary.sentiment === 'BULLISH' ? 'badge-bullish' :
-                    aiSummary.sentiment === 'BEARISH' ? 'badge-bearish' : 'badge-accent'
+                  aiSummary.sentiment === 'BEARISH' ? 'badge-bearish' : 'badge-accent'
                   }`} style={{ padding: '4px 10px' }}>
                   AI Sentiment: {aiSummary.sentiment}
                 </span>
@@ -594,7 +594,7 @@ export default function StockDetail() {
                   Yêu cầu AI tổng hợp giá, tín hiệu kỹ thuật & tin tức của {instrument?.symbol || symbol} để xuất bản luận điểm đầu tư chuyên sâu.
                 </p>
               </div>
-              
+
               <button
                 onClick={handleTriggerAi}
                 style={{
