@@ -38,30 +38,34 @@ export class MarketDataBatchIngestor implements OnModuleDestroy {
 
     this.isFlushing = true;
     const currentBatch = [...this.tickBuffer];
-    this.tickBuffer = []; // Clear buffer immediately to prevent duplicate ingestion
+    this.tickBuffer = [];
 
     try {
       const startTime = Date.now();
-      
-      // Build high-performance multi-row INSERT query
+
       const values: string[] = [];
       const params: any[] = [];
-      
+
       currentBatch.forEach((tick, index) => {
         const offset = index * 4;
         values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`);
         params.push(tick.time, tick.symbol, tick.price, tick.volume);
       });
 
-      const sql = `INSERT INTO "raw_ticks" ("time", "symbol", "price", "volume") VALUES ${values.join(', ')}`;
+      const sql = `
+        INSERT INTO "raw_ticks" ("time", "symbol", "price", "volume") 
+        VALUES ${values.join(', ')} 
+        ON CONFLICT ("symbol", "time") 
+        DO UPDATE SET 
+          "volume" = "raw_ticks"."volume" + EXCLUDED."volume",
+          "price" = EXCLUDED."price"
+      `;
       await this.prisma.$executeRawUnsafe(sql, ...params);
-      
+
       const elapsed = Date.now() - startTime;
-      this.logger.log(`🚀 Bulk inserted ${currentBatch.length} market ticks successfully in ${elapsed}ms!`);
+      this.logger.log(`Bulk inserted ${currentBatch.length} market ticks successfully in ${elapsed}ms!`);
     } catch (err) {
-      this.logger.error('❌ Failed to batch insert ticks into database:', err);
-      // Fallback: put them back in the buffer to avoid data loss
-      this.tickBuffer = [...currentBatch, ...this.tickBuffer];
+      this.logger.error('Failed to batch insert ticks into database. Dropping batch to prevent OOM memory leak.', err);
     } finally {
       this.isFlushing = false;
     }

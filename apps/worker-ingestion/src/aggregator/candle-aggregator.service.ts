@@ -7,19 +7,17 @@ export class CandleAggregatorService {
   private readonly logger = new Logger(CandleAggregatorService.name);
   private isRunning = false;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  // Run 5 seconds after each minute (e.g. 12:01:05) to ensure all ticks of the previous minute are flushed
   @Cron('5 * * * * *')
   async aggregateCandles() {
     if (this.isRunning) return;
     this.isRunning = true;
 
     try {
-      this.logger.log('📊 Running 1-minute candle aggregation cycle...');
+      this.logger.log(' Running 1-minute candle aggregation cycle...');
       const startTime = Date.now();
 
-      // Idempotent aggregate query using PostgreSQL array_agg for high performance
       const query = `
         INSERT INTO "candles" ("id", "instrument_id", "timeframe", "open", "high", "low", "close", "volume", "timestamp", "source")
         SELECT 
@@ -48,14 +46,13 @@ export class CandleAggregatorService {
       `;
 
       await this.prisma.$executeRawUnsafe(query);
-      
-      const elapsed = Date.now() - startTime;
-      this.logger.log(`✅ 1m candle aggregation completed in ${elapsed}ms!`);
 
-      // Rollup 5m candles from 1m candles for enhanced chart zooming
+      const elapsed = Date.now() - startTime;
+      this.logger.log(` 1m candle aggregation completed in ${elapsed}ms!`);
+
       await this.rollupHigherTimeframes();
     } catch (err) {
-      this.logger.error('❌ Failed to aggregate candles:', err);
+      this.logger.error(' Failed to aggregate candles:', err);
     } finally {
       this.isRunning = false;
     }
@@ -63,7 +60,6 @@ export class CandleAggregatorService {
 
   private async rollupHigherTimeframes() {
     try {
-      // 5-minute aggregation from 1m candles
       const query5m = `
         INSERT INTO "candles" ("id", "instrument_id", "timeframe", "open", "high", "low", "close", "volume", "timestamp", "source")
         SELECT 
@@ -94,7 +90,7 @@ export class CandleAggregatorService {
       await this.prisma.$executeRawUnsafe(query5m);
       this.logger.debug('Rolled up 5m candles successfully');
     } catch (err) {
-      this.logger.error('❌ Failed rolling up higher timeframe candles:', err);
+      this.logger.error(' Failed rolling up higher timeframe candles:', err);
     }
   }
 }

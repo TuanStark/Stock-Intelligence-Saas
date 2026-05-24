@@ -130,7 +130,6 @@ export class IngestionService implements OnModuleInit {
   private async ingestSingleInstrument(instrumentId: string, symbol: string): Promise<void> {
     const quote = await this.provider.getQuote(symbol);
 
-    // 1. Ghi gom cụm ticks vào raw_ticks (TimescaleDB hypertable) phục vụ biểu đồ và phân tích
     this.batchIngestor.pushTick({
       time: quote.timestamp,
       symbol,
@@ -138,7 +137,6 @@ export class IngestionService implements OnModuleInit {
       volume: Math.round(quote.volume),
     });
 
-    // 2. Xuất bản tick lên Redis Pub/Sub phục vụ WebSocket Gateways thời gian thực
     await this.redis.publishTick(symbol, {
       symbol,
       price: quote.price,
@@ -148,10 +146,8 @@ export class IngestionService implements OnModuleInit {
       time: quote.timestamp,
     });
 
-    // 3. Đồng bộ giá Latest Quote vào Redis Hash Cache phục vụ truy vấn Dashboard cực nhanh
     await this.redis.setLatestQuote(symbol, quote);
 
-    // 4. Đồng bộ vào PostgreSQL table 'quotes' theo cơ chế single-row cache (duy nhất 1 hàng mỗi symbol)
     const existingQuote = await this.prisma.quote.findFirst({
       where: { symbol },
     });
@@ -196,7 +192,6 @@ export class IngestionService implements OnModuleInit {
       });
     }
 
-    // 5. Đẩy tác vụ xử lý các chỉ số kỹ thuật vào BullMQ hàng đợi bất đồng bộ
     await this.processingQueue.add(
       'process-indicators',
       {
