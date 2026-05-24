@@ -100,6 +100,19 @@ async function main() {
     );
 
     console.log(`  ✅ ${instruments.length} sample instruments seeded`);
+
+    // ─── Default Developer User ──────────────────────────────
+    const adminUser = await prisma.user.upsert({
+        where: { email: 'admin@stockintel.ai' },
+        update: {},
+        create: {
+            email: 'admin@stockintel.ai',
+            passwordHash: '$2b$10$EPf9kdCqMdg.O24jZ63yUeE9l5W5F98p1Kae1y.v5rXoX.Teeu/4u', // admin123
+            status: 'ACTIVE',
+        },
+    });
+    console.log(`  ✅ Default active user seeded: ${adminUser.email}`);
+
     console.log('🌱 Seeding complete!');
 }
 
