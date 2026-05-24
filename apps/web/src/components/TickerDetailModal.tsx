@@ -278,52 +278,24 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
   const buyPercent = totalVolume > 0 ? (buyVolumeTotal / totalVolume) * 100 : 50;
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0, 0, 0, 0.75)',
-      backdropFilter: 'blur(8px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '20px'
-    }}>
-      <div className="glass-panel" style={{
-        width: '100%',
-        maxWidth: '1200px',
-        backgroundColor: 'var(--board-bg)',
-        border: '1px solid var(--border-board)',
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-        display: 'flex',
-        flexDirection: 'column',
-        maxHeight: '90vh',
-        overflow: 'hidden'
-      }}>
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[1000] p-5">
+      <div className="glass-panel w-full max-w-[1200px] bg-board-bg border border-border-board rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         {/* HEADER */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '16px 24px',
-          borderBottom: '1px solid var(--border-board)',
-          backgroundColor: 'var(--board-header)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="flex justify-between items-center py-4 px-6 border-b border-border-board bg-board-header">
+          <div className="flex items-center gap-4">
             <div>
-              <h2 className="font-outfit" style={{ fontSize: '24px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+              <h2 className="font-outfit text-2xl font-extrabold m-0 text-text-primary">
                 {symbol.toUpperCase()}
               </h2>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>HOSE (Ho Chi Minh Stock Exchange)</p>
+              <p className="text-xs text-text-muted m-0">HOSE (Ho Chi Minh Stock Exchange)</p>
             </div>
             
             {/* Live Price stats */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginLeft: '12px' }}>
-              <span className={`font-outfit ${priceColor}`} style={{ fontSize: '26px', fontWeight: 800 }}>
+            <div className="flex items-baseline gap-2 ml-3">
+              <span className={`font-outfit ${priceColor} text-[26px] font-extrabold`}>
                 {currentPrice.toLocaleString()}
               </span>
-              <span className={`badge ${currentPrice > tc ? 'badge-bullish' : currentPrice < tc ? 'badge-bearish' : 'badge-warning'}`} style={{ fontSize: '12px' }}>
+              <span className={`badge ${currentPrice > tc ? 'badge-bullish' : currentPrice < tc ? 'badge-bearish' : 'badge-warning'} text-xs`}>
                 {currentPrice > tc ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                 {currentChange > 0 ? '+' : ''}{currentChange.toLocaleString()} ({currentChange >= 0 ? '+' : ''}{(currentPct * 100).toFixed(2)}%)
               </span>
@@ -331,34 +303,23 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
           </div>
 
           {/* Core Prices Mini Card (Trần, Sàn, TC) */}
-          <div style={{ display: 'flex', gap: '20px', fontSize: '13px' }}>
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '10px' }}>TRẦN</span>
-              <span className="text-ceil" style={{ fontWeight: 700 }}>{tran.toLocaleString()}</span>
+          <div className="flex gap-5 text-sm">
+            <div className="text-center">
+              <span className="text-text-muted block text-[10px]">TRẦN</span>
+              <span className="text-ceil font-bold">{tran.toLocaleString()}</span>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '10px' }}>SÀN</span>
-              <span className="text-floor" style={{ fontWeight: 700 }}>{san.toLocaleString()}</span>
+            <div className="text-center">
+              <span className="text-text-muted block text-[10px]">SÀN</span>
+              <span className="text-floor font-bold">{san.toLocaleString()}</span>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '10px' }}>TC</span>
-              <span className="text-ref" style={{ fontWeight: 700 }}>{tc.toLocaleString()}</span>
+            <div className="text-center">
+              <span className="text-text-muted block text-[10px]">TC</span>
+              <span className="text-ref font-bold">{tc.toLocaleString()}</span>
             </div>
 
             <button 
               onClick={onClose}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '4px',
-                marginLeft: '10px',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+              className="bg-transparent border-none text-text-muted hover:text-text-primary cursor-pointer p-1 ml-2.5 flex items-center transition-colors"
             >
               <X size={24} />
             </button>
@@ -366,29 +327,24 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
         </div>
 
         {/* 2-COLUMN VIEWPORT */}
-        <div style={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
+        <div className="flex flex-grow overflow-hidden">
           
           {/* LEFT: TECHNICAL CHART */}
-          <div style={{ flexGrow: 1, padding: '20px', borderRight: '1px solid var(--border-board)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <span className="font-outfit" style={{ fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <TrendingUp size={16} style={{ color: 'var(--color-accent)' }} />
+          <div className="flex-grow p-5 border-r border-border-board flex flex-col">
+            <div className="flex justify-between items-center mb-3">
+              <span className="font-outfit text-base font-bold flex items-center gap-2">
+                <TrendingUp size={16} className="text-accent" />
                 ĐỒ THỊ KỸ THUẬT 1D
               </span>
-              <div style={{ display: 'flex', gap: '6px' }}>
+              <div className="flex gap-1.5">
                 {['1m', '5m', '15m', '1D', '1W'].map(tf => (
                   <button 
                     key={tf}
-                    style={{
-                      padding: '4px 10px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      borderRadius: 'var(--radius-sm)',
-                      border: tf === '1D' ? '1px solid var(--color-accent)' : '1px solid var(--border-board)',
-                      background: tf === '1D' ? 'var(--color-accent-bg)' : 'transparent',
-                      color: tf === '1D' ? 'var(--color-accent)' : 'var(--text-secondary)',
-                      cursor: 'pointer'
-                    }}
+                    className={`py-1 px-2.5 text-[11px] font-bold rounded-[6px] cursor-pointer transition-colors border ${
+                      tf === '1D' 
+                        ? 'border-accent bg-accent/15 text-accent' 
+                        : 'border-border-board bg-transparent text-text-secondary hover:text-text-primary hover:border-text-muted'
+                    }`}
                   >
                     {tf}
                   </button>
@@ -396,44 +352,50 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
               </div>
             </div>
 
-            <div style={{ flexGrow: 1, minHeight: '380px', position: 'relative', background: '#0b0e14', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-board)' }}>
+            <div className="flex-grow min-h-[380px] relative bg-board-bg rounded-lg overflow-hidden border border-border-board">
               {loadingChart && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(11,14,20,0.8)', zIndex: 10 }}>
-                  <Loader2 size={32} className="pulse" style={{ color: 'var(--color-accent)' }} />
+                <div className="absolute inset-0 flex items-center justify-center bg-board-bg/80 z-10">
+                  <Loader2 size={32} className="pulse text-accent" />
                 </div>
               )}
-              <div ref={chartContainerRef} style={{ width: '100%', height: '100%' }} />
+              <div ref={chartContainerRef} className="w-full h-full" />
             </div>
           </div>
 
           {/* RIGHT: ORDER BOOK & LIVE TRANSACTIONS */}
-          <div style={{ width: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto', borderLeft: '1px solid var(--border-board)' }}>
+          <div className="w-[380px] shrink-0 flex flex-col overflow-y-auto border-l border-border-board">
             
             {/* 1. ORDER BOOK (ĐỘ SÂU THỊ TRƯỜNG) */}
-            <div style={{ padding: '16px', borderBottom: '1px solid var(--border-board)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span className="font-outfit" style={{ fontSize: '13px', fontWeight: 700 }}>ĐỘ SÂU THỊ TRƯỜNG</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Tổng KL Mua/Bán</span>
+            <div className="p-4 border-b border-border-board">
+              <div className="flex justify-between mb-2">
+                <span className="font-outfit text-xs font-bold">ĐỘ SÂU THỊ TRƯỜNG</span>
+                <span className="text-[11px] text-text-muted">Tổng KL Mua/Bán</span>
               </div>
 
               {/* Buy vs Sell Ratio Bar */}
-              <div style={{ display: 'flex', height: '18px', borderRadius: '9px', overflow: 'hidden', fontSize: '10px', fontWeight: 700, color: '#fff', textAlign: 'center', marginBottom: '14px' }}>
-                <div style={{ width: `${buyPercent}%`, backgroundColor: 'var(--color-up)', transition: 'width 0.3s ease', lineHeight: '18px', paddingLeft: '8px', textAlign: 'left' }}>
+              <div className="flex h-[18px] rounded-[9px] overflow-hidden text-[10px] font-bold text-white text-center mb-3.5">
+                <div 
+                  className="bg-up transition-[width] duration-300 ease-in-out leading-[18px] pl-2 text-left" 
+                  style={{ width: `${buyPercent}%` }}
+                >
                   {buyPercent.toFixed(0)}% Mua
                 </div>
-                <div style={{ width: `${100 - buyPercent}%`, backgroundColor: 'var(--color-down)', transition: 'width 0.3s ease', lineHeight: '18px', paddingRight: '8px', textAlign: 'right' }}>
+                <div 
+                  className="bg-down transition-[width] duration-300 ease-in-out leading-[18px] pr-2 text-right" 
+                  style={{ width: `${100 - buyPercent}%` }}
+                >
                   {(100 - buyPercent).toFixed(0)}% Bán
                 </div>
               </div>
 
               {/* Bids & Asks list */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+              <table className="w-full border-collapse text-xs">
                 <thead>
-                  <tr style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border-board)' }}>
-                    <th style={{ textAlign: 'left', paddingBottom: '4px' }}>MUA (BID)</th>
-                    <th style={{ textAlign: 'right', paddingBottom: '4px' }}>KL</th>
-                    <th style={{ textAlign: 'right', paddingBottom: '4px' }}>BÁN (ASK)</th>
-                    <th style={{ textAlign: 'right', paddingBottom: '4px' }}>KL</th>
+                  <tr className="text-text-muted border-b border-border-board">
+                    <th className="text-left pb-1 font-semibold">MUA (BID)</th>
+                    <th className="text-right pb-1 font-semibold">KL</th>
+                    <th className="text-right pb-1 font-semibold">BÁN (ASK)</th>
+                    <th className="text-right pb-1 font-semibold">KL</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -443,45 +405,31 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                     const askPriceColor = ask.price > tc ? 'text-up' : ask.price < tc ? 'text-down' : 'text-ref';
                     
                     return (
-                      <tr key={idx} style={{ height: '26px' }}>
+                      <tr key={idx} className="h-[26px]">
                         {/* BID PRICE */}
-                        <td className={bidPriceColor} style={{ fontWeight: 700, textAlign: 'left' }}>
+                        <td className={`${bidPriceColor} font-bold text-left`}>
                           {bid.price.toLocaleString()}
                         </td>
                         {/* BID VOLUME BAR */}
-                        <td style={{ position: 'relative', textAlign: 'right', paddingRight: '8px', color: 'var(--text-primary)' }}>
-                          <div style={{
-                            position: 'absolute',
-                            right: 0,
-                            top: '4px',
-                            bottom: '4px',
-                            width: `${bid.percentage}%`,
-                            backgroundColor: 'rgba(0, 230, 118, 0.1)',
-                            borderRadius: '2px',
-                            zIndex: 1,
-                            transition: 'width 0.3s ease'
-                          }} />
-                          <span style={{ position: 'relative', zIndex: 2 }}>{bid.volume.toLocaleString()}</span>
+                        <td className="relative text-right pr-2 text-text-primary">
+                          <div 
+                            className="absolute right-0 top-1 bottom-1 bg-up/10 rounded-[2px] z-10 transition-[width] duration-300 ease-in-out" 
+                            style={{ width: `${bid.percentage}%` }}
+                          />
+                          <span className="relative z-20">{bid.volume.toLocaleString()}</span>
                         </td>
                         
                         {/* ASK PRICE */}
-                        <td className={askPriceColor} style={{ fontWeight: 700, textAlign: 'right', paddingLeft: '8px' }}>
+                        <td className={`${askPriceColor} font-bold text-right pl-2`}>
                           {ask.price.toLocaleString()}
                         </td>
                         {/* ASK VOLUME BAR */}
-                        <td style={{ position: 'relative', textAlign: 'right', color: 'var(--text-primary)' }}>
-                          <div style={{
-                            position: 'absolute',
-                            right: 0,
-                            top: '4px',
-                            bottom: '4px',
-                            width: `${ask.percentage}%`,
-                            backgroundColor: 'rgba(255, 23, 68, 0.1)',
-                            borderRadius: '2px',
-                            zIndex: 1,
-                            transition: 'width 0.3s ease'
-                          }} />
-                          <span style={{ position: 'relative', zIndex: 2 }}>{ask.volume.toLocaleString()}</span>
+                        <td className="relative text-right text-text-primary">
+                          <div 
+                            className="absolute right-0 top-1 bottom-1 bg-down/10 rounded-[2px] z-10 transition-[width] duration-300 ease-in-out" 
+                            style={{ width: `${ask.percentage}%` }}
+                          />
+                          <span className="relative z-20">{ask.volume.toLocaleString()}</span>
                         </td>
                       </tr>
                     );
@@ -491,33 +439,33 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
             </div>
 
             {/* 2. LIVE TRADES STREAM */}
-            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flexGrow: 1, overflow: 'hidden' }}>
-              <span className="font-outfit" style={{ fontSize: '13px', fontWeight: 700, marginBottom: '10px' }}>KHỚP LỆNH LIÊN TỤC</span>
+            <div className="p-4 flex flex-col flex-grow overflow-hidden">
+              <span className="font-outfit text-xs font-bold mb-2.5">KHỚP LỆNH LIÊN TỤC</span>
               
-              <div style={{ flexGrow: 1, overflowY: 'auto', maxHeight: '200px', border: '1px solid var(--border-board)', borderRadius: 'var(--radius-md)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <div className="flex-grow overflow-y-auto max-h-[200px] border border-border-board rounded-lg">
+                <table className="w-full border-collapse text-[11px]">
                   <thead>
-                    <tr style={{ position: 'sticky', top: 0, backgroundColor: 'var(--board-header)', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-board)', height: '24px' }}>
-                      <th style={{ textAlign: 'left', paddingLeft: '8px' }}>Thời gian</th>
-                      <th style={{ textAlign: 'right' }}>Giá</th>
-                      <th style={{ textAlign: 'right', paddingRight: '8px' }}>Khối lượng</th>
+                    <tr className="sticky top-0 bg-board-header text-text-muted border-b border-border-board h-6">
+                      <th className="text-left pl-2 font-semibold">Thời gian</th>
+                      <th className="text-right font-semibold">Giá</th>
+                      <th className="text-right pr-2 font-semibold">Khối lượng</th>
                     </tr>
                   </thead>
                   <tbody>
                     {trades.length === 0 ? (
                       <tr>
-                        <td colSpan={3} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>
+                        <td colSpan={3} className="text-center p-4 text-text-muted">
                           Waiting for live trades…
                         </td>
                       </tr>
                     ) : (
                       trades.map((t, idx) => (
-                        <tr key={idx} style={{ height: '22px', borderBottom: '1px solid var(--border-board)' }}>
-                          <td style={{ paddingLeft: '8px', color: 'var(--text-muted)' }}>{t.time}</td>
-                          <td className={t.price > tc ? 'text-up' : t.price < tc ? 'text-down' : 'text-ref'} style={{ fontWeight: 700, textAlign: 'right' }}>
+                        <tr key={idx} className="h-[22px] border-b border-border-board hover:bg-board-row-hover/30 transition-colors">
+                          <td className="pl-2 text-text-muted">{t.time}</td>
+                          <td className={`${t.price > tc ? 'text-up' : t.price < tc ? 'text-down' : 'text-ref'} font-bold text-right`}>
                             {t.price.toLocaleString()}
                           </td>
-                          <td style={{ textAlign: 'right', paddingRight: '8px', color: t.type === 'BUY' ? 'var(--color-up)' : 'var(--color-down)', fontWeight: 600 }}>
+                          <td className={`text-right pr-2 font-semibold ${t.type === 'BUY' ? 'text-up' : 'text-down'}`}>
                             {t.type === 'BUY' ? '▲' : '▼'} {t.volume.toLocaleString()}
                           </td>
                         </tr>

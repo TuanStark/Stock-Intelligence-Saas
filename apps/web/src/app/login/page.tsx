@@ -10,8 +10,8 @@ import Link from 'next/link';
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '16px' }}>
-        <Loader2 size={40} className="pulse" style={{ color: 'var(--color-accent)' }} />
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <Loader2 size={40} className="pulse text-accent" />
       </div>
     }>
       <LoginForm />
@@ -61,162 +61,86 @@ function LoginForm() {
   };
 
   return (
-    <div className="app-container" style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      padding: '24px',
-      position: 'relative'
-    }}>
+    <div className="app-container flex items-center justify-center min-h-screen p-6 relative">
       {/* Dynamic language switch floating at top right */}
-      <div style={{ position: 'absolute', top: '24px', right: '24px', display: 'flex', gap: '8px' }}>
+      <div className="absolute top-6 right-6 flex gap-2">
         <button 
           onClick={() => setLocale('vi')} 
-          style={{
-            padding: '4px 10px',
-            borderRadius: 'var(--radius-sm)',
-            border: locale === 'vi' ? '1px solid var(--color-accent)' : '1px solid var(--border-color)',
-            background: locale === 'vi' ? 'var(--color-accent-bg)' : 'transparent',
-            color: locale === 'vi' ? 'var(--color-accent)' : 'var(--text-secondary)',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
+          className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${
+            locale === 'vi' 
+              ? 'border-accent bg-accent/15 text-accent' 
+              : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
+          }`}
         >
           VI
         </button>
         <button 
           onClick={() => setLocale('en')} 
-          style={{
-            padding: '4px 10px',
-            borderRadius: 'var(--radius-sm)',
-            border: locale === 'en' ? '1px solid var(--color-accent)' : '1px solid var(--border-color)',
-            background: locale === 'en' ? 'var(--color-accent-bg)' : 'transparent',
-            color: locale === 'en' ? 'var(--color-accent)' : 'var(--text-secondary)',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
+          className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${
+            locale === 'en' 
+              ? 'border-accent bg-accent/15 text-accent' 
+              : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
+          }`}
         >
           EN
         </button>
       </div>
 
-      <div className="glass-panel font-inter" style={{
-        width: '100%',
-        maxWidth: '420px',
-        padding: '40px',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-color)',
-        boxShadow: 'var(--shadow-premium)'
-      }}>
+      <div className="glass-panel font-inter w-full max-w-[420px] p-10 rounded-2xl border border-board-border shadow-2xl">
         {/* LOGO */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center', marginBottom: '32px' }}>
-          <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: 'var(--radius-md)',
-            background: 'linear-gradient(135deg, var(--color-accent) 0%, #3b82f6 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '20px',
-            color: '#fff'
-          }}>S</div>
-          <h2 className="font-outfit" style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.02em' }}>
-            STOCK<span style={{ color: 'var(--color-accent)' }}>INTEL</span>
+        <div className="flex items-center gap-2.5 justify-center mb-8">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-accent to-blue-500 flex items-center justify-center font-extrabold text-xl text-white">S</div>
+          <h2 className="font-outfit text-[22px] font-extrabold tracking-tight">
+            STOCK<span className="text-accent">INTEL</span>
           </h2>
         </div>
 
-        <h3 className="font-outfit" style={{ fontSize: '24px', fontWeight: 800, textAlign: 'center', marginBottom: '8px', color: 'var(--text-primary)' }}>
+        <h3 className="font-outfit text-2xl font-extrabold text-center mb-2 text-text-primary">
           {t('auth.loginTitle')}
         </h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center', lineHeight: 1.5, marginBottom: '32px' }}>
+        <p className="text-text-secondary text-xs text-center leading-relaxed mb-8">
           {t('auth.loginSub')}
         </p>
 
         {errorMsg && (
-          <div style={{
-            padding: '12px 16px',
-            background: 'var(--color-bearish-bg)',
-            border: '1px solid hsla(346, 80%, 55%, 0.15)',
-            borderRadius: 'var(--radius-md)',
-            color: 'var(--color-bearish)',
-            fontSize: '13px',
-            fontWeight: 500,
-            marginBottom: '20px'
-          }}>
+          <div className="py-3 px-4 bg-bearish/10 border border-bearish/20 rounded-lg text-bearish text-xs font-medium mb-5">
             ⚠️ {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={handleLogin} className="flex flex-col gap-5">
           {/* Email field */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div className="flex flex-col gap-2">
+            <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
               {t('auth.email')}
             </label>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-md)',
-              padding: '10px 16px',
-              transition: 'var(--transition-smooth)'
-            }}>
-              <Mail size={16} style={{ color: 'var(--text-muted)' }} />
+            <div className="flex items-center gap-3 bg-surface border border-board-border rounded-lg py-2.5 px-4 focus-within:border-accent transition-all duration-200">
+              <Mail size={16} className="text-text-muted" />
               <input 
                 type="email" 
                 required
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                  width: '100%'
-                }}
+                className="bg-transparent border-0 outline-none text-text-primary text-sm w-full"
               />
             </div>
           </div>
 
           {/* Password field */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div className="flex flex-col gap-2">
+            <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
               {t('auth.password')}
             </label>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-md)',
-              padding: '10px 16px',
-              transition: 'var(--transition-smooth)'
-            }}>
-              <Lock size={16} style={{ color: 'var(--text-muted)' }} />
+            <div className="flex items-center gap-3 bg-surface border border-board-border rounded-lg py-2.5 px-4 focus-within:border-accent transition-all duration-200">
+              <Lock size={16} className="text-text-muted" />
               <input 
                 type="password" 
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                  width: '100%'
-                }}
+                className="bg-transparent border-0 outline-none text-text-primary text-sm w-full"
               />
             </div>
           </div>
@@ -225,22 +149,11 @@ function LoginForm() {
           <button 
             type="submit" 
             disabled={loading}
-            className="btn-primary" 
-            style={{
-              padding: '14px',
-              fontSize: '14px',
-              fontWeight: 600,
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              marginTop: '8px'
-            }}
+            className="btn-primary py-3.5 text-sm font-semibold w-full flex items-center justify-center gap-2 mt-2"
           >
             {loading ? (
               <>
-                <Loader2 size={16} className="pulse" />
+                <Loader2 size={16} className="pulse text-white" />
                 {t('common.loading')}
               </>
             ) : (
@@ -252,9 +165,9 @@ function LoginForm() {
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+        <div className="text-center mt-6 text-xs text-text-secondary">
           {t('auth.noAccount')}{' '}
-          <Link href="/register" style={{ color: 'var(--color-accent)', fontWeight: 600, textDecoration: 'none' }}>
+          <Link href="/register" className="text-accent font-semibold no-underline hover:underline">
             {t('auth.signupPrompt')}
           </Link>
         </div>

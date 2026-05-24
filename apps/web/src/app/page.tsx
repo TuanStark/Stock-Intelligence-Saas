@@ -547,65 +547,35 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="app-container">
+    <div className="min-h-screen bg-bg-primary text-text-primary">
       {/* Sidebar Mobile Backdrop Overlay */}
       <div
-        className={`sidebar-backdrop ${isSidebarOpen ? 'active' : ''}`}
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-all duration-300 md:hidden ${
+          isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
         onClick={() => setIsSidebarOpen(false)}
       />
 
       {/* ─── SIDEBAR NAVIGATION ─── */}
-      <aside className={`glass-panel ${isSidebarOpen ? 'sidebar-open' : ''}`} style={{
-        position: 'fixed',
-        left: '24px',
-        top: '24px',
-        bottom: '24px',
-        width: 'var(--sidebar-width)',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '24px',
-        zIndex: 50,
-        borderRadius: 'var(--radius-lg)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px' }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: 'var(--radius-md)',
-            background: 'linear-gradient(135deg, var(--color-accent) 0%, #3b82f6 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '18px',
-            color: '#fff'
-          }}>S</div>
-          <h2 className="font-outfit" style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em' }}>
-            STOCK<span style={{ color: 'var(--color-accent)' }}>INTEL</span>
+      <aside className={`glass-panel fixed top-6 bottom-6 w-[260px] flex flex-col p-6 z-50 rounded-2xl transition-all duration-300 -translate-x-[320px] md:translate-x-0 left-6 ${
+        isSidebarOpen ? 'translate-x-0' : ''
+      }`}>
+        <div className="flex items-center gap-2.5 mb-10">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-blue-500 flex items-center justify-center font-extrabold text-lg text-white">S</div>
+          <h2 className="font-outfit text-lg font-extrabold tracking-tight">
+            STOCK<span className="text-accent">INTEL</span>
           </h2>
         </div>
 
         {/* Tab Buttons */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexGrow: 1 }}>
+        <nav className="flex flex-col gap-2 flex-grow">
           <button
             onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              background: activeTab === 'dashboard' ? 'var(--color-accent-bg)' : 'transparent',
-              color: activeTab === 'dashboard' ? 'var(--color-accent)' : 'var(--text-secondary)',
-              fontFamily: 'Outfit, sans-serif',
-              fontWeight: 600,
-              fontSize: '14px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'var(--transition-smooth)'
-            }}
+            className={`flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+              activeTab === 'dashboard' 
+                ? 'bg-accent/15 text-accent' 
+                : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
+            }`}
           >
             <TrendingUp size={18} />
             {t('sidebar.dashboard')}
@@ -613,23 +583,11 @@ export default function Dashboard() {
 
           <button
             onClick={() => { setActiveTab('watchlist'); setIsSidebarOpen(false); }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              background: activeTab === 'watchlist' ? 'var(--color-accent-bg)' : 'transparent',
-              color: activeTab === 'watchlist' ? 'var(--color-accent)' : 'var(--text-secondary)',
-              fontFamily: 'Outfit, sans-serif',
-              fontWeight: 600,
-              fontSize: '14px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'var(--transition-smooth)'
-            }}
+            className={`flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+              activeTab === 'watchlist' 
+                ? 'bg-accent/15 text-accent' 
+                : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
+            }`}
           >
             <Bookmark size={18} />
             {t('sidebar.watchlist')}
@@ -637,23 +595,11 @@ export default function Dashboard() {
 
           <button
             onClick={() => { setActiveTab('signals'); setIsSidebarOpen(false); }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              background: activeTab === 'signals' ? 'var(--color-accent-bg)' : 'transparent',
-              color: activeTab === 'signals' ? 'var(--color-accent)' : 'var(--text-secondary)',
-              fontFamily: 'Outfit, sans-serif',
-              fontWeight: 600,
-              fontSize: '14px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'var(--transition-smooth)'
-            }}
+            className={`flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+              activeTab === 'signals' 
+                ? 'bg-accent/15 text-accent' 
+                : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
+            }`}
           >
             <Sparkles size={18} />
             {t('sidebar.signals')}
@@ -661,23 +607,11 @@ export default function Dashboard() {
 
           <button
             onClick={() => { setActiveTab('alerts'); setIsSidebarOpen(false); }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              background: activeTab === 'alerts' ? 'var(--color-accent-bg)' : 'transparent',
-              color: activeTab === 'alerts' ? 'var(--color-accent)' : 'var(--text-secondary)',
-              fontFamily: 'Outfit, sans-serif',
-              fontWeight: 600,
-              fontSize: '14px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'var(--transition-smooth)'
-            }}
+            className={`flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+              activeTab === 'alerts' 
+                ? 'bg-accent/15 text-accent' 
+                : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
+            }`}
           >
             <Bell size={18} />
             {t('sidebar.alerts')}
@@ -685,49 +619,19 @@ export default function Dashboard() {
 
           <button
             onClick={() => { setActiveTab('personalization'); setIsSidebarOpen(false); }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              background: activeTab === 'personalization' ? 'var(--color-accent-bg)' : 'transparent',
-              color: activeTab === 'personalization' ? 'var(--color-accent)' : 'var(--text-secondary)',
-              fontFamily: 'Outfit, sans-serif',
-              fontWeight: 600,
-              fontSize: '14px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'var(--transition-smooth)'
-            }}
+            className={`flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+              activeTab === 'personalization' 
+                ? 'bg-accent/15 text-accent' 
+                : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
+            }`}
           >
-            <Sparkles size={18} style={{ color: 'var(--color-warning)' }} />
+            <Sparkles size={18} className="text-warning" />
             Phân tích AI & Gợi ý
           </button>
 
-          <Link href="/pricing" style={{ textDecoration: 'none' }}>
+          <Link href="/pricing" className="no-underline">
             <button
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                width: '100%',
-                padding: '12px 16px',
-                border: 'none',
-                borderRadius: 'var(--radius-md)',
-                background: 'transparent',
-                color: 'var(--text-secondary)',
-                fontFamily: 'Outfit, sans-serif',
-                fontWeight: 600,
-                fontSize: '14px',
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'var(--transition-smooth)'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+              className="flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 bg-transparent text-text-secondary hover:bg-surface-hover hover:text-accent w-full"
             >
               <Building2 size={18} />
               {t('sidebar.pricing')}
@@ -736,68 +640,43 @@ export default function Dashboard() {
         </nav>
 
         {/* Dynamic Locale Selector */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', justifyContent: 'center' }}>
+        <div className="flex gap-2 mb-4 justify-center">
           <button
             onClick={() => setLocale('vi')}
-            style={{
-              padding: '4px 10px',
-              borderRadius: 'var(--radius-sm)',
-              border: locale === 'vi' ? '1px solid var(--color-accent)' : '1px solid var(--border-color)',
-              background: locale === 'vi' ? 'var(--color-accent-bg)' : 'transparent',
-              color: locale === 'vi' ? 'var(--color-accent)' : 'var(--text-secondary)',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
+            className={`py-1 px-2.5 rounded-[6px] text-[11px] font-bold cursor-pointer transition-colors border ${
+              locale === 'vi' 
+                ? 'border-accent bg-accent/15 text-accent' 
+                : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
+            }`}
           >
             VI
           </button>
           <button
             onClick={() => setLocale('en')}
-            style={{
-              padding: '4px 10px',
-              borderRadius: 'var(--radius-sm)',
-              border: locale === 'en' ? '1px solid var(--color-accent)' : '1px solid var(--border-color)',
-              background: locale === 'en' ? 'var(--color-accent-bg)' : 'transparent',
-              color: locale === 'en' ? 'var(--color-accent)' : 'var(--text-secondary)',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
+            className={`py-1 px-2.5 rounded-[6px] text-[11px] font-bold cursor-pointer transition-colors border ${
+              locale === 'en' 
+                ? 'border-accent bg-accent/15 text-accent' 
+                : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
+            }`}
           >
             EN
           </button>
         </div>
 
         {/* User profile footer */}
-        <div className="glass-panel" style={{
-          padding: '16px',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border-color)',
-          fontSize: '13px'
-        }}>
+        <div className="glass-panel p-4 rounded-lg border border-board-border text-xs">
           {user ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+            <div className="flex flex-col gap-2">
+              <div className="overflow-hidden text-ellipsis whitespace-nowrap font-semibold">
                 {user.email}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="badge badge-bullish" style={{ fontSize: '10px', padding: '2px 8px' }}>
+              <div className="flex justify-between items-center">
+                <span className="badge badge-bullish text-[10px] py-0.5 px-2">
                   {userTier}
                 </span>
                 <button
                   onClick={() => signOut()}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--color-bearish)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '12px',
-                    fontWeight: 600
-                  }}
+                  className="bg-transparent border-none text-bearish cursor-pointer flex items-center gap-1 text-xs font-semibold hover:text-red-400 transition-colors"
                 >
                   <LogOut size={14} />
                   {t('common.logout')}
@@ -805,10 +684,10 @@ export default function Dashboard() {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
-              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{t('sidebar.guestUser')}</span>
-              <Link href="/login" style={{ textDecoration: 'none' }}>
-                <button className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px', width: '100%' }}>
+            <div className="flex flex-col gap-2 text-center">
+              <span className="text-text-secondary font-semibold">{t('sidebar.guestUser')}</span>
+              <Link href="/login" className="no-underline">
+                <button className="btn-primary py-1.5 px-3 text-xs w-full justify-center">
                   {t('common.login')}
                 </button>
               </Link>
@@ -818,95 +697,51 @@ export default function Dashboard() {
       </aside>
 
       {/* ─── MAIN CONTENT CONTAINER ─── */}
-      <main className="main-content">
+      <main className="pl-6 md:pl-[300px] pr-6 py-6 min-h-screen flex flex-col w-full">
 
         {/* ─── TOP HEADER BAR with SEARCH ─── */}
-        <header className="app-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1 }}>
+        <header className="flex items-center justify-between gap-4 pb-6 border-b border-board-border">
+          <div className="flex items-center gap-3 flex-grow">
             {/* Hamburger Button for mobile */}
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="btn-secondary toggle-sidebar-btn"
-              style={{ padding: '10px' }}
+              className="btn-secondary p-2.5 md:hidden"
             >
               {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
 
             {/* Autocomplete Input Container */}
-            <div className="header-search-container" ref={autocompleteRef}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-md)',
-                padding: '8px 16px',
-                transition: 'var(--transition-smooth)',
-              }} className="glass-panel">
-                <Search size={18} style={{ color: 'var(--text-muted)' }} />
+            <div className="relative w-full max-w-md" ref={autocompleteRef}>
+              <div className="glass-panel flex items-center gap-2.5 bg-surface border border-board-border rounded-lg py-2 px-4 focus-within:border-accent transition-all duration-200">
+                <Search size={18} className="text-text-muted" />
                 <input
                   type="text"
                   placeholder={t('common.searchPlaceholder')}
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    outline: 'none',
-                    color: 'var(--text-primary)',
-                    fontSize: '14px',
-                    width: '100%',
-                  }}
+                  className="bg-transparent border-none outline-none text-text-primary text-sm w-full"
                 />
-                {loadingSearch && <Loader2 size={16} className="pulse" style={{ color: 'var(--text-muted)' }} />}
+                {loadingSearch && <Loader2 size={16} className="animate-spin text-text-muted" />}
               </div>
 
               {/* Search Autocomplete Panel */}
               {showAutocomplete && (
-                <div className="glass-panel" style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 8px)',
-                  left: 0,
-                  right: 0,
-                  maxHeight: '300px',
-                  overflowY: 'auto',
-                  padding: '8px',
-                  borderRadius: 'var(--radius-md)',
-                  zIndex: 100,
-                  border: '1px solid var(--border-color-active)',
-                  boxShadow: 'var(--shadow-premium)',
-                }}>
+                <div className="glass-panel absolute top-full left-0 right-0 mt-2 max-h-[300px] overflow-y-auto p-2 rounded-lg z-50 border border-board-border-active shadow-2xl bg-surface/90 backdrop-blur-md">
                   {searchResults.length === 0 ? (
-                    <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                    <div className="p-4 text-center text-text-muted text-sm">
                       {loadingSearch ? 'Searching database...' : 'No symbols found'}
                     </div>
                   ) : (
                     searchResults.map((item) => (
-                      <Link key={item.id} href={`/instruments/${item.symbol}`} style={{ textDecoration: 'none' }} onClick={() => setShowAutocomplete(false)}>
+                      <Link key={item.id} href={`/instruments/${item.symbol}`} className="no-underline" onClick={() => setShowAutocomplete(false)}>
                         <button
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            width: '100%',
-                            padding: '10px 16px',
-                            background: 'transparent',
-                            border: 'none',
-                            borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-primary)',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            transition: 'var(--transition-smooth)',
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          className="flex items-center justify-between w-full py-2.5 px-4 rounded-md text-text-primary hover:bg-surface-hover transition-colors text-left"
                         >
                           <div>
-                            <span style={{ fontWeight: 800, color: 'var(--color-accent)', marginRight: '10px' }}>{item.symbol}</span>
-                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{item.name}</span>
+                            <span className="font-extrabold text-accent mr-2.5">{item.symbol}</span>
+                            <span className="text-xs text-text-secondary">{item.name}</span>
                           </div>
-                          <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
+                          <ChevronRight size={16} className="text-text-muted" />
                         </button>
                       </Link>
                     ))
@@ -916,19 +751,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="header-ticker-hide" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '6px 12px',
-              background: 'hsla(142, 72%, 45%, 0.12)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid hsla(142, 72%, 45%, 0.2)',
-              color: 'var(--color-bullish)',
-              fontSize: '13px',
-              fontWeight: 600
-            }}>
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="flex items-center gap-2 py-1.5 px-3 bg-bullish/10 border border-bullish/25 rounded text-bullish text-xs font-semibold">
               <TrendingUp size={16} />
               VN-INDEX: 1,250.32 (+1.25%)
             </div>
@@ -936,85 +760,76 @@ export default function Dashboard() {
         </header>
 
         {/* ─── DYNAMIC SUBVIEW ─── */}
-        <div style={{ marginTop: '24px' }}>
+        <div className="mt-6 flex-1 flex flex-col">
 
           {/* TAB 1: DASHBOARD OVERVIEW */}
           {activeTab === 'dashboard' && (
             <div>
               {/* Error Banner */}
               {errorMsg && (
-                <div style={{
-                  padding: '16px 20px',
-                  background: 'var(--color-bearish-bg)',
-                  border: '1px solid hsla(346, 80%, 55%, 0.2)',
-                  borderRadius: 'var(--radius-md)',
-                  color: 'var(--color-bearish)',
-                  fontSize: '14px',
-                  marginBottom: '24px',
-                  fontWeight: 500
-                }}>
+                <div className="p-4 px-5 bg-bearish/10 border border-bearish/25 rounded-lg text-bearish text-sm mb-6 font-medium">
                   ⚠️ {errorMsg}
                 </div>
               )}
 
               {/* Dashboard Intro */}
-              <div style={{ marginBottom: '32px' }}>
-                <h1 className="font-outfit title-gradient" style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '8px' }}>
+              <div className="mb-8">
+                <h1 className="font-outfit text-3xl font-extrabold tracking-tight mb-2 title-gradient">
                   {t('dashboard.title')}
                 </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
+                <p className="text-text-secondary text-sm">
                   {t('dashboard.description')}
                 </p>
               </div>
 
               {/* Grid Content */}
-              <div className="responsive-grid-2-1">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
                 {/* LEFT COLUMN: Top Movers (Quotes) */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <h3 className="font-outfit" style={{ fontSize: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <TrendingUp size={20} style={{ color: 'var(--color-accent)' }} />
+                <div className="xl:col-span-2 flex flex-col gap-5">
+                  <h3 className="font-outfit text-lg font-bold flex items-center gap-2">
+                    <TrendingUp size={20} className="text-accent" />
                     {t('dashboard.moversTitle')}
                   </h3>
 
                   {loadingData ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
-                      <Loader2 size={32} className="pulse" style={{ color: 'var(--color-accent)' }} />
+                    <div className="flex justify-center py-16">
+                      <Loader2 size={32} className="animate-spin text-accent" />
                     </div>
                   ) : topMovers.length === 0 ? (
-                    <div className="glass-panel" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <div className="glass-panel py-16 text-center text-text-muted">
                       {t('dashboard.noMovers')}
                     </div>
                   ) : (
-                    <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-board)', boxShadow: 'var(--shadow-premium)' }}>
-                      <table className="iboard-table" style={{ width: '100%', minWidth: '950px' }}>
+                    <div className="overflow-x-auto rounded-xl border border-border-board shadow-2xl bg-board-bg">
+                      <table className="iboard-table w-full min-w-[950px]">
                         <thead>
                           <tr>
-                            <th rowSpan={2} style={{ textAlign: 'left', paddingLeft: '12px' }}>Mã CK</th>
+                            <th rowSpan={2} className="text-left pl-3">Mã CK</th>
                             <th rowSpan={2}>Trần</th>
                             <th rowSpan={2}>Sàn</th>
                             <th rowSpan={2}>TC</th>
-                            <th colSpan={6} style={{ backgroundColor: 'rgba(0, 230, 118, 0.05)' }}>Bên mua</th>
-                            <th colSpan={3} style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}>Khớp lệnh</th>
-                            <th colSpan={6} style={{ backgroundColor: 'rgba(255, 23, 68, 0.05)' }}>Bên bán</th>
-                            <th rowSpan={2} style={{ paddingRight: '12px' }}>Tổng KL</th>
+                            <th colSpan={6} className="bg-bullish/5">Bên mua</th>
+                            <th colSpan={3} className="bg-white/5">Khớp lệnh</th>
+                            <th colSpan={6} className="bg-bearish/5">Bên bán</th>
+                            <th rowSpan={2} className="pr-3">Tổng KL</th>
                           </tr>
                           <tr>
-                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>Giá 3</th>
-                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>KL 3</th>
-                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>Giá 2</th>
-                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>KL 2</th>
-                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>Giá 1</th>
-                            <th style={{ backgroundColor: 'rgba(0, 230, 118, 0.03)' }}>KL 1</th>
-                            <th style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>Giá</th>
-                            <th style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>KL</th>
-                            <th style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>+/-</th>
-                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>Giá 1</th>
-                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>KL 1</th>
-                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>Giá 2</th>
-                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>KL 2</th>
-                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>Giá 3</th>
-                            <th style={{ backgroundColor: 'rgba(255, 23, 68, 0.03)' }}>KL 3</th>
+                            <th className="bg-bullish/3">Giá 3</th>
+                            <th className="bg-bullish/3">KL 3</th>
+                            <th className="bg-bullish/3">Giá 2</th>
+                            <th className="bg-bullish/3">KL 2</th>
+                            <th className="bg-bullish/3">Giá 1</th>
+                            <th className="bg-bullish/3">KL 1</th>
+                            <th className="bg-white/2">Giá</th>
+                            <th className="bg-white/2">KL</th>
+                            <th className="bg-white/2">+/-</th>
+                            <th className="bg-bearish/3">Giá 1</th>
+                            <th className="bg-bearish/3">KL 1</th>
+                            <th className="bg-bearish/3">Giá 2</th>
+                            <th className="bg-bearish/3">KL 2</th>
+                            <th className="bg-bearish/3">Giá 3</th>
+                            <th className="bg-bearish/3">KL 3</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1024,14 +839,11 @@ export default function Dashboard() {
                             const tran = Math.round(tc * 1.07);
                             const san = Math.round(tc * 0.93);
 
-                            // Flashing styling
                             const flashClass = flashingSymbols[mover.symbol] === 'up' ? 'animate-flash-up' : flashingSymbols[mover.symbol] === 'down' ? 'animate-flash-down' : '';
 
-                            // Semantic price color class
                             const currentPrice = Number(mover.price);
                             const priceColor = currentPrice > tc ? 'text-up' : currentPrice < tc ? 'text-down' : 'text-ref';
                             
-                            // Mock Bid/Ask deterministic depth values fluctuated by symbol and price
                             const bid1Price = Math.round(currentPrice - 50);
                             const bid1Vol = Math.floor(25000 + (currentPrice % 300) * 100);
                             const bid2Price = Math.round(currentPrice - 100);
@@ -1055,47 +867,41 @@ export default function Dashboard() {
                                   setSelectedSymbol(mover.symbol);
                                   setIsModalOpen(true);
                                 }}
-                                style={{ cursor: 'pointer' }}
+                                className="cursor-pointer"
                               >
-                                {/* Mã CK */}
-                                <td style={{ textAlign: 'left', fontWeight: 800, paddingLeft: '12px', color: 'var(--text-primary)' }}>
+                                <td className="text-left font-extrabold pl-3 text-text-primary">
                                   ★ {mover.symbol}
                                 </td>
                                 
-                                {/* Trần / Sàn / TC */}
-                                <td className="text-ceil" style={{ fontWeight: 700 }}>{tran.toLocaleString()}</td>
-                                <td className="text-floor" style={{ fontWeight: 700 }}>{san.toLocaleString()}</td>
-                                <td className="text-ref" style={{ fontWeight: 700 }}>{tc.toLocaleString()}</td>
+                                <td className="text-ceil font-bold">{tran.toLocaleString()}</td>
+                                <td className="text-floor font-bold">{san.toLocaleString()}</td>
+                                <td className="text-ref font-bold">{tc.toLocaleString()}</td>
 
-                                {/* Bên mua 3-2-1 */}
                                 <td className={bid3Price > tc ? 'text-up' : bid3Price < tc ? 'text-down' : 'text-ref'}>{bid3Price.toLocaleString()}</td>
-                                <td style={{ color: 'var(--text-muted)' }}>{bid3Vol.toLocaleString()}</td>
+                                <td className="text-text-muted">{bid3Vol.toLocaleString()}</td>
                                 <td className={bid2Price > tc ? 'text-up' : bid2Price < tc ? 'text-down' : 'text-ref'}>{bid2Price.toLocaleString()}</td>
-                                <td style={{ color: 'var(--text-muted)' }}>{bid2Vol.toLocaleString()}</td>
+                                <td className="text-text-muted">{bid2Vol.toLocaleString()}</td>
                                 <td className={bid1Price > tc ? 'text-up' : bid1Price < tc ? 'text-down' : 'text-ref'}>{bid1Price.toLocaleString()}</td>
-                                <td style={{ color: 'var(--text-muted)' }}>{bid1Vol.toLocaleString()}</td>
+                                <td className="text-text-muted">{bid1Vol.toLocaleString()}</td>
 
-                                {/* Khớp lệnh */}
-                                <td className={`${priceColor} ${flashClass}`} style={{ fontWeight: 800, backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
+                                <td className={`${priceColor} ${flashClass} font-extrabold bg-white/2`}>
                                   {currentPrice.toLocaleString()}
                                 </td>
-                                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                <td className="font-semibold text-text-primary">
                                   {Math.floor(100 + (currentPrice % 10) * 100).toLocaleString()}
                                 </td>
-                                <td className={priceColor} style={{ fontWeight: 700 }}>
+                                <td className={`${priceColor} font-bold`}>
                                   {isUp ? '+' : ''}{Number(mover.change).toLocaleString()}
                                 </td>
 
-                                {/* Bên bán 1-2-3 */}
                                 <td className={ask1Price > tc ? 'text-up' : ask1Price < tc ? 'text-down' : 'text-ref'}>{ask1Price.toLocaleString()}</td>
-                                <td style={{ color: 'var(--text-muted)' }}>{ask1Vol.toLocaleString()}</td>
+                                <td className="text-text-muted">{ask1Vol.toLocaleString()}</td>
                                 <td className={ask2Price > tc ? 'text-up' : ask2Price < tc ? 'text-down' : 'text-ref'}>{ask2Price.toLocaleString()}</td>
-                                <td style={{ color: 'var(--text-muted)' }}>{ask2Vol.toLocaleString()}</td>
+                                <td className="text-text-muted">{ask2Vol.toLocaleString()}</td>
                                 <td className={ask3Price > tc ? 'text-up' : ask3Price < tc ? 'text-down' : 'text-ref'}>{ask3Price.toLocaleString()}</td>
-                                <td style={{ color: 'var(--text-muted)' }}>{ask3Vol.toLocaleString()}</td>
+                                <td className="text-text-muted">{ask3Vol.toLocaleString()}</td>
 
-                                {/* Tổng KL */}
-                                <td style={{ fontWeight: 600, paddingRight: '12px', color: 'var(--text-primary)' }}>
+                                <td className="font-semibold pr-3 text-text-primary">
                                   {totalVolume.toLocaleString()}
                                 </td>
                               </tr>
@@ -1108,45 +914,37 @@ export default function Dashboard() {
                 </div>
 
                 {/* RIGHT COLUMN: Emerging Signals */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <h3 className="font-outfit" style={{ fontSize: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Sparkles size={20} style={{ color: 'var(--color-warning)' }} />
+                <div className="xl:col-span-1 flex flex-col gap-5">
+                  <h3 className="font-outfit text-lg font-bold flex items-center gap-2">
+                    <Sparkles size={20} className="text-warning" />
                     {t('dashboard.signalsTitle')}
                   </h3>
 
                   {loadingData ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
-                      <Loader2 size={24} className="pulse" style={{ color: 'var(--color-warning)' }} />
+                    <div className="flex justify-center py-16">
+                      <Loader2 size={24} className="animate-spin text-warning" />
                     </div>
                   ) : recentSignals.length === 0 ? (
-                    <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                    <div className="glass-panel py-10 text-center text-text-muted text-xs">
                       {t('dashboard.noSignals')}
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="flex flex-col gap-3">
                       {recentSignals.map((signal) => {
                         const isBuy = signal.type === 'BUY';
                         return (
-                          <Link key={signal.id} href={`/instruments/${signal.symbol}`} style={{ textDecoration: 'none' }}>
-                            <div
-                              className="glass-panel"
-                              style={{
-                                padding: '16px',
-                                borderRadius: 'var(--radius-md)',
-                                border: '1px solid var(--border-color)',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <span style={{ fontWeight: 800, fontSize: '15px' }} className="font-outfit">{signal.symbol}</span>
-                                <span className={`badge ${isBuy ? 'badge-bullish' : 'badge-bearish'}`} style={{ padding: '2px 8px', fontSize: '10px' }}>
+                          <Link key={signal.id} href={`/instruments/${signal.symbol}`} className="no-underline">
+                            <div className="glass-panel p-4 rounded-xl border border-board-border cursor-pointer hover:border-accent/40 hover:bg-surface-hover/80 transition-all duration-200">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="font-extrabold text-sm font-outfit text-text-primary">{signal.symbol}</span>
+                                <span className={`badge ${isBuy ? 'badge-bullish' : 'badge-bearish'} text-[10px]`}>
                                   {signal.type}
                                 </span>
                               </div>
-                              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                              <p className="text-xs text-text-secondary mb-2 leading-relaxed line-clamp-2">
                                 {signal.reason}
                               </p>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
+                              <div className="flex justify-between text-[10px] text-text-muted">
                                 <span>{t('dashboard.via')} {signal.indicator}</span>
                                 <span>{new Date(signal.detectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                               </div>
@@ -1165,105 +963,81 @@ export default function Dashboard() {
           {/* TAB 2: WATCHLIST TAB */}
           {activeTab === 'watchlist' && (
             <div>
-              <div style={{ marginBottom: '32px' }}>
-                <h1 className="font-outfit title-gradient" style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '8px' }}>
+              <div className="mb-8">
+                <h1 className="font-outfit text-3xl font-extrabold tracking-tight mb-2 title-gradient">
                   {t('watchlist.title')}
                 </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
+                <p className="text-text-secondary text-sm">
                   {t('watchlist.description')}
                 </p>
               </div>
 
               {/* Add Symbol Bar */}
-              <form onSubmit={handleAddWatchlist} style={{ display: 'flex', gap: '12px', maxWidth: '480px', marginBottom: '32px' }}>
+              <form onSubmit={handleAddWatchlist} className="flex gap-3 max-w-lg mb-8">
                 <input
                   type="text"
                   placeholder={t('watchlist.symbolPlaceholder')}
                   value={watchlistInput}
                   onChange={(e) => setWatchlistInput(e.target.value)}
-                  style={{
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '10px 16px',
-                    color: 'var(--text-primary)',
-                    fontSize: '14px',
-                    outline: 'none',
-                    flexGrow: 1
-                  }}
+                  className="bg-surface border border-board-border rounded-lg py-2.5 px-4 text-text-primary text-sm outline-none flex-grow focus:border-accent transition-colors"
                 />
-                <button type="submit" className="btn-primary" style={{ padding: '10px 20px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button type="submit" className="btn-primary py-2.5 px-5 text-sm flex items-center gap-1.5 shrink-0">
                   <Plus size={16} />
                   {t('watchlist.addBtn')}
                 </button>
               </form>
 
               {loadingWatchlist ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
-                  <Loader2 size={32} className="pulse" style={{ color: 'var(--color-accent)' }} />
+                <div className="flex justify-center py-16">
+                  <Loader2 size={32} className="animate-spin text-accent" />
                 </div>
               ) : watchlistItems.length === 0 ? (
-                <div className="glass-panel" style={{ padding: '60px', textAlign: 'center', borderRadius: 'var(--radius-lg)' }}>
-                  <Bookmark size={40} style={{ color: 'var(--color-accent)', margin: '0 auto 16px auto' }} />
-                  <h3 className="font-outfit" style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>{t('watchlist.emptyTitle')}</h3>
-                  <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto 16px auto', fontSize: '14px', lineHeight: 1.5 }}>
+                <div className="glass-panel py-16 text-center rounded-2xl border border-board-border max-w-xl mx-auto">
+                  <Bookmark size={40} className="text-accent mx-auto mb-4" />
+                  <h3 className="font-outfit text-lg font-extrabold text-text-primary mb-2">{t('watchlist.emptyTitle')}</h3>
+                  <p className="text-text-secondary max-w-md mx-auto text-sm leading-relaxed px-4">
                     {t('watchlist.emptyDesc')}
                   </p>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                   {watchlistItems.map((item) => {
                     const isUp = item.instrument.changePercent >= 0;
                     return (
                       <div
                         key={item.id}
-                        className="glass-panel"
-                        style={{ padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', position: 'relative' }}
+                        className="glass-panel p-5 rounded-2xl border border-board-border relative group hover:border-accent/40"
                       >
                         <button
                           onClick={() => handleRemoveWatchlist(item.instrument.symbol)}
-                          style={{
-                            position: 'absolute',
-                            top: '16px',
-                            right: '16px',
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'var(--color-bearish)',
-                            cursor: 'pointer',
-                            padding: '4px',
-                            borderRadius: 'var(--radius-sm)'
-                          }}
+                          className="absolute top-4 right-4 bg-transparent border-none text-bearish hover:text-red-400 cursor-pointer p-1 rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                         >
                           <Trash2 size={16} />
                         </button>
 
-                        <Link href={`/instruments/${item.instrument.symbol}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                            <span className="font-outfit" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>{item.instrument.symbol}</span>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{item.instrument.name}</span>
+                        <Link href={`/instruments/${item.instrument.symbol}`} className="no-underline text-inherit">
+                          <div className="flex items-center gap-2 mb-3.5 pr-6">
+                            <span className="font-outfit text-lg font-extrabold text-text-primary">{item.instrument.symbol}</span>
+                            <span className="text-xs text-text-muted truncate max-w-[120px]">{item.instrument.name}</span>
                           </div>
 
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                          <div className="flex justify-between items-end">
                             <div>
-                              <p className="font-outfit" style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                                {item.instrument.price.toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>VND</span>
+                              <p className="font-outfit text-xl font-extrabold text-text-primary m-0">
+                                {item.instrument.price.toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} <span className="text-[10px] text-text-muted">VND</span>
                               </p>
                             </div>
-                            <span className={`badge ${isUp ? 'badge-bullish' : 'badge-bearish'}`} style={{ padding: '2px 8px' }}>
+                            <span className={`badge ${isUp ? 'badge-bullish' : 'badge-bearish'}`}>
                               {isUp ? '+' : ''}{(item.instrument.changePercent * 100).toFixed(2)}%
                             </span>
                           </div>
 
                           {item.instrument.latestSignal && (
-                            <div style={{
-                              marginTop: '16px',
-                              padding: '8px 12px',
-                              background: item.instrument.latestSignal.type === 'BUY' ? 'var(--color-bullish-bg)' : 'var(--color-bearish-bg)',
-                              borderRadius: 'var(--radius-sm)',
-                              fontSize: '11px',
-                              color: item.instrument.latestSignal.type === 'BUY' ? 'var(--color-bullish)' : 'var(--color-bearish)',
-                              fontWeight: 600
-                            }}>
+                            <div className={`mt-4 py-2 px-3 rounded-lg text-xs font-semibold ${
+                              item.instrument.latestSignal.type === 'BUY' 
+                                ? 'bg-bullish/10 text-bullish border border-bullish/20' 
+                                : 'bg-bearish/10 text-bearish border border-bearish/20'
+                            }`}>
                               {t('sidebar.signals')}: {item.instrument.latestSignal.type} (Score: {Number(item.instrument.latestSignal.score || 0).toFixed(1)})
                             </div>
                           )}
@@ -1279,32 +1053,26 @@ export default function Dashboard() {
           {/* TAB 3: AI SIGNALS TAB */}
           {activeTab === 'signals' && (
             <div>
-              <div style={{ marginBottom: '32px' }}>
-                <h1 className="font-outfit title-gradient" style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '8px' }}>
+              <div className="mb-8">
+                <h1 className="font-outfit text-3xl font-extrabold tracking-tight mb-2 title-gradient">
                   {t('signals.title')}
                 </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
+                <p className="text-text-secondary text-sm">
                   {t('signals.description')}
                 </p>
               </div>
 
               {/* Signals Type Filter */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+              <div className="flex flex-wrap gap-2 mb-6">
                 {(['ALL', 'BUY', 'SELL'] as const).map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setSignalTypeFilter(filter)}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: signalTypeFilter === filter ? '1px solid var(--color-accent)' : '1px solid var(--border-color)',
-                      background: signalTypeFilter === filter ? 'var(--color-accent-bg)' : 'transparent',
-                      color: signalTypeFilter === filter ? 'var(--color-accent)' : 'var(--text-secondary)',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'var(--transition-smooth)'
-                    }}
+                    className={`py-2 px-4 rounded-lg border font-semibold text-xs cursor-pointer transition-all duration-200 ${
+                      signalTypeFilter === filter
+                        ? 'border-accent bg-accent/15 text-accent shadow-md'
+                        : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary hover:border-text-muted'
+                    }`}
                   >
                     {filter === 'ALL' ? t('signals.filterAll') : filter === 'BUY' ? t('signals.filterBuy') : t('signals.filterSell')}
                   </button>
@@ -1312,60 +1080,58 @@ export default function Dashboard() {
               </div>
 
               {loadingAllSignals ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
-                  <Loader2 size={32} className="pulse" style={{ color: 'var(--color-accent)' }} />
+                <div className="flex justify-center py-16">
+                  <Loader2 size={32} className="animate-spin text-accent" />
                 </div>
               ) : allSignals.length === 0 ? (
-                <div className="glass-panel" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', borderRadius: 'var(--radius-lg)' }}>
-                  <Sparkles size={40} style={{ color: 'var(--color-warning)', margin: '0 auto 16px auto' }} />
+                <div className="glass-panel py-16 text-center text-text-muted rounded-2xl border border-board-border">
+                  <Sparkles size={40} className="text-warning mx-auto mb-4" />
                   <p>{t('signals.noSignals')}</p>
                 </div>
               ) : (
-                <div className="glass-panel font-inter" style={{ overflowX: 'auto', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+                <div className="glass-panel font-inter overflow-x-auto rounded-2xl border border-board-border bg-board-bg">
+                  <table className="w-full border-collapse text-left text-sm">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '16px 20px' }}>{t('signals.tableSymbol')}</th>
-                        <th style={{ padding: '16px 20px' }}>{t('signals.tableType')}</th>
-                        <th style={{ padding: '16px 20px' }}>{t('signals.tableIndicator')}</th>
-                        <th style={{ padding: '16px 20px' }}>{t('signals.tableStrength')}</th>
-                        <th style={{ padding: '16px 20px' }}>{t('signals.tableScore')}</th>
-                        <th style={{ padding: '16px 20px' }}>{t('signals.tableExplanation')}</th>
-                        <th style={{ padding: '16px 20px' }}>{t('signals.tableTime')}</th>
+                      <tr className="border-b border-board-border text-text-muted font-bold text-xs uppercase tracking-wider">
+                        <th className="p-4 px-6">{t('signals.tableSymbol')}</th>
+                        <th className="p-4 px-6">{t('signals.tableType')}</th>
+                        <th className="p-4 px-6">{t('signals.tableIndicator')}</th>
+                        <th className="p-4 px-6">{t('signals.tableStrength')}</th>
+                        <th className="p-4 px-6">{t('signals.tableScore')}</th>
+                        <th className="p-4 px-6">{t('signals.tableExplanation')}</th>
+                        <th className="p-4 px-6">{t('signals.tableTime')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {allSignals.map((signal) => {
                         const isBuy = signal.type === 'BUY';
                         return (
-                          <tr key={signal.id} style={{ borderBottom: '1px solid var(--border-color-active)', transition: 'var(--transition-smooth)' }} className="table-row-hover">
-                            <td style={{ padding: '16px 20px' }}>
-                              <Link href={`/instruments/${signal.symbol}`} style={{ color: 'var(--color-accent)', fontWeight: 800, textDecoration: 'none' }}>
+                          <tr key={signal.id} className="border-b border-board-border hover:bg-board-row-hover transition-colors">
+                            <td className="p-4 px-6">
+                              <Link href={`/instruments/${signal.symbol}`} className="text-accent font-extrabold hover:underline">
                                 {signal.symbol}
                               </Link>
                             </td>
-                            <td style={{ padding: '16px 20px' }}>
-                              <span className={`badge ${isBuy ? 'badge-bullish' : 'badge-bearish'}`} style={{ padding: '2px 8px', fontSize: '11px' }}>
+                            <td className="p-4 px-6">
+                              <span className={`badge ${isBuy ? 'badge-bullish' : 'badge-bearish'} text-[11px]`}>
                                 {signal.type}
                               </span>
                             </td>
-                            <td style={{ padding: '16px 20px', fontWeight: 600 }}>{signal.indicator}</td>
-                            <td style={{ padding: '16px 20px' }}>
-                              <span style={{
-                                color: signal.strength === 'HIGH' ? 'var(--color-bullish)' : signal.strength === 'MEDIUM' ? 'var(--color-warning)' : 'var(--text-muted)',
-                                fontWeight: 700,
-                                fontSize: '12px'
-                              }}>
+                            <td className="p-4 px-6 font-semibold text-text-primary">{signal.indicator}</td>
+                            <td className="p-4 px-6">
+                              <span className={`font-bold text-xs ${
+                                signal.strength === 'HIGH' ? 'text-bullish' : signal.strength === 'MEDIUM' ? 'text-warning' : 'text-text-muted'
+                              }`}>
                                 {signal.strength === 'HIGH' ? t('signals.strengthHigh') : signal.strength === 'MEDIUM' ? t('signals.strengthMedium') : t('signals.strengthLow')}
                               </span>
                             </td>
-                            <td style={{ padding: '16px 20px', fontWeight: 700 }}>
+                            <td className="p-4 px-6 font-bold text-text-primary">
                               {Number(signal.score || 0).toFixed(2)}
                             </td>
-                            <td style={{ padding: '16px 20px', color: 'var(--text-secondary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <td className="p-4 px-6 text-text-secondary max-w-[280px] truncate" title={signal.reason}>
                               {signal.reason}
                             </td>
-                            <td style={{ padding: '16px 20px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                            <td className="p-4 px-6 text-text-muted text-xs">
                               {new Date(signal.detectedAt).toLocaleDateString()} {new Date(signal.detectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </td>
                           </tr>
@@ -1381,146 +1147,114 @@ export default function Dashboard() {
           {/* TAB 4: ALERTS TAB */}
           {activeTab === 'alerts' && (
             <div>
-              <div style={{ marginBottom: '32px' }}>
-                <h1 className="font-outfit title-gradient" style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '8px' }}>
+              <div className="mb-8">
+                <h1 className="font-outfit text-3xl font-extrabold tracking-tight mb-2 title-gradient">
                   {t('alerts.title')}
                 </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
+                <p className="text-text-secondary text-sm">
                   {t('alerts.description')}
                 </p>
               </div>
 
               {!session ? (
-                <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', borderRadius: 'var(--radius-lg)' }}>
-                  <Bell size={40} style={{ color: 'var(--color-accent)', margin: '0 auto 16px auto' }} />
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>{t('alerts.loginPrompt')}</p>
+                <div className="glass-panel p-10 text-center rounded-2xl border border-board-border max-w-md mx-auto">
+                  <Bell size={40} className="text-accent mx-auto mb-4" />
+                  <p className="text-text-secondary mb-5 text-sm">{t('alerts.loginPrompt')}</p>
                   <Link href="/login?callbackUrl=/pricing">
-                    <button className="btn-primary" style={{ padding: '8px 16px' }}>{t('common.login')}</button>
+                    <button className="btn-primary py-2 px-5 text-sm">{t('common.login')}</button>
                   </Link>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px' }}>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   {/* Create rule form */}
-                  <div className="glass-panel font-inter" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', height: 'fit-content' }}>
-                    <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 800, marginBottom: '20px' }}>{t('alerts.createRule')}</h3>
+                  <div className="glass-panel font-inter p-6 rounded-2xl border border-board-border bg-board-bg h-fit lg:col-span-1">
+                    <h3 className="font-outfit text-base font-bold text-text-primary mb-5">{t('alerts.createRule')}</h3>
 
-                    <form onSubmit={handleCreateAlert} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>{t('alerts.symbol')}</label>
+                    <form onSubmit={handleCreateAlert} className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">{t('alerts.symbol')}</label>
                         <input
                           type="text"
                           required
                           placeholder="e.g. FPT"
                           value={alertSymbol}
                           onChange={(e) => setAlertSymbol(e.target.value)}
-                          style={{
-                            background: 'var(--bg-surface)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '10px 14px',
-                            color: 'var(--text-primary)',
-                            fontSize: '14px',
-                            outline: 'none'
-                          }}
+                          className="bg-surface border border-board-border rounded-lg py-2.5 px-4 text-text-primary text-sm outline-none focus:border-accent transition-colors"
                         />
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>{t('alerts.type')}</label>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">{t('alerts.type')}</label>
                         <select
                           value={alertType}
                           onChange={(e) => setAlertType(e.target.value)}
-                          style={{
-                            background: 'var(--bg-surface)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '10px 14px',
-                            color: 'var(--text-primary)',
-                            fontSize: '14px',
-                            outline: 'none',
-                            cursor: 'pointer'
-                          }}
+                          className="bg-surface border border-board-border rounded-lg py-2.5 px-4 text-text-primary text-sm outline-none cursor-pointer focus:border-accent transition-colors"
                         >
                           <option value="PRICE_ABOVE">{t('alerts.above')}</option>
                           <option value="PRICE_BELOW">{t('alerts.below')}</option>
                         </select>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>{t('alerts.threshold')}</label>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">{t('alerts.threshold')}</label>
                         <input
                           type="number"
                           required
                           placeholder="e.g. 85000"
                           value={alertThreshold}
                           onChange={(e) => setAlertThreshold(e.target.value)}
-                          style={{
-                            background: 'var(--bg-surface)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '10px 14px',
-                            color: 'var(--text-primary)',
-                            fontSize: '14px',
-                            outline: 'none'
-                          }}
+                          className="bg-surface border border-board-border rounded-lg py-2.5 px-4 text-text-primary text-sm outline-none focus:border-accent transition-colors"
                         />
                       </div>
 
-                      <button type="submit" className="btn-primary" style={{ padding: '12px', fontWeight: 700, fontSize: '14px', marginTop: '8px' }}>
+                      <button type="submit" className="btn-primary py-3 font-bold text-sm mt-2 w-full justify-center">
                         {t('alerts.createBtn')}
                       </button>
                     </form>
                   </div>
 
                   {/* Rules and logs view */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-
+                  <div className="flex flex-col gap-8 lg:col-span-2">
                     {/* Rules section */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <h3 className="font-outfit" style={{ fontSize: '20px', fontWeight: 800 }}>{t('alerts.activeRules')}</h3>
+                    <div className="flex flex-col gap-4">
+                      <h3 className="font-outfit text-lg font-bold text-text-primary">{t('alerts.activeRules')}</h3>
                       {loadingAlerts ? (
-                        <Loader2 className="pulse" style={{ color: 'var(--color-accent)' }} />
+                        <div className="flex py-6"><Loader2 className="animate-spin text-accent" size={24} /></div>
                       ) : alertRules.length === 0 ? (
-                        <div className="glass-panel" style={{ padding: '24px', color: 'var(--text-muted)', fontSize: '14px' }}>
+                        <div className="glass-panel p-6 text-text-muted text-sm rounded-2xl border border-board-border">
                           {t('alerts.noRules')}
                         </div>
                       ) : (
-                        <div className="glass-panel font-inter" style={{ overflow: 'hidden', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                        <div className="glass-panel font-inter overflow-hidden rounded-2xl border border-board-border bg-board-bg">
+                          <table className="w-full border-collapse text-left text-xs sm:text-sm">
                             <thead>
-                              <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                                <th style={{ padding: '12px 16px' }}>{t('alerts.symbol')}</th>
-                                <th style={{ padding: '12px 16px' }}>{t('alerts.condition')}</th>
-                                <th style={{ padding: '12px 16px' }}>{t('alerts.threshold')}</th>
-                                <th style={{ padding: '12px 16px' }}>{t('common.status')}</th>
-                                <th style={{ padding: '12px 16px' }} />
+                              <tr className="border-b border-board-border text-text-muted">
+                                <th className="p-3 px-4">{t('alerts.symbol')}</th>
+                                <th className="p-3 px-4">{t('alerts.condition')}</th>
+                                <th className="p-3 px-4">{t('alerts.threshold')}</th>
+                                <th className="p-3 px-4">{t('common.status')}</th>
+                                <th className="p-3 px-4" />
                               </tr>
                             </thead>
                             <tbody>
                               {alertRules.map((rule) => (
-                                <tr key={rule.id} style={{ borderBottom: '1px solid var(--border-color-active)' }}>
-                                  <td style={{ padding: '12px 16px', fontWeight: 800, color: 'var(--color-accent)' }}>{rule.symbol}</td>
-                                  <td style={{ padding: '12px 16px', fontWeight: 600 }}>
+                                <tr key={rule.id} className="border-b border-board-border hover:bg-board-row-hover">
+                                  <td className="p-3 px-4 font-extrabold text-accent">{rule.symbol}</td>
+                                  <td className="p-3 px-4 font-semibold text-text-primary">
                                     {rule.type === 'PRICE_ABOVE' ? 'PRICE >= (ABOVE)' : 'PRICE <= (BELOW)'}
                                   </td>
-                                  <td style={{ padding: '12px 16px', fontWeight: 700 }}>
+                                  <td className="p-3 px-4 font-bold text-text-primary">
                                     {rule.threshold.toLocaleString()} VND
                                   </td>
-                                  <td style={{ padding: '12px 16px' }}>
-                                    <span className="badge badge-bullish" style={{ fontSize: '10px', padding: '2px 8px' }}>
+                                  <td className="p-3 px-4">
+                                    <span className="badge badge-bullish text-[10px]">
                                       Active
                                     </span>
                                   </td>
-                                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                                  <td className="p-3 px-4 text-right">
                                     <button
                                       onClick={() => handleDeleteAlert(rule.id)}
-                                      style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: 'var(--color-bearish)',
-                                        cursor: 'pointer',
-                                        padding: '4px'
-                                      }}
+                                      className="bg-transparent border-none text-bearish hover:text-red-400 cursor-pointer p-1 transition-colors"
                                     >
                                       <Trash2 size={15} />
                                     </button>
@@ -1534,38 +1268,38 @@ export default function Dashboard() {
                     </div>
 
                     {/* Fired events logs */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <h3 className="font-outfit" style={{ fontSize: '20px', fontWeight: 800 }}>{t('alerts.triggeredEvents')}</h3>
+                    <div className="flex flex-col gap-4">
+                      <h3 className="font-outfit text-lg font-bold text-text-primary">{t('alerts.triggeredEvents')}</h3>
                       {alertEvents.length === 0 ? (
-                        <div className="glass-panel" style={{ padding: '24px', color: 'var(--text-muted)', fontSize: '14px' }}>
+                        <div className="glass-panel p-6 text-text-muted text-sm rounded-2xl border border-board-border">
                           {t('alerts.noEvents')}
                         </div>
                       ) : (
-                        <div className="glass-panel font-inter" style={{ overflow: 'hidden', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                        <div className="glass-panel font-inter overflow-hidden rounded-2xl border border-board-border bg-board-bg">
+                          <table className="w-full border-collapse text-left text-xs sm:text-sm">
                             <thead>
-                              <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                                <th style={{ padding: '12px 16px' }}>{t('alerts.symbol')}</th>
-                                <th style={{ padding: '12px 16px' }}>{t('alerts.condition')}</th>
-                                <th style={{ padding: '12px 16px' }}>{t('alerts.threshold')}</th>
-                                <th style={{ padding: '12px 16px' }}>{t('alerts.triggeredVal')}</th>
-                                <th style={{ padding: '12px 16px' }}>{t('alerts.triggeredAt')}</th>
+                              <tr className="border-b border-board-border text-text-muted">
+                                <th className="p-3 px-4">{t('alerts.symbol')}</th>
+                                <th className="p-3 px-4">{t('alerts.condition')}</th>
+                                <th className="p-3 px-4">{t('alerts.threshold')}</th>
+                                <th className="p-3 px-4">{t('alerts.triggeredVal')}</th>
+                                <th className="p-3 px-4">{t('alerts.triggeredAt')}</th>
                               </tr>
                             </thead>
                             <tbody>
                               {alertEvents.map((event) => (
-                                <tr key={event.id} style={{ borderBottom: '1px solid var(--border-color-active)' }}>
-                                  <td style={{ padding: '12px 16px', fontWeight: 800, color: 'var(--color-accent)' }}>{event.symbol}</td>
-                                  <td style={{ padding: '12px 16px', fontWeight: 600 }}>
+                                <tr key={event.id} className="border-b border-board-border hover:bg-board-row-hover">
+                                  <td className="p-3 px-4 font-extrabold text-accent">{event.symbol}</td>
+                                  <td className="p-3 px-4 font-semibold text-text-primary">
                                     {event.type === 'PRICE_ABOVE' ? 'PRICE >= (ABOVE)' : 'PRICE <= (BELOW)'}
                                   </td>
-                                  <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>
+                                  <td className="p-3 px-4 text-text-muted">
                                     {event.threshold.toLocaleString()} VND
                                   </td>
-                                  <td style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--color-warning)' }}>
+                                  <td className="p-3 px-4 font-bold text-warning">
                                     {event.triggeredValue.toLocaleString()} VND
                                   </td>
-                                  <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '11px' }}>
+                                  <td className="p-3 px-4 text-text-muted text-[11px]">
                                     {new Date(event.triggeredAt).toLocaleString()}
                                   </td>
                                 </tr>
@@ -1575,7 +1309,6 @@ export default function Dashboard() {
                         </div>
                       )}
                     </div>
-
                   </div>
                 </div>
               )}
@@ -1586,71 +1319,37 @@ export default function Dashboard() {
           {activeTab === 'personalization' && (
             <div>
               {/* Header section with manual scan action */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'stretch',
-                flexDirection: 'column',
-                gap: '16px',
-                marginBottom: '32px'
-              }} className="md:flex-row md:items-center">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span className="badge" style={{
-                      fontSize: '11px',
-                      fontWeight: 800,
-                      padding: '3px 8px',
-                      background: 'rgba(16, 185, 129, 0.15)',
-                      color: 'var(--color-bullish)',
-                      border: '1px solid rgba(16, 185, 129, 0.3)'
-                    }}>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="badge badge-accent bg-emerald-500/10 border border-emerald-500/20 text-bullish font-extrabold text-[10px]">
                       ⚡ POWERED BY AI DEEP ADVISORY v2.4
                     </span>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '11px',
-                      color: 'var(--text-muted)'
-                    }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                    <span className="inline-flex items-center gap-1 text-[11px] text-text-muted">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
                       Học máy học tập động
                     </span>
                   </div>
-                  <h1 className="font-outfit title-gradient" style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '4px' }}>
+                  <h1 className="font-outfit text-3xl font-extrabold tracking-tight mb-1 title-gradient">
                     Nhận Định Danh Mục & Gợi Ý AI
                   </h1>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
+                  <p className="text-text-secondary text-sm">
                     Trí tuệ nhân tạo quét hành vi đầu tư thực tế, kiểm soát rủi ro phân bổ HHI và đề xuất cơ hội phù hợp nhất với bạn.
                   </p>
                 </div>
 
-                <div>
+                <div className="w-full md:w-auto">
                   <button
                     onClick={handleAIScan}
                     disabled={isAnalyzing || loadingPersonalization}
-                    style={{
-                      padding: '12px 24px',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'linear-gradient(135deg, var(--color-accent) 0%, #a855f7 100%)',
-                      color: '#fff',
-                      border: 'none',
-                      cursor: (isAnalyzing || loadingPersonalization) ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      fontWeight: 800,
-                      fontFamily: 'Outfit, sans-serif',
-                      boxShadow: '0 4px 20px rgba(139, 92, 246, 0.25)',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      opacity: (isAnalyzing || loadingPersonalization) ? 0.75 : 1,
-                      width: '100%',
-                      justifyContent: 'center'
-                    }}
-                    className="md:w-auto"
+                    className={`p-3 px-6 rounded-xl text-white font-extrabold font-outfit text-sm shadow-xl flex items-center justify-center gap-2 w-full md:w-auto transition-all duration-300 ${
+                      (isAnalyzing || loadingPersonalization)
+                        ? 'bg-purple-900/60 border border-purple-500/20 cursor-not-allowed opacity-75'
+                        : 'bg-gradient-to-r from-accent to-purple-600 hover:from-accent hover:to-purple-700 cursor-pointer shadow-purple-600/10'
+                    }`}
                   >
                     {isAnalyzing ? (
-                      <Loader2 className="spin" size={16} />
+                      <Loader2 className="animate-spin" size={16} />
                     ) : (
                       <Sparkles size={16} />
                     )}
@@ -1661,60 +1360,43 @@ export default function Dashboard() {
 
               {/* Error State */}
               {personalizationError && (
-                <div className="glass-panel" style={{
-                  padding: '20px',
-                  background: 'var(--color-bearish-bg)',
-                  border: '1px solid hsla(346, 80%, 55%, 0.2)',
-                  borderRadius: 'var(--radius-md)',
-                  color: 'var(--color-bearish)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '24px'
-                }}>
-                  <ShieldAlert size={20} />
+                <div className="glass-panel p-5 bg-bearish/10 border border-bearish/20 rounded-xl text-bearish flex items-start gap-3 mb-6">
+                  <ShieldAlert size={20} className="shrink-0 mt-0.5" />
                   <div>
-                    <strong style={{ display: 'block' }}>Không thể liên kết bộ máy cá nhân hóa</strong>
-                    <span style={{ fontSize: '13px' }}>{personalizationError}</span>
+                    <strong className="block font-bold text-sm">Không thể liên kết bộ máy cá nhân hóa</strong>
+                    <span className="text-xs text-text-secondary">{personalizationError}</span>
                   </div>
                 </div>
               )}
 
               {/* Step-by-Step AI Analysis Terminal log (Active Scanner overlay) */}
               {isAnalyzing && (
-                <div className="glass-panel" style={{
-                  padding: '24px',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid rgba(139, 92, 246, 0.4)',
-                  background: 'rgba(15, 23, 42, 0.85)',
-                  boxShadow: '0 8px 32px rgba(139, 92, 246, 0.15)',
-                  marginBottom: '32px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                    <Loader2 className="spin" style={{ color: 'var(--color-accent)' }} size={20} />
-                    <h4 className="font-outfit text-white" style={{ fontSize: '18px', fontWeight: 800 }}>
+                <div className="glass-panel p-6 rounded-2xl border border-purple-500/30 bg-slate-950/80 shadow-2xl shadow-purple-500/5 mb-8">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Loader2 className="animate-spin text-accent" size={20} />
+                    <h4 className="font-outfit text-white text-base font-extrabold">
                       Hệ thống đang cập nhật hồ sơ & tính toán khuyến nghị...
                     </h4>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontFamily: 'monospace', fontSize: '13px' }}>
-                    <div style={{ color: analysisStep >= 1 ? 'var(--color-bullish)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontWeight: 800 }}>{analysisStep > 1 ? '✓' : '●'}</span>
+                  <div className="flex flex-col gap-2.5 font-mono text-xs">
+                    <div className={`flex items-center gap-2 transition-colors duration-200 ${analysisStep >= 1 ? 'text-bullish font-semibold' : 'text-text-muted'}`}>
+                      <span className="font-bold">{analysisStep > 1 ? '✓' : '●'}</span>
                       <span>[BƯỚC 1/4] Đang tập hợp các cổ phiếu bạn xem và tìm kiếm gần đây...</span>
                     </div>
-                    <div style={{ color: analysisStep >= 2 ? (analysisStep > 2 ? 'var(--color-bullish)' : 'var(--color-warning)') : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontWeight: 800 }}>{analysisStep > 2 ? '✓' : analysisStep === 2 ? '⚡' : '○'}</span>
+                    <div className={`flex items-center gap-2 transition-colors duration-200 ${analysisStep >= 2 ? (analysisStep > 2 ? 'text-bullish font-semibold' : 'text-warning font-semibold') : 'text-text-muted'}`}>
+                      <span className="font-bold">{analysisStep > 2 ? '✓' : analysisStep === 2 ? '⚡' : '○'}</span>
                       <span>[BƯỚC 2/4] Đang ưu tiên các mối quan tâm mới nhất và tự động giảm bớt tương tác cũ...</span>
                     </div>
-                    <div style={{ color: analysisStep >= 3 ? (analysisStep > 3 ? 'var(--color-bullish)' : 'var(--color-warning)') : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontWeight: 800 }}>{analysisStep > 3 ? '✓' : analysisStep === 3 ? '⚡' : '○'}</span>
+                    <div className={`flex items-center gap-2 transition-colors duration-200 ${analysisStep >= 3 ? (analysisStep > 3 ? 'text-bullish font-semibold' : 'text-warning font-semibold') : 'text-text-muted'}`}>
+                      <span className="font-bold">{analysisStep > 3 ? '✓' : analysisStep === 3 ? '⚡' : '○'}</span>
                       <span>[BƯỚC 3/4] Đang đo lường mức độ đa dạng tài sản và rủi ro dồn vốn vào một vài nhóm ngành...</span>
                     </div>
-                    <div style={{ color: analysisStep >= 4 ? (analysisStep > 4 ? 'var(--color-bullish)' : 'var(--color-warning)') : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontWeight: 800 }}>{analysisStep > 4 ? '✓' : analysisStep === 4 ? '⚡' : '○'}</span>
+                    <div className={`flex items-center gap-2 transition-colors duration-200 ${analysisStep >= 4 ? (analysisStep > 4 ? 'text-bullish font-semibold' : 'text-warning font-semibold') : 'text-text-muted'}`}>
+                      <span className="font-bold">{analysisStep > 4 ? '✓' : analysisStep === 4 ? '⚡' : '○'}</span>
                       <span>[BƯỚC 4/4] Đang biên soạn luận điểm đánh giá rủi ro từ chuyên gia cố vấn AI (GPT-4o)...</span>
                     </div>
                     {analysisStep === 5 && (
-                      <div style={{ color: 'var(--color-accent)', fontWeight: 800, marginTop: '8px', fontSize: '14px' }}>
+                      <div className="text-accent font-extrabold mt-2 text-sm">
                         🎉 ĐÃ TẢI XONG: Bản phân tích danh mục và danh sách gợi ý cổ phiếu live đã sẵn sàng!
                       </div>
                     )}
@@ -1724,78 +1406,55 @@ export default function Dashboard() {
 
               {/* Main Content Layout */}
               {loadingPersonalization && !isAnalyzing ? (
-                <div style={{ padding: '60px', textAlign: 'center' }}>
-                  <Loader2 className="spin" size={40} style={{ color: 'var(--color-accent)', margin: '0 auto 16px auto' }} />
-                  <p style={{ color: 'var(--text-secondary)' }}>Đang truy vấn mô hình cá nhân hóa học sâu...</p>
+                <div className="py-16 text-center">
+                  <Loader2 className="animate-spin text-accent mx-auto mb-4" size={40} />
+                  <p className="text-text-secondary text-sm">Đang truy vấn mô hình cá nhân hóa học sâu...</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 font-inter">
 
-                  {/* Left Column: Portfolio Diversification Intelligence (7 columns on desktop) */}
-                  <div className="lg:col-span-7 xl:col-span-8" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                  {/* Left Column: Portfolio Diversification Intelligence */}
+                  <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
 
                     {/* Portfolio overview and HHI analysis */}
-                    <div className="glass-panel" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <PieChart size={20} style={{ color: 'var(--color-accent)' }} />
-                          <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 800 }}>
+                    <div className="glass-panel p-6 rounded-2xl border border-board-border bg-board-bg">
+                      <div className="flex justify-between items-center mb-6 border-b border-board-border pb-4">
+                        <div className="flex items-center gap-2.5">
+                          <PieChart size={20} className="text-accent" />
+                          <h3 className="font-outfit text-base font-extrabold text-text-primary">
                             {portfolioIntel?.portfolioName || 'Danh mục Đầu tư Cá nhân'}
                           </h3>
                         </div>
-                        <span className="badge" style={{ fontSize: '11px', padding: '3px 10px', background: 'var(--color-accent-bg)', color: 'var(--color-accent)' }}>
+                        <span className="badge badge-accent">
                           Khớp tài khoản thực tế
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ marginBottom: '20px' }}>
-                        <div style={{
-                          background: 'var(--bg-surface)',
-                          padding: '16px 20px',
-                          borderRadius: 'var(--radius-md)',
-                          border: '1px solid var(--border-color-active)'
-                        }}>
-                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                        <div className="bg-surface p-4 px-5 rounded-xl border border-board-border-active">
+                          <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
                             Tổng giá trị tài sản nắm giữ
                           </span>
-                          <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-bullish)', marginTop: '4px', textShadow: '0 0 10px rgba(16,185,129,0.1)' }}>
-                            {portfolioIntel?.totalValue ? portfolioIntel.totalValue.toLocaleString() : '174,000,000'} <span style={{ fontSize: '15px' }}>VND</span>
+                          <div className="text-2xl font-extrabold text-bullish mt-1 drop-shadow-[0_0_8px_rgba(16,185,129,0.1)]">
+                            {portfolioIntel?.totalValue ? portfolioIntel.totalValue.toLocaleString() : '174,000,000'} <span className="text-sm font-semibold">VND</span>
                           </div>
                         </div>
 
-                        <div style={{
-                          background: 'var(--bg-surface)',
-                          padding: '16px 20px',
-                          borderRadius: 'var(--radius-md)',
-                          border: '1px solid var(--border-color-active)'
-                        }}>
-                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <div className="bg-surface p-4 px-5 rounded-xl border border-board-border-active">
+                          <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
                             Rủi ro tập trung (Chỉ số phân bổ)
                           </span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
-                            <div style={{ fontSize: '24px', fontWeight: 800, color: '#fff' }}>
-                              {portfolioIntel?.hhi || 5625} <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>HHI</span>
+                          <div className="flex items-center gap-2.5 mt-1">
+                            <div className="text-2xl font-extrabold text-white">
+                              {portfolioIntel?.hhi || 5625} <span className="text-xs text-text-secondary font-semibold">HHI</span>
                             </div>
-                            <span className="badge" style={{
-                              fontSize: '11px',
-                              padding: '2px 8px',
-                              fontWeight: 700,
-                              background: portfolioIntel?.concentrationRating === 'DIVERSIFIED'
-                                ? 'rgba(16, 185, 129, 0.15)'
+                            <span className={`badge shrink-0 text-[10px] font-extrabold ${
+                              portfolioIntel?.concentrationRating === 'DIVERSIFIED'
+                                ? 'badge-bullish'
                                 : portfolioIntel?.concentrationRating === 'MODERATELY_CONCENTRATED'
-                                  ? 'rgba(245, 158, 11, 0.15)'
-                                  : 'rgba(239, 68, 68, 0.15)',
-                              color: portfolioIntel?.concentrationRating === 'DIVERSIFIED'
-                                ? 'var(--color-bullish)'
-                                : portfolioIntel?.concentrationRating === 'MODERATELY_CONCENTRATED'
-                                  ? 'var(--color-warning)'
-                                  : 'var(--color-bearish)',
-                              border: `1px solid ${portfolioIntel?.concentrationRating === 'DIVERSIFIED'
-                                ? 'rgba(16, 185, 129, 0.3)'
-                                : portfolioIntel?.concentrationRating === 'MODERATELY_CONCENTRATED'
-                                  ? 'rgba(245, 158, 11, 0.3)'
-                                  : 'rgba(239, 68, 68, 0.3)'}`
-                            }}>
+                                  ? 'badge-warning'
+                                  : 'badge-bearish'
+                            }`}>
                               {portfolioIntel?.concentrationLabel || 'Rủi ro tập trung cao'}
                             </span>
                           </div>
@@ -1803,57 +1462,30 @@ export default function Dashboard() {
                       </div>
 
                       {/* Descriptive Layman explanatory subtext */}
-                      <p style={{
-                        fontSize: '12px',
-                        color: 'var(--text-secondary)',
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        padding: '10px 14px',
-                        borderRadius: 'var(--radius-sm)',
-                        lineHeight: '1.5',
-                        marginBottom: '24px'
-                      }}>
+                      <p className="text-[11px] sm:text-xs text-text-secondary bg-white/2 border border-white/5 p-3 px-4 rounded-lg leading-relaxed mb-6">
                         💡 <strong>Chỉ số HHI:</strong> Thước đo mức độ tập trung vốn của bạn. Điểm càng nhỏ chứng tỏ vốn được chia đều sang nhiều ngành/cổ phiếu khác nhau (giảm thiểu rủi ro thua lỗ nặng khi một ngành rung lắc).
                       </p>
 
-                      {/* HHI Visual Gauge Bar with caretaker */}
-                      <div style={{ marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px' }}>
+                      {/* HHI Visual Gauge Bar */}
+                      <div className="mb-4">
+                        <div className="flex justify-between text-[9px] sm:text-[10px] text-text-muted font-bold mb-1.5 uppercase tracking-wider">
                           <span>🟢 AN TOÀN (Phân bổ đều)</span>
                           <span>🟡 TRUNG BÌNH (Tập trung nhẹ)</span>
                           <span>🔴 RỦI RO CAO (Dồn vốn lớn)</span>
                         </div>
 
-                        {/* The Multi-zone Bar */}
-                        <div style={{
-                          height: '12px',
-                          borderRadius: '6px',
-                          background: 'linear-gradient(to right, #10b981 0%, #10b981 15%, #f59e0b 15%, #f59e0b 25%, #ef4444 25%, #ef4444 100%)',
-                          position: 'relative',
-                          overflow: 'visible',
-                          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.4)'
-                        }}>
-                          {/* Caret Caretaker pointing to HHI */}
-                          <div style={{
-                            position: 'absolute',
-                            left: `${Math.min(Math.max((portfolioIntel?.hhi || 5625) / 100, 2), 98)}%`,
-                            top: '-8px',
-                            transform: 'translateX(-50%)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            transition: 'left 1s cubic-bezier(0.4, 0, 0.2, 1)'
-                          }}>
-                            <span style={{
-                              color: '#fff',
-                              fontSize: '14px',
-                              textShadow: '0 0 8px rgba(255,255,255,0.8)',
-                              lineHeight: 1
-                            }}>▲</span>
+                        {/* Multi-zone Bar */}
+                        <div className="h-3 rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500 relative overflow-visible shadow-inner">
+                          {/* Caret pointing */}
+                          <div 
+                            style={{ left: `${Math.min(Math.max((portfolioIntel?.hhi || 5625) / 100, 2), 98)}%` }}
+                            className="absolute -top-2 -translate-x-1/2 flex flex-col items-center transition-all duration-1000 ease-out"
+                          >
+                            <span className="text-white text-xs drop-shadow-[0_0_4px_rgba(255,255,255,0.8)] leading-none">▲</span>
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                        <div className="flex justify-between text-[9px] sm:text-[10px] text-text-muted mt-2">
                           <span>0</span>
                           <span>1500</span>
                           <span>2500</span>
@@ -1863,50 +1495,40 @@ export default function Dashboard() {
                     </div>
 
                     {/* Sector allocation list */}
-                    <div className="glass-panel" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
-                      <h4 className="font-outfit" style={{ fontSize: '16px', fontWeight: 800, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Briefcase size={16} style={{ color: 'var(--color-accent)' }} />
+                    <div className="glass-panel p-6 rounded-2xl border border-board-border bg-board-bg">
+                      <h4 className="font-outfit text-sm font-extrabold text-text-primary mb-5 flex items-center gap-2">
+                        <Briefcase size={16} className="text-accent" />
                         Phân bổ tỷ trọng nhóm ngành thực tế
                       </h4>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div className="flex flex-col gap-4">
                         {portfolioIntel?.allocation && portfolioIntel.allocation.length > 0 ? (
                           portfolioIntel.allocation.map((item: any, idx: number) => (
-                            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                            <div key={idx} className="flex flex-col gap-1.5">
+                              <div className="flex justify-between text-xs sm:text-sm">
+                                <span className="font-bold text-text-primary">
                                   {idx + 1}. {item.sector}
                                 </span>
-                                <div style={{ display: 'flex', gap: '12px' }}>
-                                  <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+                                <div className="flex gap-3">
+                                  <span className="text-text-secondary font-medium">
                                     {item.value ? item.value.toLocaleString() : '---'} VND
                                   </span>
-                                  <span style={{ fontWeight: 800, color: 'var(--color-accent)' }}>
+                                  <span className="font-extrabold text-accent">
                                     {item.percentage}%
                                   </span>
                                 </div>
                               </div>
                               {/* Sleek Percentage Bar */}
-                              <div style={{ height: '6px', background: 'var(--bg-surface)', borderRadius: '3px', overflow: 'hidden' }}>
-                                <div style={{
-                                  height: '100%',
-                                  width: `${item.percentage}%`,
-                                  background: 'linear-gradient(90deg, var(--color-accent) 0%, #3b82f6 100%)',
-                                  borderRadius: '3px',
-                                  transition: 'width 1s ease-in-out'
-                                }} />
+                              <div className="h-1.5 bg-surface rounded-full overflow-hidden">
+                                <div 
+                                  style={{ width: `${item.percentage}%` }}
+                                  className="h-full bg-gradient-to-r from-accent to-blue-500 rounded-full transition-all duration-1000 ease-out"
+                                />
                               </div>
                             </div>
                           ))
                         ) : (
-                          <div style={{
-                            padding: '16px',
-                            textAlign: 'center',
-                            color: 'var(--text-muted)',
-                            fontSize: '13px',
-                            background: 'var(--bg-surface)',
-                            borderRadius: 'var(--radius-md)'
-                          }}>
+                          <div className="p-4 text-center text-text-muted text-xs bg-surface rounded-lg">
                             Chưa tìm thấy dữ liệu phân bổ nhóm ngành.
                           </div>
                         )}
@@ -1914,51 +1536,39 @@ export default function Dashboard() {
                     </div>
 
                     {/* AI Advisor Thesis */}
-                    <div className="glass-panel" style={{
-                      padding: '24px',
-                      borderRadius: 'var(--radius-lg)',
-                      border: '1px solid rgba(245, 158, 11, 0.25)',
-                      background: 'linear-gradient(180deg, rgba(22, 28, 45, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%)',
-                      boxShadow: '0 4px 24px rgba(245, 158, 11, 0.03)'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                        <Sparkles size={18} style={{ color: 'var(--color-warning)' }} />
-                        <h4 className="font-outfit" style={{ fontSize: '16px', fontWeight: 800, color: '#f59e0b', letterSpacing: '0.02em' }}>
+                    <div className="glass-panel p-6 rounded-2xl border border-warning/20 bg-gradient-to-b from-slate-900/60 to-slate-950/80 shadow-md">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Sparkles size={18} className="text-warning" />
+                        <h4 className="font-outfit text-sm font-extrabold text-warning tracking-wide">
                           Ý Kiến Tư Vấn Quản Trị Rủi Ro AI
                         </h4>
                       </div>
-                      <p style={{
-                        fontSize: '14px',
-                        lineHeight: '1.65',
-                        color: 'var(--text-primary)',
-                        fontStyle: 'italic',
-                        whiteSpace: 'pre-wrap'
-                      }}>
+                      <p className="text-xs sm:text-sm leading-relaxed text-text-primary italic whitespace-pre-wrap">
                         "{portfolioIntel?.thesis || 'Hệ thống AI Advisor đang quét danh mục tài sản nắm giữ để sinh luận điểm rủi ro. Hãy bấm nút Kích hoạt quét AI ở phía trên.'}"
                       </p>
 
-                      <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                      <div className="mt-4 flex justify-end text-[10px] text-text-muted font-medium">
                         — Chứng nhận bởi OpenAI GPT-4o Risk Engine
                       </div>
                     </div>
 
                   </div>
 
-                  {/* Right Column: Personalized Feed (5 columns on desktop) */}
-                  <div className="lg:col-span-5 xl:col-span-4" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Activity size={18} style={{ color: 'var(--color-warning)' }} />
-                        <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 800 }}>
+                  {/* Right Column: Personalized Feed */}
+                  <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-5">
+                    <div className="flex items-center justify-between border-b border-board-border pb-3 mb-2">
+                      <div className="flex items-center gap-2">
+                        <Activity size={18} className="text-warning" />
+                        <h3 className="font-outfit text-base font-extrabold text-text-primary">
                           Gợi ý cổ phiếu dành cho bạn
                         </h3>
                       </div>
-                      <span className="badge" style={{ fontSize: '10px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--color-warning)' }}>
+                      <span className="badge badge-warning text-[9px]">
                         Đo khớp tối ưu
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="flex flex-col gap-4">
                       {personalizedFeed && personalizedFeed.length > 0 ? (
                         personalizedFeed.map((item: any, idx: number) => {
                           const hasSignal = !!item.latestSignal;
@@ -1971,56 +1581,33 @@ export default function Dashboard() {
                               key={idx}
                               href={`/instruments/${item.symbol}`}
                               onClick={() => handleSelectRecommended(item.symbol)}
-                              style={{ textDecoration: 'none', color: 'inherit' }}
+                              className="no-underline text-inherit"
                             >
                               <div
-                                className="glass-panel"
-                                style={{
-                                  padding: '16px',
-                                  borderRadius: 'var(--radius-md)',
-                                  border: '1px solid var(--border-color)',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                  background: 'var(--bg-surface)'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.borderColor = 'var(--color-accent)';
-                                  e.currentTarget.style.transform = 'translateX(4px)';
-                                  e.currentTarget.style.backgroundColor = 'var(--bg-surface-hover)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.borderColor = 'var(--border-color)';
-                                  e.currentTarget.style.transform = 'translateX(0)';
-                                  e.currentTarget.style.backgroundColor = 'var(--bg-surface)';
-                                }}
+                                className="glass-panel p-4 rounded-xl border border-board-border cursor-pointer transition-all duration-300 bg-surface hover:border-accent hover:translate-x-1 hover:bg-surface-hover"
                               >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                <div className="flex justify-between items-start mb-2.5">
                                   <div>
-                                    <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-accent)' }}>
+                                    <span className="text-base font-extrabold text-accent">
                                       {item.symbol}
                                     </span>
-                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span className="text-xs text-text-muted block max-w-[160px] truncate">
                                       {item.name}
                                     </span>
                                   </div>
 
-                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                  <div className="flex flex-col items-end">
                                     {item.price !== null ? (
-                                      <span style={{ fontWeight: 800, fontSize: '14px', color: 'var(--text-primary)' }}>
+                                      <span className="font-extrabold text-sm text-text-primary">
                                         {item.price.toLocaleString()}
                                       </span>
                                     ) : (
-                                      <span style={{ color: 'var(--text-muted)' }}>---</span>
+                                      <span className="text-text-muted text-xs">---</span>
                                     )}
                                     {hasChange && (
-                                      <span style={{
-                                        fontSize: '11px',
-                                        fontWeight: 800,
-                                        color: isUp ? 'var(--color-bullish)' : 'var(--color-bearish)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '2px'
-                                      }}>
+                                      <span className={`text-[10px] font-extrabold flex items-center gap-0.5 ${
+                                        isUp ? 'text-bullish' : 'text-bearish'
+                                      }`}>
                                         {isUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
                                         {isUp ? '+' : ''}{item.changePercent.toFixed(2)}%
                                       </span>
@@ -2029,21 +1616,20 @@ export default function Dashboard() {
                                 </div>
 
                                 {/* Linear score indicator */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                                  <div style={{ flexGrow: 1, height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                                    <div style={{
-                                      height: '100%',
-                                      width: `${item.score}%`,
-                                      background: 'linear-gradient(90deg, #a855f7 0%, var(--color-accent) 100%)'
-                                    }} />
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="flex-grow h-1 bg-white/5 rounded-full overflow-hidden">
+                                    <div 
+                                      style={{ width: `${item.score}%` }}
+                                      className="h-full bg-gradient-to-r from-purple-500 to-accent"
+                                    />
                                   </div>
-                                  <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-warning)' }}>
+                                  <span className="text-[10px] font-extrabold text-warning shrink-0">
                                     {Math.round(item.score)}% PHÙ HỢP
                                   </span>
                                 </div>
 
                                 {/* Matching Reason capsules */}
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: hasSignal ? '10px' : '0px' }}>
+                                <div className={`flex flex-wrap gap-1.5 ${hasSignal ? 'mb-2.5' : 'mb-0'}`}>
                                   {item.reasons && item.reasons.map((reason: string, rIdx: number) => {
                                     let icon = '⭐';
                                     let text = reason;
@@ -2053,18 +1639,7 @@ export default function Dashboard() {
                                     else if (reason === 'POPULAR_MEMBER') { icon = '🔥'; text = 'Được xem nhiều'; }
 
                                     return (
-                                      <span key={rIdx} style={{
-                                        fontSize: '10px',
-                                        fontWeight: 700,
-                                        color: 'var(--text-secondary)',
-                                        background: 'var(--bg-surface-hover)',
-                                        border: '1px solid var(--border-color)',
-                                        padding: '2px 6px',
-                                        borderRadius: '4px',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '3px'
-                                      }}>
+                                      <span key={rIdx} className="text-[9px] font-bold text-text-secondary bg-surface-hover border border-board-border py-0.5 px-2 rounded flex items-center gap-1">
                                         <span>{icon}</span> {text}
                                       </span>
                                     );
@@ -2073,27 +1648,14 @@ export default function Dashboard() {
 
                                 {/* Active AI signal if present */}
                                 {hasSignal && (
-                                  <div style={{
-                                    marginTop: '8px',
-                                    background: isBuy ? 'var(--color-bullish-bg)' : 'var(--color-bearish-bg)',
-                                    border: `1px solid ${isBuy ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}`,
-                                    padding: '8px 10px',
-                                    borderRadius: '4px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    fontSize: '11px',
-                                    fontWeight: 700,
-                                    color: isBuy ? 'var(--color-bullish)' : 'var(--color-bearish)'
-                                  }}>
-                                    <span style={{
-                                      width: '6px',
-                                      height: '6px',
-                                      borderRadius: '50%',
-                                      background: isBuy ? '#10b981' : '#ef4444',
-                                      display: 'inline-block',
-                                      animation: 'pulse 1.5s infinite'
-                                    }}></span>
+                                  <div className={`mt-2 p-2 rounded flex items-center gap-1.5 text-[10px] font-bold ${
+                                    isBuy 
+                                      ? 'bg-bullish/10 border border-bullish/15 text-bullish' 
+                                      : 'bg-bearish/10 border border-bearish/15 text-bearish'
+                                  }`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full inline-block animate-pulse ${
+                                      isBuy ? 'bg-emerald-500' : 'bg-red-500'
+                                    }`}></span>
                                     AI: {item.latestSignal.type} ({item.latestSignal.indicator}) — Tín cậy: {Number(item.latestSignal.score || 0).toFixed(1)}
                                   </div>
                                 )}
@@ -2102,7 +1664,7 @@ export default function Dashboard() {
                           );
                         })
                       ) : (
-                        <div className="glass-panel" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                        <div className="glass-panel p-6 text-center text-text-muted text-sm rounded-xl">
                           Chưa có gợi ý cá nhân hóa nào được tạo. Click Quét AI phía trên để khởi chạy!
                         </div>
                       )}

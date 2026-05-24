@@ -41,13 +41,11 @@ export default function PricingPage() {
     setSubmittingPayment(true);
 
     try {
-      // Call NestJS subscription upgrade endpoint using central Axios helper
       const result = await authApi.upgradeSubscription(checkoutTier);
 
       if (result.success) {
         setPaymentSuccess(true);
         
-        // Dynamically update NextAuth session
         await updateSession({ tier: checkoutTier });
         
         setTimeout(() => {
@@ -71,7 +69,7 @@ export default function PricingPage() {
   const tiers = [
     {
       id: 'FREE',
-      icon: <TrendingUp size={24} style={{ color: 'var(--text-secondary)' }} />,
+      icon: <TrendingUp size={24} className="text-text-secondary" />,
       name: t('pricing.tiers.free.name'),
       price: t('pricing.tiers.free.price'),
       desc: t('pricing.tiers.free.desc'),
@@ -80,7 +78,7 @@ export default function PricingPage() {
     },
     {
       id: 'PRO',
-      icon: <Sparkles size={24} style={{ color: 'var(--color-warning)' }} />,
+      icon: <Sparkles size={24} className="text-warning" />,
       name: t('pricing.tiers.pro.name'),
       price: t('pricing.tiers.pro.price'),
       desc: t('pricing.tiers.pro.desc'),
@@ -90,7 +88,7 @@ export default function PricingPage() {
     },
     {
       id: 'API',
-      icon: <Key size={24} style={{ color: 'var(--color-accent)' }} />,
+      icon: <Key size={24} className="text-accent" />,
       name: t('pricing.tiers.api.name'),
       price: t('pricing.tiers.api.price'),
       desc: t('pricing.tiers.api.desc'),
@@ -100,45 +98,35 @@ export default function PricingPage() {
   ];
 
   return (
-    <div className="app-container" style={{ minHeight: '100vh', padding: '40px 24px', position: 'relative' }}>
+    <div className="app-container min-h-screen py-10 px-6 relative">
       {/* Floating Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '48px' }}>
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px' }}>
+      <div className="flex justify-between items-center mb-12">
+        <Link href="/" className="no-underline">
+          <button className="btn-secondary flex items-center gap-2 py-2 px-4">
             <ArrowLeft size={16} />
             {t('common.back')}
           </button>
         </Link>
 
         {/* Dynamic language switch floating at top right */}
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="flex gap-2">
           <button 
             onClick={() => setLocale('vi')} 
-            style={{
-              padding: '4px 10px',
-              borderRadius: 'var(--radius-sm)',
-              border: locale === 'vi' ? '1px solid var(--color-accent)' : '1px solid var(--border-color)',
-              background: locale === 'vi' ? 'var(--color-accent-bg)' : 'transparent',
-              color: locale === 'vi' ? 'var(--color-accent)' : 'var(--text-secondary)',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
+            className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${
+              locale === 'vi' 
+                ? 'border-accent bg-accent/15 text-accent' 
+                : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
+            }`}
           >
             VI
           </button>
           <button 
             onClick={() => setLocale('en')} 
-            style={{
-              padding: '4px 10px',
-              borderRadius: 'var(--radius-sm)',
-              border: locale === 'en' ? '1px solid var(--color-accent)' : '1px solid var(--border-color)',
-              background: locale === 'en' ? 'var(--color-accent-bg)' : 'transparent',
-              color: locale === 'en' ? 'var(--color-accent)' : 'var(--text-secondary)',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
+            className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${
+              locale === 'en' 
+                ? 'border-accent bg-accent/15 text-accent' 
+                : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
+            }`}
           >
             EN
           </button>
@@ -146,98 +134,62 @@ export default function PricingPage() {
       </div>
 
       {/* Main Title */}
-      <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-        <h1 className="font-outfit title-gradient" style={{ fontSize: '40px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '16px' }}>
+      <div className="text-center mb-[60px]">
+        <h1 className="font-outfit title-gradient text-[40px] font-extrabold tracking-tight mb-4">
           {t('pricing.title')}
         </h1>
-        <p className="font-inter" style={{ color: 'var(--text-secondary)', fontSize: '16px', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
+        <p className="font-inter text-text-secondary text-base max-w-[600px] mx-auto leading-relaxed">
           {t('pricing.description')}
         </p>
       </div>
 
       {/* Tiers Grid */}
-      <div className="font-inter" style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-        gap: '32px',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        paddingBottom: '60px'
-      }}>
+      <div className="font-inter grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-8 max-w-[1200px] mx-auto pb-[60px]">
         {tiers.map((tier) => {
           const isCurrent = currentTier === tier.id;
           return (
             <div 
               key={tier.id}
-              className="glass-panel"
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                padding: '40px',
-                borderRadius: 'var(--radius-lg)',
-                border: tier.recommended ? '2px solid var(--color-accent)' : '1px solid var(--border-color)',
-                position: 'relative',
-                boxShadow: tier.recommended ? '0 8px 32px -8px hsla(220, 90%, 56%, 0.15)' : 'none',
-                transform: tier.recommended ? 'scale(1.02)' : 'none',
-                zIndex: tier.recommended ? 10 : 1
-              }}
+              className={`glass-panel flex flex-col p-10 rounded-2xl relative transition-all duration-300 ${
+                tier.recommended 
+                  ? 'border-2 border-accent shadow-[0_8px_32px_-8px_hsla(220,90%,56%,0.15)] scale-[1.02] z-10' 
+                  : 'border border-board-border z-1'
+              }`}
             >
               {tier.recommended && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-14px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: 'var(--color-accent)',
-                  color: '#fff',
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  padding: '4px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase'
-                }}>
+                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-accent text-white text-[11px] font-extrabold py-1 px-3 rounded-[6px] tracking-wider uppercase">
                   RECOMMENDED
                 </span>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                <div style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border-color)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-11 h-11 rounded-lg bg-surface border border-board-border flex items-center justify-center">
                   {tier.icon}
                 </div>
                 <div>
-                  <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>{tier.name}</h3>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tier.desc}</p>
+                  <h3 className="font-outfit text-lg font-extrabold text-text-primary">{tier.name}</h3>
+                  <p className="text-xs text-text-muted">{tier.desc}</p>
                 </div>
               </div>
 
               {/* Price */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '32px' }}>
-                <span className="font-outfit" style={{ fontSize: '48px', fontWeight: 800, color: 'var(--text-primary)' }}>
+              <div className="flex items-baseline gap-1.5 mb-8">
+                <span className="font-outfit text-[48px] font-extrabold text-text-primary">
                   ${tier.price}
                 </span>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>/mo</span>
+                <span className="text-text-secondary text-sm">/mo</span>
               </div>
 
               {/* Feature Title */}
-              <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>
+              <p className="text-[13px] font-bold text-text-secondary uppercase tracking-wider mb-5">
                 {t('pricing.featuresTitle')}
               </p>
 
               {/* Features List */}
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '14px', flexGrow: 1, marginBottom: '40px' }}>
+              <ul className="list-none p-0 m-0 flex flex-col gap-3.5 flex-grow mb-10">
                 {tier.features.map((feature, idx) => (
-                  <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    <Check size={16} style={{ color: 'var(--color-bullish)', marginTop: '2px', flexShrink: 0 }} />
+                  <li key={idx} className="flex items-start gap-2.5 text-sm text-text-secondary leading-relaxed">
+                    <Check size={16} className="text-bullish mt-0.5 shrink-0" />
                     <span>{feature.trim()}</span>
                   </li>
                 ))}
@@ -245,24 +197,13 @@ export default function PricingPage() {
 
               {/* CTA Action button */}
               {isCurrent ? (
-                <div style={{
-                  width: '100%',
-                  padding: '14px',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-surface-hover)',
-                  color: 'var(--text-secondary)',
-                  textAlign: 'center',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  border: '1px solid var(--border-color)'
-                }}>
+                <div className="w-full py-3.5 rounded-lg bg-surface-hover text-text-secondary text-center font-bold text-sm border border-board-border">
                   ✓ {t('pricing.currentPlan')}
                 </div>
               ) : (
                 <button 
                   onClick={() => handleOpenCheckout(tier.id)}
-                  className={tier.recommended ? 'btn-primary' : 'btn-secondary'}
-                  style={{ width: '100%', padding: '14px', fontWeight: 700, fontSize: '14px' }}
+                  className={`${tier.recommended ? 'btn-primary' : 'btn-secondary'} w-full py-3.5 font-bold text-sm`}
                 >
                   {t('pricing.subscribeBtn')}
                 </button>
@@ -274,61 +215,32 @@ export default function PricingPage() {
 
       {/* Checkout Modal */}
       {checkoutTier && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(5, 8, 16, 0.85)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '24px'
-        }}>
-          <div className="glass-panel font-inter" style={{
-            width: '100%',
-            maxWidth: '440px',
-            padding: '32px',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--border-color-active)',
-            boxShadow: 'var(--shadow-premium)'
-          }}>
-            <h3 className="font-outfit" style={{ fontSize: '22px', fontWeight: 800, marginBottom: '4px', color: 'var(--text-primary)' }}>
+        <div className="fixed inset-0 bg-[#050810]/85 backdrop-blur-md flex items-center justify-center z-[1000] p-6">
+          <div className="glass-panel font-inter w-full max-w-[440px] p-8 rounded-2xl border border-board-border-active shadow-2xl">
+            <h3 className="font-outfit text-[22px] font-extrabold mb-1 text-text-primary">
               {t('pricing.checkoutTitle')}
             </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '24px' }}>
+            <p className="text-text-secondary text-xs mb-6">
               {t('pricing.checkoutSub')}{' '}
-              <strong style={{ color: 'var(--color-accent)' }}>{checkoutTier}</strong>
+              <strong className="text-accent">{checkoutTier}</strong>
             </p>
 
             {paymentSuccess ? (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <span style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  background: 'var(--color-bullish-bg)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 20px auto'
-                }}>
-                  <Check size={28} style={{ color: 'var(--color-bullish)' }} />
+              <div className="text-center py-10">
+                <span className="w-14 h-14 rounded-full bg-bullish/10 flex items-center justify-center mx-auto mb-5">
+                  <Check size={28} className="text-bullish" />
                 </span>
-                <h4 style={{ fontWeight: 800, fontSize: '16px', color: 'var(--text-primary)', marginBottom: '8px' }}>
+                <h4 className="font-extrabold text-base text-text-primary mb-2">
                   Transaction Approved!
                 </h4>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                <p className="text-text-secondary text-xs">
                   {t('pricing.successMsg')}
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleSimulatePayment} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              <form onSubmit={handleSimulatePayment} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-text-muted uppercase">
                     {t('pricing.cardHolder')}
                   </label>
                   <input 
@@ -337,23 +249,15 @@ export default function PricingPage() {
                     placeholder="John Doe"
                     value={cardHolder}
                     onChange={(e) => setCardHolder(e.target.value)}
-                    style={{
-                      background: 'var(--bg-surface)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: 'var(--radius-sm)',
-                      padding: '10px 14px',
-                      color: 'var(--text-primary)',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
+                    className="bg-surface border border-board-border rounded-[6px] py-2.5 px-3.5 text-text-primary text-sm outline-none focus:border-accent transition-colors"
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-text-muted uppercase">
                     {t('pricing.cardNumber')}
                   </label>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <div className="relative flex items-center">
                     <input 
                       type="text" 
                       required 
@@ -361,24 +265,15 @@ export default function PricingPage() {
                       placeholder="4111 2222 3333 4444"
                       value={cardNumber}
                       onChange={(e) => setCardNumber(e.target.value)}
-                      style={{
-                        background: 'var(--bg-surface)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '10px 14px 10px 40px',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px',
-                        outline: 'none',
-                        width: '100%'
-                      }}
+                      className="bg-surface border border-board-border rounded-[6px] py-2.5 pl-10 pr-3.5 text-text-primary text-sm outline-none focus:border-accent transition-colors w-full"
                     />
-                    <CreditCard size={16} style={{ position: 'absolute', left: '14px', color: 'var(--text-muted)' }} />
+                    <CreditCard size={16} className="absolute left-3.5 text-text-muted" />
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-text-muted uppercase">
                       {t('pricing.expiry')}
                     </label>
                     <input 
@@ -388,20 +283,12 @@ export default function PricingPage() {
                       placeholder="MM/YY"
                       value={expiry}
                       onChange={(e) => setExpiry(e.target.value)}
-                      style={{
-                        background: 'var(--bg-surface)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '10px 14px',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
+                      className="bg-surface border border-board-border rounded-[6px] py-2.5 px-3.5 text-text-primary text-sm outline-none focus:border-accent transition-colors"
                     />
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-text-muted uppercase">
                       {t('pricing.cvv')}
                     </label>
                     <input 
@@ -411,35 +298,25 @@ export default function PricingPage() {
                       placeholder="•••"
                       value={cvv}
                       onChange={(e) => setCvv(e.target.value)}
-                      style={{
-                        background: 'var(--bg-surface)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '10px 14px',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
+                      className="bg-surface border border-board-border rounded-[6px] py-2.5 px-3.5 text-text-primary text-sm outline-none focus:border-accent transition-colors"
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                <div className="flex gap-3 mt-4">
                   <button 
                     type="button"
                     onClick={() => setCheckoutTier(null)}
-                    className="btn-secondary"
-                    style={{ flex: 1, padding: '12px' }}
+                    className="btn-secondary flex-1 py-3"
                   >
                     {t('common.cancel')}
                   </button>
                   <button 
                     type="submit"
                     disabled={submittingPayment}
-                    className="btn-primary"
-                    style={{ flex: 1, padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    className="btn-primary flex-1 py-3 flex items-center justify-center gap-2"
                   >
-                    {submittingPayment && <Loader2 size={16} className="pulse" />}
+                    {submittingPayment && <Loader2 size={16} className="pulse text-white" />}
                     {submittingPayment ? t('pricing.processing') : 'Approve Sandbox'}
                   </button>
                 </div>

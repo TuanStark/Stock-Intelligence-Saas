@@ -16,7 +16,6 @@ import {
   Calendar,
   Layers,
   DollarSign,
-  HelpCircle,
   RefreshCw
 } from 'lucide-react';
 import Link from 'next/link';
@@ -290,20 +289,20 @@ export default function StockDetail() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '16px' }}>
-        <Loader2 size={40} className="pulse" style={{ color: 'var(--color-accent)' }} />
-        <p style={{ color: 'var(--text-secondary)' }} className="font-outfit">{t('stockDetail.loading')}</p>
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <Loader2 size={40} className="pulse text-accent" />
+        <p className="font-outfit text-text-secondary">{t('stockDetail.loading')}</p>
       </div>
     );
   }
 
   if (errorMsg || !instrument) {
     return (
-      <div style={{ padding: '60px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', maxWidth: '500px' }}>
-          <AlertTriangle size={48} style={{ color: 'var(--color-bearish)', margin: '0 auto 16px auto' }} />
-          <h3 className="font-outfit" style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>Analysis Terminal Locked</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '14px', lineHeight: 1.5 }}>
+      <div className="py-[60px] px-6 flex flex-col items-center justify-center min-h-screen">
+        <div className="glass-panel p-10 text-center max-w-[500px]">
+          <AlertTriangle size={48} className="text-bearish mx-auto mb-4" />
+          <h3 className="font-outfit text-xl font-extrabold mb-2">Analysis Terminal Locked</h3>
+          <p className="text-text-secondary mb-6 text-sm leading-relaxed">
             {errorMsg}
           </p>
           <button className="btn-primary" onClick={() => router.push('/')}>
@@ -317,78 +316,62 @@ export default function StockDetail() {
   const isUp = latestQuote ? Number(latestQuote.changePercent) >= 0 : true;
 
   return (
-    <div style={{
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '24px',
-      backgroundImage: 'radial-gradient(at 0% 0%, hsla(220, 90%, 56%, 0.03) 0px, transparent 50%)'
-    }}>
+    <div className="max-w-[1200px] mx-auto p-6 bg-[radial-gradient(at_0%_0%,rgba(59,130,246,0.03)_0px,transparent_50%)]">
       {/* Floating dynamic language selector */}
-      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginBottom: '16px' }}>
+      <div className="flex gap-2 justify-end mb-4">
         <button
           onClick={() => setLocale('vi')}
-          style={{
-            padding: '4px 10px',
-            borderRadius: 'var(--radius-sm)',
-            border: locale === 'vi' ? '1px solid var(--color-accent)' : '1px solid var(--border-color)',
-            background: locale === 'vi' ? 'var(--color-accent-bg)' : 'transparent',
-            color: locale === 'vi' ? 'var(--color-accent)' : 'var(--text-secondary)',
-            fontSize: '11px',
-            fontWeight: 700,
-            cursor: 'pointer'
-          }}
+          className={`py-1 px-2.5 rounded-[6px] text-[11px] font-bold cursor-pointer transition-colors border ${
+            locale === 'vi' 
+              ? 'border-accent bg-accent/15 text-accent' 
+              : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
+          }`}
         >
           VI
         </button>
         <button
           onClick={() => setLocale('en')}
-          style={{
-            padding: '4px 10px',
-            borderRadius: 'var(--radius-sm)',
-            border: locale === 'en' ? '1px solid var(--color-accent)' : '1px solid var(--border-color)',
-            background: locale === 'en' ? 'var(--color-accent-bg)' : 'transparent',
-            color: locale === 'en' ? 'var(--color-accent)' : 'var(--text-secondary)',
-            fontSize: '11px',
-            fontWeight: 700,
-            cursor: 'pointer'
-          }}
+          className={`py-1 px-2.5 rounded-[6px] text-[11px] font-bold cursor-pointer transition-colors border ${
+            locale === 'en' 
+              ? 'border-accent bg-accent/15 text-accent' 
+              : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
+          }`}
         >
           EN
         </button>
       </div>
 
       {/* HEADER: Nav Back */}
-      <header style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+      <header className="flex items-center gap-3 mb-6">
         <button
           onClick={() => router.push('/')}
-          className="btn-secondary"
-          style={{ padding: '8px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          className="btn-secondary py-2 px-3.5 text-xs flex items-center gap-1.5"
         >
           <ArrowLeft size={16} /> {t('common.back')}
         </button>
-        <span style={{ color: 'var(--text-muted)' }}>/</span>
-        <span style={{ color: 'var(--text-muted)' }}>{t('sidebar.systemStatus')}</span>
-        <span style={{ color: 'var(--text-muted)' }}>/</span>
-        <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{instrument.symbol} Terminal</span>
+        <span className="text-text-muted">/</span>
+        <span className="text-text-muted">{t('sidebar.systemStatus')}</span>
+        <span className="text-text-muted">/</span>
+        <span className="text-text-primary font-semibold">{instrument.symbol} Terminal</span>
       </header>
 
       {/* BLOCK 1: Stock Heading Detail & Real-time Quote */}
-      <div className="responsive-grid-1-5-1" style={{ marginBottom: '24px' }}>
+      <div className="responsive-grid-1-5-1 mb-6">
         {/* Name and sector */}
-        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px solid var(--border-color)' }}>
-          <h1 className="font-outfit title-gradient" style={{ fontSize: '36px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '6px' }}>
+        <div className="glass-panel p-6 flex flex-col justify-center border border-board-border">
+          <h1 className="font-outfit title-gradient text-4xl font-extrabold tracking-tight mb-1.5">
             {instrument.symbol}
-            <span className="badge badge-bullish" style={{ marginLeft: '12px', fontSize: '11px', padding: '2px 8px', letterSpacing: '0.05em' }}>LIVE TICK</span>
+            <span className="badge badge-bullish ml-3 text-[11px] py-0.5 px-2 tracking-wider">LIVE TICK</span>
           </h1>
-          <h2 style={{ fontSize: '18px', color: 'var(--text-secondary)', fontWeight: 500, marginBottom: '12px' }}>
+          <h2 className="text-lg text-text-secondary font-medium mb-3">
             {instrument.name}
           </h2>
-          <div style={{ display: 'flex', gap: '12px', fontSize: '13px', color: 'var(--text-muted)' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div className="flex gap-3 text-[13px] text-text-muted">
+            <span className="flex items-center gap-1.5">
               <Layers size={14} /> {instrument.industry || 'Capital Markets'}
             </span>
             <span>•</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span className="flex items-center gap-1.5">
               <Calendar size={14} /> HOSE Exchange
             </span>
           </div>
@@ -396,23 +379,23 @@ export default function StockDetail() {
 
         {/* Pricing quotes */}
         {latestQuote && (
-          <div className="glass-panel" style={{ padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border-color)' }}>
+          <div className="glass-panel p-6 flex justify-between items-center border border-board-border">
             <div>
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Real-time Quote</p>
-              <h3 className="font-outfit" style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-                {Number(latestQuote.price).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>VND</span>
+              <p className="text-[11px] text-text-muted uppercase tracking-wider mb-1">Real-time Quote</p>
+              <h3 className="font-outfit text-3xl font-extrabold text-text-primary tracking-tight">
+                {Number(latestQuote.price).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} <span className="text-sm text-text-muted">VND</span>
               </h3>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Source: <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{latestQuote.source}</span> • {new Date(latestQuote.timestamp).toLocaleTimeString()}
+              <p className="text-xs text-text-muted mt-1">
+                Source: <span className="font-semibold text-text-secondary">{latestQuote.source}</span> • {new Date(latestQuote.timestamp).toLocaleTimeString()}
               </p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-              <span className={`badge ${isUp ? 'badge-bullish' : 'badge-bearish'}`} style={{ padding: '6px 12px', fontSize: '14px' }}>
+            <div className="flex flex-col items-end gap-2">
+              <span className={`badge ${isUp ? 'badge-bullish' : 'badge-bearish'} py-1.5 px-3 text-sm`}>
                 {isUp ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
                 {isUp ? '+' : ''}{(Number(latestQuote.changePercent) * 100).toFixed(2)}%
               </span>
-              <p style={{ fontWeight: 600, color: isUp ? 'var(--color-bullish)' : 'var(--color-bearish)', fontSize: '16px' }}>
+              <p className={`font-semibold text-base ${isUp ? 'text-bullish' : 'text-bearish'}`}>
                 {isUp ? '+' : ''}{Number(latestQuote.change).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} VND
               </p>
             </div>
@@ -421,48 +404,28 @@ export default function StockDetail() {
       </div>
 
       {/* BLOCK 2: Stock Technical Chart & AI Thesis Summary */}
-      <div className="responsive-grid-2-1" style={{ marginBottom: '24px' }}>
+      <div className="responsive-grid-2-1 mb-6">
 
         {/* Left: TradingView Chart */}
-        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid var(--border-color)' }}>
-          <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Activity size={18} style={{ color: 'var(--color-accent)' }} />
+        <div className="glass-panel p-6 flex flex-col gap-4 border border-board-border">
+          <h3 className="font-outfit text-lg font-bold flex items-center gap-2">
+            <Activity size={18} className="text-accent" />
             {t('common.title1')}
           </h3>
-          <div ref={chartContainerRef} style={{ width: '100%', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}></div>
+          <div ref={chartContainerRef} className="w-full rounded-lg overflow-hidden"></div>
         </div>
 
         {/* Right: AI In-depth Thesis Summary */}
-        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', border: '1px solid var(--border-color)', position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-              <Sparkles size={18} style={{ color: 'var(--color-warning)' }} />
+        <div className="glass-panel p-6 flex flex-col gap-5 border border-board-border relative">
+          <div className="flex items-center justify-between">
+            <h3 className="font-outfit text-lg font-bold flex items-center gap-2 m-0">
+              <Sparkles size={18} className="text-warning" />
               {t('stockDetail.aiThesis')}
             </h3>
             {aiSummary && !aiLoading && (
               <button
                 onClick={handleTriggerAi}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  color: 'var(--color-warning)',
-                  cursor: 'pointer',
-                  padding: '6px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s',
-                  outline: 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.1)';
-                  e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                }}
+                className="bg-white/5 border border-white/10 text-warning cursor-pointer p-1.5 rounded-md flex items-center justify-center hover:bg-warning/10 hover:border-warning/30 transition-all duration-200 outline-none"
                 title="Làm mới phân tích AI"
               >
                 <RefreshCw size={14} />
@@ -471,91 +434,61 @@ export default function StockDetail() {
           </div>
 
           {aiMessage && (
-            <div style={{
-              padding: '10px 14px',
-              backgroundColor: 'rgba(239, 68, 68, 0.06)',
-              border: '1px solid rgba(239, 68, 68, 0.15)',
-              borderRadius: 'var(--radius-sm)',
-              color: '#f87171',
-              fontSize: '12px',
-              textAlign: 'center',
-              lineHeight: 1.4
-            }}>
+            <div className="py-2.5 px-3.5 bg-red-500/5 border border-red-500/15 rounded-md text-red-400 text-xs text-center leading-relaxed">
               {aiMessage}
             </div>
           )}
 
           {aiLoading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flexGrow: 1 }} className="animate-pulse">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div className="glass-panel" style={{ width: '120px', height: '24px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '4px', border: 'none' }}></div>
-                <div className="glass-panel" style={{ width: '80px', height: '16px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '4px', border: 'none' }}></div>
+            <div className="flex flex-col gap-4 flex-grow animate-pulse">
+              <div className="flex justify-between items-center">
+                <div className="glass-panel w-[120px] h-6 bg-white/5 rounded-[4px] border-none"></div>
+                <div className="glass-panel w-20 h-4 bg-white/5 rounded-[4px] border-none"></div>
               </div>
-              <div className="glass-panel" style={{
-                padding: '24px 16px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'rgba(245, 158, 11, 0.02)',
-                border: '1px dashed rgba(245, 158, 11, 0.15)',
-                flexGrow: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center',
-                minHeight: '140px'
-              }}>
-                <Loader2 className="animate-spin text-amber-500" size={28} style={{ color: 'var(--color-warning)' }} />
+              <div className="glass-panel py-6 px-4 rounded-lg bg-warning/5 border border-dashed border-warning/15 flex-grow flex flex-col gap-3 justify-center items-center text-center min-h-[140px]">
+                <Loader2 className="animate-spin text-warning" size={28} />
                 <div>
-                  <p className="font-outfit" style={{ fontWeight: 600, color: 'var(--color-warning)', fontSize: '14px', marginBottom: '4px' }}>AI đang phân tích dữ liệu...</p>
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Đang nén các chỉ số RSI/MACD & tin tức mới</p>
+                  <p className="font-outfit font-semibold text-warning text-sm mb-1">AI đang phân tích dữ liệu...</p>
+                  <p className="text-[11px] text-text-muted">Đang nén các chỉ số RSI/MACD & tin tức mới</p>
                 </div>
               </div>
-              <div className="responsive-grid-1-1" style={{ gap: '12px', marginTop: 'auto' }}>
-                <div className="glass-panel" style={{ height: '70px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}></div>
-                <div className="glass-panel" style={{ height: '70px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}></div>
+              <div className="responsive-grid-1-1 gap-3 mt-auto">
+                <div className="glass-panel h-[70px] bg-white/2 border border-white/4"></div>
+                <div className="glass-panel h-[70px] bg-white/2 border border-white/4"></div>
               </div>
             </div>
           ) : aiSummary ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flexGrow: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="flex flex-col gap-4 flex-grow">
+              <div className="flex justify-between items-center">
                 <span className={`badge ${aiSummary.sentiment === 'BULLISH' ? 'badge-bullish' :
                   aiSummary.sentiment === 'BEARISH' ? 'badge-bearish' : 'badge-accent'
-                  }`} style={{ padding: '4px 10px' }}>
+                  } py-1 px-2.5`}>
                   AI Sentiment: {aiSummary.sentiment}
                 </span>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                <span className="text-xs text-text-muted">
                   {t('stockDetail.aiConfidence')}: {Math.round(Number(aiSummary.confidence) * 100)}%
                 </span>
               </div>
 
-              <div className="glass-panel" style={{
-                padding: '16px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'hsla(35, 90%, 52%, 0.05)',
-                border: '1px solid hsla(35, 90%, 52%, 0.12)',
-                lineHeight: 1.6,
-                fontSize: '14px',
-                color: 'var(--text-secondary)'
-              }}>
-                <p style={{ fontWeight: 600, color: 'var(--color-warning)', marginBottom: '6px' }}>Decision Thesis</p>
+              <div className="glass-panel p-4 rounded-lg bg-warning/5 border border-warning/10 leading-relaxed text-sm text-text-secondary">
+                <p className="font-semibold text-warning mb-1.5">Decision Thesis</p>
                 {aiSummary.summary}
               </div>
 
               {/* Drivers & Risks Grid */}
-              <div className="responsive-grid-1-1" style={{ gap: '12px', marginTop: 'auto' }}>
-                <div className="glass-panel" style={{ padding: '12px', backgroundColor: 'rgba(16, 185, 129, 0.04)', borderColor: 'rgba(16, 185, 129, 0.1)' }}>
-                  <p style={{ color: 'var(--color-bullish)', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px' }}>Catalysts</p>
-                  <ul style={{ fontSize: '11px', color: 'var(--text-secondary)', paddingLeft: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div className="responsive-grid-1-1 gap-3 mt-auto">
+                <div className="glass-panel p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-lg">
+                  <p className="text-bullish font-bold text-[11px] uppercase tracking-wider mb-2">Catalysts</p>
+                  <ul className="text-[11px] text-text-secondary pl-3 flex flex-col gap-1.5 list-disc">
                     {Array.isArray(aiSummary.drivers) ? aiSummary.drivers.slice(0, 3).map((d, i) => (
                       <li key={i}>{d}</li>
                     )) : <li>Volume expansion</li>}
                   </ul>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '12px', backgroundColor: 'rgba(244, 63, 94, 0.04)', borderColor: 'rgba(244, 63, 94, 0.1)' }}>
-                  <p style={{ color: 'var(--color-bearish)', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px' }}>Risk Factors</p>
-                  <ul style={{ fontSize: '11px', color: 'var(--text-secondary)', paddingLeft: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div className="glass-panel p-3 bg-rose-500/5 border border-rose-500/10 rounded-lg">
+                  <p className="text-bearish font-bold text-[11px] uppercase tracking-wider mb-2">Risk Factors</p>
+                  <ul className="text-[11px] text-text-secondary pl-3 flex flex-col gap-1.5 list-disc">
                     {Array.isArray(aiSummary.risks) ? aiSummary.risks.slice(0, 3).map((r, i) => (
                       <li key={i}>{r}</li>
                     )) : <li>Market friction</li>}
@@ -564,62 +497,22 @@ export default function StockDetail() {
               </div>
             </div>
           ) : (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              flexGrow: 1,
-              padding: '30px 10px',
-              color: 'var(--text-muted)',
-              textAlign: 'center',
-              gap: '16px'
-            }}>
-              <div className="glass-panel" style={{
-                padding: '16px',
-                borderRadius: '50%',
-                backgroundColor: 'hsla(35, 90%, 52%, 0.03)',
-                border: '1px solid hsla(35, 90%, 52%, 0.08)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Sparkles size={36} style={{ color: 'var(--color-warning)' }} className="animate-pulse" />
+            <div className="flex flex-col justify-center items-center flex-grow py-8 px-2.5 text-text-muted text-center gap-4">
+              <div className="glass-panel p-4 rounded-full bg-warning/5 border border-warning/10 flex items-center justify-center">
+                <Sparkles size={36} className="text-warning animate-pulse" />
               </div>
               <div>
-                <h4 className="font-outfit" style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
+                <h4 className="font-outfit text-text-primary text-sm font-semibold mb-1.5">
                   Chưa có Luận điểm Phân tích AI
                 </h4>
-                <p style={{ fontSize: '12px', lineHeight: 1.6, maxWidth: '280px', margin: '0 auto' }}>
+                <p className="text-xs leading-relaxed max-w-[280px] mx-auto">
                   Yêu cầu AI tổng hợp giá, tín hiệu kỹ thuật & tin tức của {instrument?.symbol || symbol} để xuất bản luận điểm đầu tư chuyên sâu.
                 </p>
               </div>
 
               <button
                 onClick={handleTriggerAi}
-                style={{
-                  padding: '10px 18px',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--color-warning)',
-                  color: '#0f172a',
-                  border: 'none',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer',
-                  boxShadow: '0 0 12px hsla(35, 90%, 52%, 0.25)',
-                  transition: 'transform 0.2s, box-shadow 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 0 18px hsla(35, 90%, 52%, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.boxShadow = '0 0 12px hsla(35, 90%, 52%, 0.25)';
-                }}
+                className="py-2.5 px-[18px] rounded-lg bg-warning text-slate-900 border-none font-bold text-xs flex items-center gap-2 cursor-pointer shadow-[0_0_12px_hsla(35,90%,52%,0.25)] hover:-translate-y-0.5 hover:shadow-[0_0_18px_hsla(35,90%,52%,0.4)] transition-all duration-200"
               >
                 <Sparkles size={14} />
                 Yêu cầu AI phân tích {instrument?.symbol || symbol}
@@ -635,78 +528,70 @@ export default function StockDetail() {
 
         {/* Left: Financial Fundamentals */}
         {latestQuote && (
-          <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid var(--border-color)' }}>
-            <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <DollarSign size={18} style={{ color: 'var(--color-accent)' }} />
+          <div className="glass-panel p-6 flex flex-col gap-4 border border-board-border">
+            <h3 className="font-outfit text-lg font-bold flex items-center gap-2">
+              <DollarSign size={18} className="text-accent" />
               {t('stockDetail.financials')}
             </h3>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', fontSize: '13px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>{t('stockDetail.open')}</span>
-                <span style={{ fontWeight: 600 }}>{Number(latestQuote.open).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} VND</span>
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between border-b border-board-border pb-2 text-sm">
+                <span className="text-text-muted">{t('stockDetail.open')}</span>
+                <span className="font-semibold">{Number(latestQuote.open).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} VND</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', fontSize: '13px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>{t('stockDetail.high')}</span>
-                <span style={{ fontWeight: 600, color: 'var(--color-bullish)' }}>{Number(latestQuote.high).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} VND</span>
+              <div className="flex justify-between border-b border-board-border pb-2 text-sm">
+                <span className="text-text-muted">{t('stockDetail.high')}</span>
+                <span className="font-semibold text-bullish">{Number(latestQuote.high).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} VND</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', fontSize: '13px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>{t('stockDetail.low')}</span>
-                <span style={{ fontWeight: 600, color: 'var(--color-bearish)' }}>{Number(latestQuote.low).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} VND</span>
+              <div className="flex justify-between border-b border-board-border pb-2 text-sm">
+                <span className="text-text-muted">{t('stockDetail.low')}</span>
+                <span className="font-semibold text-bearish">{Number(latestQuote.low).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} VND</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', fontSize: '13px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>{t('stockDetail.prevClose')}</span>
-                <span style={{ fontWeight: 600 }}>{Number(latestQuote.previousClose).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} VND</span>
+              <div className="flex justify-between border-b border-board-border pb-2 text-sm">
+                <span className="text-text-muted">{t('stockDetail.prevClose')}</span>
+                <span className="font-semibold">{Number(latestQuote.previousClose).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} VND</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', fontSize: '13px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>{t('stockDetail.volume')}</span>
-                <span style={{ fontWeight: 600 }}>{Number(latestQuote.volume).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}</span>
+              <div className="flex justify-between border-b border-board-border pb-2 text-sm">
+                <span className="text-text-muted">{t('stockDetail.volume')}</span>
+                <span className="font-semibold">{Number(latestQuote.volume).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '4px', fontSize: '13px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>{t('stockDetail.value')}</span>
-                <span style={{ fontWeight: 600 }}>{Number(latestQuote.value).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}</span>
+              <div className="flex justify-between pb-1 text-sm">
+                <span className="text-text-muted">{t('stockDetail.value')}</span>
+                <span className="font-semibold">{Number(latestQuote.value).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}</span>
               </div>
             </div>
           </div>
         )}
 
         {/* Right: Technical Signals Crossover Log */}
-        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid var(--border-color)' }}>
-          <h3 className="font-outfit" style={{ fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Activity size={18} style={{ color: 'var(--color-warning)' }} />
+        <div className="glass-panel p-6 flex flex-col gap-4 border border-board-border">
+          <h3 className="font-outfit text-lg font-bold flex items-center gap-2">
+            <Activity size={18} className="text-warning" />
             {t('stockDetail.signalsLog')}
           </h3>
 
           {signals.length === 0 ? (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1, color: 'var(--text-muted)', fontSize: '13px' }}>
+            <div className="flex justify-center items-center flex-grow text-text-muted text-sm">
               No signal logs recorded for this equity.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="flex flex-col gap-2.5">
               {signals.map((sig) => (
-                <div key={sig.id} className="glass-panel" style={{
-                  padding: '14px 16px',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--bg-surface)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  border: '1px solid var(--border-color)'
-                }}>
+                <div key={sig.id} className="glass-panel py-3.5 px-4 rounded-lg bg-surface flex items-center justify-between border border-board-border hover:border-text-muted transition-colors duration-200">
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                    <p className="text-sm font-semibold text-text-primary mb-1">
                       {sig.explanation || `Crossover detected via indicator`}
                     </p>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    <p className="text-[11px] text-text-muted">
                       Detected on {new Date(sig.detectedAt).toLocaleDateString()} at {new Date(sig.detectedAt).toLocaleTimeString()}
                     </p>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="flex items-center gap-3">
                     <span className={`badge ${sig.type === 'BUY' ? 'badge-bullish' : 'badge-bearish'}`}>
                       {sig.type}
                     </span>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                    <span className="text-xs text-text-muted font-semibold">
                       Score: {Number(sig.score).toFixed(2)}
                     </span>
                   </div>
