@@ -11,7 +11,7 @@ import { authApi } from '@/lib/api/auth.api';
 export default function RegisterPage() {
   const router = useRouter();
   const { t, locale, setLocale } = useTranslation();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -66,23 +66,21 @@ export default function RegisterPage() {
     <div className="app-container flex items-center justify-center min-h-screen p-6 relative">
       {/* Floating language selector */}
       <div className="absolute top-6 right-6 flex gap-2">
-        <button 
-          onClick={() => setLocale('vi')} 
-          className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${
-            locale === 'vi' 
-              ? 'border-accent bg-accent/15 text-accent' 
+        <button
+          onClick={() => setLocale('vi')}
+          className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${locale === 'vi'
+              ? 'border-accent bg-accent/15 text-accent'
               : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
-          }`}
+            }`}
         >
           VI
         </button>
-        <button 
-          onClick={() => setLocale('en')} 
-          className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${
-            locale === 'en' 
-              ? 'border-accent bg-accent/15 text-accent' 
+        <button
+          onClick={() => setLocale('en')}
+          className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${locale === 'en'
+              ? 'border-accent bg-accent/15 text-accent'
               : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
-          }`}
+            }`}
         >
           EN
         </button>
@@ -91,7 +89,7 @@ export default function RegisterPage() {
       <div className="glass-panel font-inter w-full max-w-[420px] p-10 rounded-2xl border border-board-border shadow-2xl">
         {/* LOGO */}
         <div className="flex items-center gap-2.5 justify-center mb-8">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-accent to-blue-500 flex items-center justify-center font-extrabold text-xl text-white">S</div>
+          <img src="/logo-new.png" alt="StockIntel Logo" className="w-9 h-9 rounded-lg object-cover shrink-0" />
           <h2 className="font-outfit text-[22px] font-extrabold tracking-tight">
             STOCK<span className="text-accent">INTEL</span>
           </h2>
@@ -118,8 +116,8 @@ export default function RegisterPage() {
             </label>
             <div className="flex items-center gap-3 bg-surface border border-board-border rounded-lg py-2.5 px-4 focus-within:border-accent transition-all duration-200">
               <Mail size={16} className="text-text-muted" />
-              <input 
-                type="email" 
+              <input
+                type="email"
                 required
                 placeholder="you@example.com"
                 value={email}
@@ -136,8 +134,8 @@ export default function RegisterPage() {
             </label>
             <div className="flex items-center gap-3 bg-surface border border-board-border rounded-lg py-2.5 px-4 focus-within:border-accent transition-all duration-200">
               <Lock size={16} className="text-text-muted" />
-              <input 
-                type="password" 
+              <input
+                type="password"
                 required
                 placeholder="••••••••"
                 value={password}
@@ -154,8 +152,8 @@ export default function RegisterPage() {
             </label>
             <div className="flex items-center gap-3 bg-surface border border-board-border rounded-lg py-2.5 px-4 focus-within:border-accent transition-all duration-200">
               <Lock size={16} className="text-text-muted" />
-              <input 
-                type="password" 
+              <input
+                type="password"
                 required
                 placeholder="••••••••"
                 value={confirmPassword}
@@ -166,8 +164,8 @@ export default function RegisterPage() {
           </div>
 
           {/* Register Button */}
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="btn-primary py-3.5 text-sm font-semibold w-full flex items-center justify-center gap-2 mt-2"
           >

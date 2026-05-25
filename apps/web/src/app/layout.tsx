@@ -6,6 +6,9 @@ import { I18nProvider } from '@/lib/i18n/i18n-context';
 export const metadata: Metadata = {
   title: 'Stock Intelligence SaaS — Decision-First Equity Analysis',
   description: 'AI-Powered real-time Vietnamese equity insight and decision terminal.',
+  icons: {
+    icon: '/logo-new.png',
+  },
 };
 
 export default function RootLayout({

@@ -284,7 +284,7 @@ export default function Dashboard() {
 
         // Seed Board Quotes from topMovers and common Vietnamese symbols
         const initialQuotes: Record<string, Mover> = {};
-        
+
         // Seed HOSE/VN30 baseline
         movers.forEach(m => {
           initialQuotes[m.symbol] = m;
@@ -719,8 +719,8 @@ export default function Dashboard() {
   // Render SVG Sparkline
   const renderSparkline = (change: number) => {
     const isUp = change >= 0;
-    const points = isUp 
-      ? '0,18 10,14 20,20 30,12 40,8 50,11 60,4 70,2' 
+    const points = isUp
+      ? '0,18 10,14 20,20 30,12 40,8 50,11 60,4 70,2'
       : '0,2 10,8 20,4 30,14 40,11 50,18 60,15 70,22';
     return (
       <svg className="w-10 h-5" viewBox="0 0 70 24">
@@ -738,26 +738,22 @@ export default function Dashboard() {
     <div className="min-h-screen bg-bg-primary text-text-primary">
       {/* Sidebar Mobile Backdrop Overlay */}
       <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-all duration-300 md:hidden ${
-          isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-all duration-300 md:hidden ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
         onClick={() => setIsSidebarOpen(false)}
       />
 
       {/* ─── SIDEBAR NAVIGATION ─── */}
-      <aside className={`sidebar-transition group fixed top-0 bottom-0 left-0 flex flex-col z-50 rounded-none border-r border-board-border bg-[#090b11] -translate-x-[320px] md:translate-x-0 ${
-        isSidebarOpen ? 'translate-x-0' : ''
-      } ${
-        isSidebarCollapsed 
-          ? 'w-[70px] hover:w-[260px] p-3 hover:p-6' 
+      <aside className={`sidebar-transition group fixed top-0 bottom-0 left-0 flex flex-col z-50 rounded-none border-r border-board-border bg-[#090b11] -translate-x-[320px] md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : ''
+        } ${isSidebarCollapsed
+          ? 'w-[70px] hover:w-[260px] p-3 hover:p-6'
           : 'w-[260px] p-6'
-      }`}>
+        }`}>
         {/* Sidebar Header */}
         <div className="flex items-center gap-2.5 mb-10 overflow-hidden shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-blue-500 flex items-center justify-center font-extrabold text-lg text-white shrink-0">S</div>
-          <h2 className={`font-outfit text-lg font-extrabold tracking-tight transition-opacity duration-200 ${
-            isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:block' : 'opacity-100 block'
-          }`}>
+          <img src="/logo-new.png" alt="StockIntel Logo" className="w-8 h-8 rounded-lg object-cover shrink-0" />
+          <h2 className={`font-outfit text-lg font-extrabold tracking-tight transition-opacity duration-200 ${isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:block' : 'opacity-100 block'
+            }`}>
             STOCK<span className="text-accent">INTEL</span>
           </h2>
         </div>
@@ -766,13 +762,11 @@ export default function Dashboard() {
         <nav className="flex flex-col gap-2 flex-grow overflow-y-auto overflow-x-hidden">
           <button
             onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}
-            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
-              isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
-            } ${
-              activeTab === 'dashboard' 
-                ? 'bg-accent/15 text-accent' 
+            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+              } ${activeTab === 'dashboard'
+                ? 'bg-accent/15 text-accent'
                 : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
-            }`}
+              }`}
           >
             <TrendingUp size={18} className="shrink-0" />
             <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
@@ -782,13 +776,11 @@ export default function Dashboard() {
 
           <button
             onClick={() => { setActiveTab('watchlist'); setIsSidebarOpen(false); }}
-            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
-              isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
-            } ${
-              activeTab === 'watchlist' 
-                ? 'bg-accent/15 text-accent' 
+            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+              } ${activeTab === 'watchlist'
+                ? 'bg-accent/15 text-accent'
                 : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
-            }`}
+              }`}
           >
             <Bookmark size={18} className="shrink-0" />
             <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
@@ -798,13 +790,11 @@ export default function Dashboard() {
 
           <button
             onClick={() => { setActiveTab('signals'); setIsSidebarOpen(false); }}
-            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
-              isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
-            } ${
-              activeTab === 'signals' 
-                ? 'bg-accent/15 text-accent' 
+            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+              } ${activeTab === 'signals'
+                ? 'bg-accent/15 text-accent'
                 : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
-            }`}
+              }`}
           >
             <Sparkles size={18} className="shrink-0" />
             <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
@@ -814,13 +804,11 @@ export default function Dashboard() {
 
           <button
             onClick={() => { setActiveTab('alerts'); setIsSidebarOpen(false); }}
-            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
-              isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
-            } ${
-              activeTab === 'alerts' 
-                ? 'bg-accent/15 text-accent' 
+            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+              } ${activeTab === 'alerts'
+                ? 'bg-accent/15 text-accent'
                 : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
-            }`}
+              }`}
           >
             <Bell size={18} className="shrink-0" />
             <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
@@ -830,13 +818,11 @@ export default function Dashboard() {
 
           <button
             onClick={() => { setActiveTab('personalization'); setIsSidebarOpen(false); }}
-            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
-              isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
-            } ${
-              activeTab === 'personalization' 
-                ? 'bg-accent/15 text-accent' 
+            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+              } ${activeTab === 'personalization'
+                ? 'bg-accent/15 text-accent'
                 : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
-            }`}
+              }`}
           >
             <Sparkles size={18} className="text-warning shrink-0" />
             <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
@@ -846,9 +832,8 @@ export default function Dashboard() {
 
           <Link href="/pricing" className="no-underline">
             <button
-              className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 bg-transparent text-text-secondary hover:bg-surface-hover hover:text-accent w-full ${
-                isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
-              }`}
+              className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 bg-transparent text-text-secondary hover:bg-surface-hover hover:text-accent w-full ${isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+                }`}
             >
               <Building2 size={18} className="shrink-0" />
               <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
@@ -877,39 +862,59 @@ export default function Dashboard() {
         </div>
 
         {/* User profile footer */}
-        <div className="glass-panel p-4 rounded-lg border border-board-border text-xs shrink-0 overflow-hidden">
+        <div className="glass-panel p-4 rounded-lg border border-board-border text-xs shrink-0 overflow-hidden transition-all duration-200">
           {user ? (
             <div className="flex flex-col gap-2">
-              {/* Collapsed Mode Avatar Indicator */}
-              <div className={`flex items-center gap-2 ${isSidebarCollapsed ? 'justify-center group-hover:justify-start' : 'justify-start'}`}>
-                <div className="w-6 h-6 rounded-full bg-accent/20 text-accent font-extrabold flex items-center justify-center shrink-0">👤</div>
-                <div className={`overflow-hidden text-ellipsis whitespace-nowrap font-semibold transition-opacity duration-200 ${
-                  isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:block' : 'opacity-100 block'
+              {/* Collapsed Mode - Avatar + Hover Expand */}
+              <div className={`flex items-center gap-3 group-hover:gap-3 transition-all duration-200 ${isSidebarCollapsed ? 'justify-center' : 'justify-start'
                 }`}>
-                  {user.email}
+
+                {/* Avatar */}
+                <div className="w-7 h-7 rounded-full bg-accent/20 text-accent font-bold flex items-center justify-center shrink-0 text-lg transition-transform group-hover:scale-110">
+                  👤
+                </div>
+
+                {/* User Info - Ẩn khi collapse, hiện mượt mà khi hover */}
+                <div className={`flex-1 overflow-hidden transition-all duration-200 ${isSidebarCollapsed
+                  ? 'max-w-0 opacity-0 group-hover:max-w-[200px] group-hover:opacity-100'
+                  : 'max-w-full opacity-100'
+                  }`}>
+                  <div className="font-semibold text-sm truncate">
+                    {user.email}
+                  </div>
                 </div>
               </div>
-              <div className={`justify-between items-center ${
-                isSidebarCollapsed ? 'hidden group-hover:flex' : 'flex'
-              }`}>
+
+              {/* Tier + Logout - Chỉ hiện khi expanded hoặc hover collapsed */}
+              <div className={`flex items-center justify-between transition-all duration-200 ${isSidebarCollapsed
+                ? 'max-h-0 opacity-0 group-hover:max-h-10 group-hover:opacity-100 overflow-hidden'
+                : 'max-h-10 opacity-100'
+                }`}>
                 <span className="badge badge-bullish text-[10px] py-0.5 px-2">
                   {userTier}
                 </span>
+
                 <button
                   onClick={() => signOut()}
-                  className="bg-transparent border-none text-bearish cursor-pointer flex items-center gap-1 text-xs font-semibold hover:text-red-400 transition-colors"
+                  className="bg-transparent border-none text-bearish hover:text-red-400 cursor-pointer flex items-center gap-1.5 text-xs font-semibold transition-colors"
                 >
                   <LogOut size={14} />
-                  {t('common.logout')}
+                  <span>{t('common.logout')}</span>
                 </button>
               </div>
             </div>
           ) : (
+            /* Guest Mode */
             <div className="flex flex-col gap-2 text-center">
-              <span className={`text-text-secondary font-semibold ${isSidebarCollapsed ? 'hidden group-hover:block' : 'block'}`}>{t('sidebar.guestUser')}</span>
+              <span className={`text-text-secondary font-semibold transition-opacity ${isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'
+                }`}>
+                {t('sidebar.guestUser')}
+              </span>
+
               <Link href="/login" className="no-underline">
-                <button className={`btn-primary py-1.5 text-xs w-full justify-center ${isSidebarCollapsed ? 'px-1 group-hover:px-3' : 'px-3'}`}>
-                  <span className={isSidebarCollapsed ? 'group-hover:inline' : 'inline'}>{t('common.login')}</span>
+                <button className={`btn-primary py-1.5 text-xs w-full justify-center transition-all ${isSidebarCollapsed ? 'px-2 group-hover:px-4' : 'px-4'
+                  }`}>
+                  {t('common.login')}
                 </button>
               </Link>
             </div>
@@ -918,11 +923,10 @@ export default function Dashboard() {
       </aside>
 
       {/* ─── MAIN CONTENT CONTAINER ─── */}
-      <main className={`sidebar-transition pr-6 py-6 min-h-screen flex flex-col w-full ${
-        isSidebarCollapsed 
-          ? 'pl-6 md:pl-[100px]' 
-          : 'pl-6 md:pl-[300px]'
-      }`}>
+      <main className={`sidebar-transition pr-6 py-6 min-h-screen flex flex-col w-full ${isSidebarCollapsed
+        ? 'pl-6 md:pl-[100px]'
+        : 'pl-6 md:pl-[300px]'
+        }`}>
 
         {/* ─── TOP HEADER BAR with SEARCH ─── */}
         <header className="flex items-center justify-between gap-4 pb-4 border-b border-board-border">
@@ -1091,11 +1095,10 @@ export default function Dashboard() {
                     <button
                       key={tab.key}
                       onClick={() => setBoardMarketTab(tab.key)}
-                      className={`py-1.5 px-3 rounded text-[11px] font-bold font-outfit border-0 cursor-pointer transition-all duration-200 ${
-                        boardMarketTab === tab.key
-                          ? 'bg-accent/25 text-accent shadow-md'
-                          : 'bg-transparent text-text-muted hover:text-white hover:bg-white/2'
-                      }`}
+                      className={`py-1.5 px-3 rounded text-[11px] font-bold font-outfit border-0 cursor-pointer transition-all duration-200 ${boardMarketTab === tab.key
+                        ? 'bg-accent/25 text-accent shadow-md'
+                        : 'bg-transparent text-text-muted hover:text-white hover:bg-white/2'
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -1104,8 +1107,8 @@ export default function Dashboard() {
 
                 <div className="text-[11px] text-text-muted font-bold font-outfit">
                   Hiển thị: <span className="text-white">
-                    {boardMarketTab === 'WATCHLIST' 
-                      ? `${watchlistItems.length} mã theo dõi` 
+                    {boardMarketTab === 'WATCHLIST'
+                      ? `${watchlistItems.length} mã theo dõi`
                       : `${getFilteredMoverList().length} mã thị trường`}
                   </span>
                 </div>
@@ -1119,8 +1122,8 @@ export default function Dashboard() {
                   </div>
                 ) : getFilteredMoverList().length === 0 ? (
                   <div className="glass-panel py-16 text-center text-text-muted text-xs">
-                    {boardMarketTab === 'WATCHLIST' 
-                      ? 'Danh mục theo dõi của bạn đang trống. Chọn thêm các mã như FPT, HPG để theo dõi!' 
+                    {boardMarketTab === 'WATCHLIST'
+                      ? 'Danh mục theo dõi của bạn đang trống. Chọn thêm các mã như FPT, HPG để theo dõi!'
                       : 'Không có dữ liệu cổ phiếu cho nhóm này.'}
                   </div>
                 ) : (
@@ -1169,7 +1172,7 @@ export default function Dashboard() {
 
                           const currentPrice = Number(mover.price);
                           const priceColor = currentPrice > tc ? 'text-up' : currentPrice < tc ? 'text-down' : 'text-ref';
-                          
+
                           const bid1Price = Math.round(currentPrice - 50);
                           const bid1Vol = Math.floor(18000 + (currentPrice % 300) * 100);
                           const bid2Price = Math.round(currentPrice - 100);
@@ -1191,8 +1194,8 @@ export default function Dashboard() {
                           const forSell = Math.floor(200 + (currentPrice % 17) * 150);
 
                           return (
-                            <tr 
-                              key={mover.symbol} 
+                            <tr
+                              key={mover.symbol}
                               onClick={() => {
                                 setSelectedSymbol(mover.symbol);
                                 setIsModalOpen(true);
@@ -1204,14 +1207,14 @@ export default function Dashboard() {
                                   <span>★ {mover.symbol}</span>
                                   {/* Quick floating Actions Box */}
                                   <div className="hidden group-hover/row:flex items-center gap-1 absolute left-14 bg-board-bg/95 border border-board-border rounded p-0.5 z-20 shadow-xl">
-                                    <button 
+                                    <button
                                       title="Phân tích chi tiết"
                                       onClick={(e) => { e.stopPropagation(); setSelectedSymbol(mover.symbol); setIsModalOpen(true); }}
                                       className="bg-transparent border-0 text-accent hover:text-white cursor-pointer px-1 py-0.5 text-[10px]"
                                     >
                                       🔍
                                     </button>
-                                    <button 
+                                    <button
                                       title="Thêm/Xóa danh mục theo dõi"
                                       onClick={async (e) => {
                                         e.stopPropagation();
@@ -1222,13 +1225,12 @@ export default function Dashboard() {
                                           await handleAddWatchlistFromSymbol(mover.symbol);
                                         }
                                       }}
-                                      className={`bg-transparent border-0 cursor-pointer px-1 py-0.5 text-[10px] ${
-                                        watchlistItems.some(item => item.instrument.symbol === mover.symbol) ? 'text-yellow-500' : 'text-text-muted hover:text-yellow-500'
-                                      }`}
+                                      className={`bg-transparent border-0 cursor-pointer px-1 py-0.5 text-[10px] ${watchlistItems.some(item => item.instrument.symbol === mover.symbol) ? 'text-yellow-500' : 'text-text-muted hover:text-yellow-500'
+                                        }`}
                                     >
                                       {watchlistItems.some(item => item.instrument.symbol === mover.symbol) ? '★' : '☆'}
                                     </button>
-                                    <button 
+                                    <button
                                       title="Thiết lập cảnh báo giá"
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -1243,7 +1245,7 @@ export default function Dashboard() {
                                   </div>
                                 </div>
                               </td>
-                              
+
                               <td className="text-ceil font-bold">{tran.toLocaleString()}</td>
                               <td className="text-floor font-bold">{san.toLocaleString()}</td>
                               <td className="text-ref font-bold">{tc.toLocaleString()}</td>
@@ -1362,11 +1364,10 @@ export default function Dashboard() {
                           </div>
 
                           {item.instrument.latestSignal && (
-                            <div className={`mt-4 py-2 px-3 rounded-lg text-xs font-semibold ${
-                              item.instrument.latestSignal.type === 'BUY' 
-                                ? 'bg-bullish/10 text-bullish border border-bullish/20' 
-                                : 'bg-bearish/10 text-bearish border border-bearish/20'
-                            }`}>
+                            <div className={`mt-4 py-2 px-3 rounded-lg text-xs font-semibold ${item.instrument.latestSignal.type === 'BUY'
+                              ? 'bg-bullish/10 text-bullish border border-bullish/20'
+                              : 'bg-bearish/10 text-bearish border border-bearish/20'
+                              }`}>
                               {t('sidebar.signals')}: {item.instrument.latestSignal.type} (Score: {Number(item.instrument.latestSignal.score || 0).toFixed(1)})
                             </div>
                           )}
@@ -1397,11 +1398,10 @@ export default function Dashboard() {
                   <button
                     key={filter}
                     onClick={() => setSignalTypeFilter(filter)}
-                    className={`py-2 px-4 rounded-lg border font-semibold text-xs cursor-pointer transition-all duration-200 ${
-                      signalTypeFilter === filter
-                        ? 'border-accent bg-accent/15 text-accent shadow-md'
-                        : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary hover:border-text-muted'
-                    }`}
+                    className={`py-2 px-4 rounded-lg border font-semibold text-xs cursor-pointer transition-all duration-200 ${signalTypeFilter === filter
+                      ? 'border-accent bg-accent/15 text-accent shadow-md'
+                      : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary hover:border-text-muted'
+                      }`}
                   >
                     {filter === 'ALL' ? t('signals.filterAll') : filter === 'BUY' ? t('signals.filterBuy') : t('signals.filterSell')}
                   </button>
@@ -1448,9 +1448,8 @@ export default function Dashboard() {
                             </td>
                             <td className="p-4 px-6 font-semibold text-text-primary">{signal.indicator}</td>
                             <td className="p-4 px-6">
-                              <span className={`font-bold text-xs ${
-                                signal.strength === 'HIGH' ? 'text-bullish' : signal.strength === 'MEDIUM' ? 'text-warning' : 'text-text-muted'
-                              }`}>
+                              <span className={`font-bold text-xs ${signal.strength === 'HIGH' ? 'text-bullish' : signal.strength === 'MEDIUM' ? 'text-warning' : 'text-text-muted'
+                                }`}>
                                 {signal.strength === 'HIGH' ? t('signals.strengthHigh') : signal.strength === 'MEDIUM' ? t('signals.strengthMedium') : t('signals.strengthLow')}
                               </span>
                             </td>
@@ -1671,11 +1670,10 @@ export default function Dashboard() {
                   <button
                     onClick={handleAIScan}
                     disabled={isAnalyzing || loadingPersonalization}
-                    className={`p-3 px-6 rounded-xl text-white font-extrabold font-outfit text-sm shadow-xl flex items-center justify-center gap-2 w-full md:w-auto transition-all duration-300 ${
-                      (isAnalyzing || loadingPersonalization)
-                        ? 'bg-purple-900/60 border border-purple-500/20 cursor-not-allowed opacity-75'
-                        : 'bg-gradient-to-r from-accent to-purple-600 hover:from-accent hover:to-purple-700 cursor-pointer shadow-purple-600/10'
-                    }`}
+                    className={`p-3 px-6 rounded-xl text-white font-extrabold font-outfit text-sm shadow-xl flex items-center justify-center gap-2 w-full md:w-auto transition-all duration-300 ${(isAnalyzing || loadingPersonalization)
+                      ? 'bg-purple-900/60 border border-purple-500/20 cursor-not-allowed opacity-75'
+                      : 'bg-gradient-to-r from-accent to-purple-600 hover:from-accent hover:to-purple-700 cursor-pointer shadow-purple-600/10'
+                      }`}
                   >
                     {isAnalyzing ? (
                       <Loader2 className="animate-spin" size={16} />
@@ -1777,13 +1775,12 @@ export default function Dashboard() {
                             <div className="text-2xl font-extrabold text-white">
                               {portfolioIntel?.hhi || 5625} <span className="text-xs text-text-secondary font-semibold">HHI</span>
                             </div>
-                            <span className={`badge shrink-0 text-[10px] font-extrabold ${
-                              portfolioIntel?.concentrationRating === 'DIVERSIFIED'
-                                ? 'badge-bullish'
-                                : portfolioIntel?.concentrationRating === 'MODERATELY_CONCENTRATED'
-                                  ? 'badge-warning'
-                                  : 'badge-bearish'
-                            }`}>
+                            <span className={`badge shrink-0 text-[10px] font-extrabold ${portfolioIntel?.concentrationRating === 'DIVERSIFIED'
+                              ? 'badge-bullish'
+                              : portfolioIntel?.concentrationRating === 'MODERATELY_CONCENTRATED'
+                                ? 'badge-warning'
+                                : 'badge-bearish'
+                              }`}>
                               {portfolioIntel?.concentrationLabel || 'Rủi ro tập trung cao'}
                             </span>
                           </div>
@@ -1806,7 +1803,7 @@ export default function Dashboard() {
                         {/* Multi-zone Bar */}
                         <div className="h-3 rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500 relative overflow-visible shadow-inner">
                           {/* Caret pointing */}
-                          <div 
+                          <div
                             style={{ left: `${Math.min(Math.max((portfolioIntel?.hhi || 5625) / 100, 2), 98)}%` }}
                             className="absolute -top-2 -translate-x-1/2 flex flex-col items-center transition-all duration-1000 ease-out"
                           >
@@ -1849,7 +1846,7 @@ export default function Dashboard() {
                               </div>
                               {/* Sleek Percentage Bar */}
                               <div className="h-1.5 bg-surface rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   style={{ width: `${item.percentage}%` }}
                                   className="h-full bg-gradient-to-r from-accent to-blue-500 rounded-full transition-all duration-1000 ease-out"
                                 />
@@ -1934,9 +1931,8 @@ export default function Dashboard() {
                                       <span className="text-text-muted text-xs">---</span>
                                     )}
                                     {hasChange && (
-                                      <span className={`text-[10px] font-extrabold flex items-center gap-0.5 ${
-                                        isUp ? 'text-bullish' : 'text-bearish'
-                                      }`}>
+                                      <span className={`text-[10px] font-extrabold flex items-center gap-0.5 ${isUp ? 'text-bullish' : 'text-bearish'
+                                        }`}>
                                         {isUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
                                         {isUp ? '+' : ''}{item.changePercent.toFixed(2)}%
                                       </span>
@@ -1947,7 +1943,7 @@ export default function Dashboard() {
                                 {/* Linear score indicator */}
                                 <div className="flex items-center gap-2 mb-3">
                                   <div className="flex-grow h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div 
+                                    <div
                                       style={{ width: `${item.score}%` }}
                                       className="h-full bg-gradient-to-r from-purple-500 to-accent"
                                     />
@@ -1977,14 +1973,12 @@ export default function Dashboard() {
 
                                 {/* Active AI signal if present */}
                                 {hasSignal && (
-                                  <div className={`mt-2 p-2 rounded flex items-center gap-1.5 text-[10px] font-bold ${
-                                    isBuy 
-                                      ? 'bg-bullish/10 border border-bullish/15 text-bullish' 
-                                      : 'bg-bearish/10 border border-bearish/15 text-bearish'
-                                  }`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full inline-block animate-pulse ${
-                                      isBuy ? 'bg-emerald-500' : 'bg-red-500'
-                                    }`}></span>
+                                  <div className={`mt-2 p-2 rounded flex items-center gap-1.5 text-[10px] font-bold ${isBuy
+                                    ? 'bg-bullish/10 border border-bullish/15 text-bullish'
+                                    : 'bg-bearish/10 border border-bearish/15 text-bearish'
+                                    }`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full inline-block animate-pulse ${isBuy ? 'bg-emerald-500' : 'bg-red-500'
+                                      }`}></span>
                                     AI: {item.latestSignal.type} ({item.latestSignal.indicator}) — Tín cậy: {Number(item.latestSignal.score || 0).toFixed(1)}
                                   </div>
                                 )}
