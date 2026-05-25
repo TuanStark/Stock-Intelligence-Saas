@@ -32,6 +32,7 @@ export class IngestionService implements OnModuleInit {
   async onModuleInit() {
     this.logger.log(' IngestionService initialized. Running initial bootstrap…');
     await this.bootstrapInstruments();
+    await this.prewarmHistoricalCandles(); // Run background pre-warming for historical candles
     await this.ingestMarketData();
   }
 
@@ -209,5 +210,90 @@ export class IngestionService implements OnModuleInit {
         },
       },
     );
+  }
+
+  // ─── Background Pre-warming Candles Engine ─────────────────
+  private async prewarmHistoricalCandles(): Promise<void> {
+    const instruments = await this.prisma.instrument.findMany({
+      where: { status: 'ACTIVE' },
+    });
+    this.logger.log(`Pre-warming historical candles for ${instruments.length} active instruments asynchronously...`);
+
+    // Execute in a background closure to keep main thread bootstrap unblocked
+    (async () => {
+      for (const inst of instruments) {
+        try {
+          // Skip if database already has sufficient daily historical candles
+          const count = await this.prisma.candle.count({
+            where: { instrumentId: inst.id, timeframe: '1D' },
+          });
+
+          if (count >= 10) {
+            this.logger.debug(`Candles for ${inst.symbol} already cached (${count} records). Skipping.`);
+            continue;
+          }
+
+          const cleanSym = inst.symbol.toUpperCase();
+          const toTime = Math.floor(Date.now() / 1000);
+          const fromTime = toTime - 120 * 24 * 60 * 60; // Fetch 120 calendar days to comfortably cover 60+ trading days
+
+          const url = `https://dchart-api.vndirect.com.vn/dchart/history?symbol=${cleanSym}&resolution=D&from=${fromTime}&to=${toTime}`;
+          
+          const response = await fetch(url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+          });
+
+          if (response.ok) {
+            const data = (await response.json()) as any;
+            if (data && data.s === 'ok' && data.t && data.t.length > 0) {
+              const limit = 90;
+              const startIndex = Math.max(0, data.t.length - limit);
+              const candlesToSave = [];
+
+              for (let idx = startIndex; idx < data.t.length; idx++) {
+                candlesToSave.push({
+                  instrumentId: inst.id,
+                  timeframe: '1D',
+                  open: Math.round(data.o[idx] * 1000),
+                  high: Math.round(data.h[idx] * 1000),
+                  low: Math.round(data.l[idx] * 1000),
+                  close: Math.round(data.c[idx] * 1000),
+                  volume: data.v[idx] || 0,
+                  timestamp: new Date(data.t[idx] * 1000),
+                  source: 'VNDIRECT_DCHART_PREWARM',
+                });
+              }
+
+              for (const item of candlesToSave) {
+                await this.prisma.candle.upsert({
+                  where: {
+                    instrumentId_timeframe_timestamp: {
+                      instrumentId: item.instrumentId,
+                      timeframe: item.timeframe,
+                      timestamp: item.timestamp,
+                    },
+                  },
+                  update: {
+                    open: item.open,
+                    high: item.high,
+                    low: item.low,
+                    close: item.close,
+                    volume: item.volume,
+                  },
+                  create: item,
+                });
+              }
+              this.logger.log(` Successfully pre-warmed ${candlesToSave.length} real historical daily candles for ${cleanSym}`);
+            }
+          }
+        } catch (e) {
+          this.logger.error(`Failed to pre-warm historical candles for ${inst.symbol}:`, e);
+        }
+        // Throttling: 1-second delay between requests to be friendly to public external API rate limits
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    })();
   }
 }
