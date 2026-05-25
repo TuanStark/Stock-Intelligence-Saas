@@ -39,6 +39,15 @@ export class MarketController {
     return candles;
   }
 
+  @Get('instruments/:symbol/financials')
+  async getInstrumentFinancials(@Param('symbol') symbol: string) {
+    const financials = await this.marketService.getOrFetchFinancials(symbol);
+    if (!financials) {
+      throw new NotFoundException(`Instrument ${symbol} financials not found`);
+    }
+    return financials;
+  }
+
   @Post('instruments/:symbol/ai-summary')
   async triggerAiSummary(@Param('symbol') symbol: string) {
     const result = await this.marketService.triggerAiSummary(symbol);

@@ -14,9 +14,13 @@
         "@nestjs/common": "^11.0.1",
         "@nestjs/core": "^11.0.1",
         "@nestjs/bullmq": "^11.0.0",
+        "@stock-intel/contracts": "workspace:^",
+        "@stock-intel/db": "workspace:^",
         "bullmq": "^5.0.0",
+        "ioredis": "^5.4.1",
         "reflect-metadata": "^0.2.2",
-        "rxjs": "^7.8.1"
+        "rxjs": "^7.8.1",
+        "technicalindicators": "^3.1.0"
     },
     "devDependencies": {
         "@nestjs/cli": "^11.0.0",

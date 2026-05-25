@@ -7,6 +7,8 @@ import { ProviderFallbackService } from './adapters/provider.service';
 import { RedisModule } from './redis/redis.module';
 import { MarketDataBatchIngestor } from './ingestor/market-data-batch.ingestor';
 import { CandleAggregatorService } from './aggregator/candle-aggregator.service';
+import { FinancialDataIngestor } from './ingestor/financial-data.ingestor';
+import { FinancialDataProcessor } from './ingestor/financial-data.processor';
 
 @Module({
     imports: [
@@ -23,12 +25,17 @@ import { CandleAggregatorService } from './aggregator/candle-aggregator.service'
         BullModule.registerQueue({
             name: 'stock-processing',
         }),
+        BullModule.registerQueue({
+            name: 'financial-ingestion',
+        }),
     ],
     providers: [
         IngestionService,
         ProviderFallbackService,
         MarketDataBatchIngestor,
         CandleAggregatorService,
+        FinancialDataIngestor,
+        FinancialDataProcessor,
     ],
 })
 export class AppModule { }

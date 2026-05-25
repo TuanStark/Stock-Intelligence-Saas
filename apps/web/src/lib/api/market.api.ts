@@ -20,4 +20,7 @@ export const marketApi = {
   triggerAiSummary: async (symbol: string): Promise<any> => {
     return apiClient.post(`/market/instruments/${symbol.toUpperCase()}/ai-summary`, {});
   },
+  getFinancials: async (symbol: string): Promise<any> => {
+    return apiClient.get(`/market/instruments/${symbol.toUpperCase()}/financials`);
+  },
 };

@@ -13,6 +13,9 @@ import { RedisModule } from '../redis/redis.module';
     BullModule.registerQueue({
       name: 'ai-summary',
     }),
+    BullModule.registerQueue({
+      name: 'financial-ingestion',
+    }),
   ],
   controllers: [MarketController],
   providers: [MarketService, MarketGateway],

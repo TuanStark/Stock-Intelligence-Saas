@@ -209,6 +209,12 @@ model Instrument {
   candles            Candle[]
   recommendationScores RecommendationScore[]
 
+  companyProfile           CompanyProfile?
+  companyShareholders      CompanyShareholder[]
+  companyDividends         CompanyDividend[]
+  companyFinancialQuarters CompanyFinancialQuarter[]
+  companyFinancialYears    CompanyFinancialYear[]
+
   @@unique([symbol, exchangeId])
   @@index([exchangeId])
   @@index([sectorId])
@@ -580,4 +586,93 @@ model PersonalizedNotification {
   @@index([userId, isRead, createdAt])
   @@map("personalized_notifications")
 }
+
+model CompanyProfile {
+  id                String   @id @default(uuid())
+  instrumentId      String   @unique @map("instrument_id")
+  description       String   @db.Text
+  industry          String
+  management        Json     // Lưu danh sách ban lãnh đạo: Array<{ name: string, position: string }>
+  charterCapital    Decimal  @map("charter_capital") @db.Decimal(24, 8) // Vốn điều lệ
+  outstandingShares BigInt   @map("outstanding_shares") // Cổ phiếu lưu hành
+  beta              Decimal  @db.Decimal(5, 2)
+  eps               Decimal  @db.Decimal(24, 8)
+  pe                Decimal  @db.Decimal(10, 2)
+  pb                Decimal  @db.Decimal(10, 2)
+  dividendYield     Decimal  @map("dividend_yield") @db.Decimal(5, 2)
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@map("company_profiles")
+}
+
+model CompanyShareholder {
+  id           String   @id @default(uuid())
+  instrumentId String   @map("instrument_id")
+  name         String
+  shares       BigInt
+  percentage   Decimal  @db.Decimal(5, 2)
+  isForeign    Boolean  @default(false) @map("is_foreign")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@unique([instrumentId, name])
+  @@index([instrumentId])
+  @@map("company_shareholders")
+}
+
+model CompanyDividend {
+  id           String   @id @default(uuid())
+  instrumentId String   @map("instrument_id")
+  exDate       DateTime @map("ex_date")
+  type         String
+  rate         String
+  value        Decimal? @db.Decimal(24, 8)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@unique([instrumentId, exDate, type])
+  @@index([instrumentId])
+  @@map("company_dividends")
+}
+
+model CompanyFinancialQuarter {
+  id           String   @id @default(uuid())
+  instrumentId String   @map("instrument_id")
+  quarter      String
+  revenue      Decimal  @db.Decimal(24, 8)
+  grossProfit  Decimal  @map("gross_profit") @db.Decimal(24, 8)
+  netProfit    Decimal  @map("net_profit") @db.Decimal(24, 8)
+  roe          Decimal? @db.Decimal(5, 2)
+  roa          Decimal? @db.Decimal(5, 2)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@unique([instrumentId, quarter])
+  @@index([instrumentId])
+  @@map("company_financial_quarters")
+}
+
+model CompanyFinancialYear {
+  id           String   @id @default(uuid())
+  instrumentId String   @map("instrument_id")
+  year         String
+  revenue      Decimal  @db.Decimal(24, 8)
+  grossProfit  Decimal  @map("gross_profit") @db.Decimal(24, 8)
+  netProfit    Decimal  @map("net_profit") @db.Decimal(24, 8)
+  roe          Decimal  @db.Decimal(5, 2)
+  roa          Decimal  @db.Decimal(5, 2)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@unique([instrumentId, year])
+  @@index([instrumentId])
+  @@map("company_financial_years")
+}
+
 

@@ -149,6 +149,38 @@ export class IngestionService implements OnModuleInit {
 
     await this.redis.setLatestQuote(symbol, quote);
 
+    // ─── Real-time Live Candle Ingestion ──────────────────────
+    const candleDate = new Date(quote.timestamp);
+    candleDate.setUTCHours(0, 0, 0, 0); // Standardize daily timestamp to midnight
+
+    await this.prisma.candle.upsert({
+      where: {
+        instrumentId_timeframe_timestamp: {
+          instrumentId,
+          timeframe: '1D',
+          timestamp: candleDate,
+        },
+      },
+      update: {
+        open: Math.round(quote.open),
+        high: Math.round(quote.high),
+        low: Math.round(quote.low),
+        close: Math.round(quote.price),
+        volume: Math.round(quote.volume),
+      },
+      create: {
+        instrumentId,
+        timeframe: '1D',
+        open: Math.round(quote.open),
+        high: Math.round(quote.high),
+        low: Math.round(quote.low),
+        close: Math.round(quote.price),
+        volume: Math.round(quote.volume),
+        timestamp: candleDate,
+        source: 'INGESTION_REALTIME',
+      },
+    });
+
     const existingQuote = await this.prisma.quote.findFirst({
       where: { symbol },
     });
@@ -217,22 +249,12 @@ export class IngestionService implements OnModuleInit {
     const instruments = await this.prisma.instrument.findMany({
       where: { status: 'ACTIVE' },
     });
-    this.logger.log(`Pre-warming historical candles for ${instruments.length} active instruments asynchronously...`);
+    this.logger.log(`Pre-warming and synchronizing historical candles for ${instruments.length} active instruments asynchronously...`);
 
     // Execute in a background closure to keep main thread bootstrap unblocked
     (async () => {
       for (const inst of instruments) {
         try {
-          // Skip if database already has sufficient daily historical candles
-          const count = await this.prisma.candle.count({
-            where: { instrumentId: inst.id, timeframe: '1D' },
-          });
-
-          if (count >= 10) {
-            this.logger.debug(`Candles for ${inst.symbol} already cached (${count} records). Skipping.`);
-            continue;
-          }
-
           const cleanSym = inst.symbol.toUpperCase();
           const toTime = Math.floor(Date.now() / 1000);
           const fromTime = toTime - 120 * 24 * 60 * 60; // Fetch 120 calendar days to comfortably cover 60+ trading days
@@ -285,7 +307,7 @@ export class IngestionService implements OnModuleInit {
                   create: item,
                 });
               }
-              this.logger.log(` Successfully pre-warmed ${candlesToSave.length} real historical daily candles for ${cleanSym}`);
+              this.logger.log(` Successfully synchronized ${candlesToSave.length} real historical daily candles for ${cleanSym}`);
             }
           }
         } catch (e) {
@@ -295,5 +317,12 @@ export class IngestionService implements OnModuleInit {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     })();
+  }
+
+  // ─── Cron: Periodic Historical Candles Synchronization ──────
+  @Cron('0 */6 * * *')
+  async handlePeriodicHistoricalSync(): Promise<void> {
+    this.logger.log('⌛ Starting periodic background sync for historical daily candles...');
+    await this.prewarmHistoricalCandles();
   }
 }

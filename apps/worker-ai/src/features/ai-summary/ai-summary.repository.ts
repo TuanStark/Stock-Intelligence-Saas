@@ -43,7 +43,15 @@ export class AiSummaryRepository {
   }
 
   async gatherContextData(instrumentId: string): Promise<ContextData> {
-    const [latestQuote, activeSignals, recentNews] = await Promise.all([
+    const [
+      latestQuote,
+      activeSignals,
+      recentNews,
+      companyProfile,
+      companyShareholders,
+      companyDividends,
+      companyFinancialQuarters,
+    ] = await Promise.all([
       this.prisma.quote.findFirst({
         where: { instrumentId },
         orderBy: { asOf: 'desc' },
@@ -58,9 +66,35 @@ export class AiSummaryRepository {
         orderBy: { publishedAt: 'desc' },
         take: 3,
       }),
+      this.prisma.companyProfile.findUnique({
+        where: { instrumentId },
+      }),
+      this.prisma.companyShareholder.findMany({
+        where: { instrumentId },
+        orderBy: { percentage: 'desc' },
+        take: 5,
+      }),
+      this.prisma.companyDividend.findMany({
+        where: { instrumentId },
+        orderBy: { exDate: 'desc' },
+        take: 5,
+      }),
+      this.prisma.companyFinancialQuarter.findMany({
+        where: { instrumentId },
+        orderBy: { quarter: 'desc' },
+        take: 4,
+      }),
     ]);
 
-    return { latestQuote, activeSignals, recentNews };
+    return {
+      latestQuote,
+      activeSignals,
+      recentNews,
+      companyProfile,
+      companyShareholders,
+      companyDividends,
+      companyFinancialQuarters,
+    };
   }
 
   private mapSentiment(sentiment: string): AiSentiment {

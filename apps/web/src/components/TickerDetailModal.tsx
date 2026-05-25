@@ -3,6 +3,7 @@ import { createChart, CandlestickSeries, LineSeries, ISeriesApi } from 'lightwei
 import { X, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Loader2, Sparkles, Activity } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { marketApi } from '@/lib/api/market.api';
+import { CompanyFinancials } from '@/lib/helpers/company-data';
 
 interface TickerDetailModalProps {
   symbol: string;
@@ -142,10 +143,11 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
   const [latestQuote, setLatestQuote] = useState<any>(null);
   const [loadingChart, setLoadingChart] = useState(true);
 
-  // AI Summary States
   const [aiSummary, setAiSummary] = useState<AiSummary | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMessage, setAiMessage] = useState('');
+  const [financials, setFinancials] = useState<any>(null);
+  const [loadingFinancials, setLoadingFinancials] = useState(false);
 
   // Fetch AI summary dynamically
   const handleAIScan = async () => {
@@ -238,6 +240,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
     if (!isOpen || !symbol) return;
 
     setTrades([]);
+    setFinancials(null);
 
     async function fetchDetails() {
       try {
@@ -252,12 +255,31 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
             setSan(Math.round(basePrice * 0.93));
             generateMockDepth(Number(quote.price) || basePrice);
           }
+          if (res.data.aiSummary) {
+            setAiSummary(res.data.aiSummary);
+          }
         }
       } catch (err) {
         console.error('Failed to load instrument detail:', err);
       }
     }
+
+    async function fetchFinancials() {
+      setLoadingFinancials(true);
+      try {
+        const res = await marketApi.getFinancials(symbol);
+        if (res && res.success && res.data) {
+          setFinancials(res.data);
+        }
+      } catch (err) {
+        console.error('Failed to load financials:', err);
+      } finally {
+        setLoadingFinancials(false);
+      }
+    }
+
     fetchDetails();
+    fetchFinancials();
 
     function generateMockDepth(price: number) {
       const step = 50;
@@ -589,6 +611,363 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
     setTimeout(() => setDrawStatus(''), 3000);
   };
 
+  const renderSubTab = () => {
+    if (loadingFinancials || !financials) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 animate-fade-in font-inter">
+          <Loader2 className="w-8 h-8 text-[#00c58e] animate-spin mb-3" />
+          <span className="text-text-muted text-[11px] font-bold tracking-wider uppercase">Đang đồng bộ dữ liệu tài chính thực tế...</span>
+        </div>
+      );
+    }
+
+    const comp = financials as CompanyFinancials;
+    
+    switch (activeTab) {
+      case 'Hồ sơ':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in font-inter text-xs">
+            {/* Left Card: Company Description */}
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              <div className="bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
+                <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-3 pb-2 border-b border-[#222b3e]">Giới Thiệu Doanh Nghiệp</h4>
+                <p className="text-text-secondary leading-relaxed text-[11.5px] whitespace-pre-line">{comp.overview.description}</p>
+              </div>
+              
+              <div className="bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
+                <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-3 pb-2 border-b border-[#222b3e]">Ban Lãnh Đạo Chủ Chốt</h4>
+                <div className="flex flex-col gap-2.5">
+                  {comp.overview.management.map((m, i) => (
+                    <div key={i} className="flex justify-between items-center bg-[#141a27] p-3 rounded-lg border border-[#232d42]/40 hover:border-[#31405b]/60 transition-colors">
+                      <span className="font-bold text-white text-[11.5px]">{m.name}</span>
+                      <span className="text-[10px] text-text-muted font-bold uppercase">{m.position}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Right Card: Valuation Info */}
+            <div className="bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg h-fit">
+              <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Chỉ Số Định Giá & Cơ Bản</h4>
+              <div className="flex flex-col gap-3 font-mono text-[11px]">
+                <div className="flex justify-between pb-2 border-b border-[#182030]/60">
+                  <span className="text-text-muted font-sans font-medium">Ngành nghề</span>
+                  <span className="font-bold text-white font-sans">{comp.overview.industry}</span>
+                </div>
+                <div className="flex justify-between pb-2 border-b border-[#182030]/60">
+                  <span className="text-text-muted font-sans font-medium">Vốn điều lệ</span>
+                  <span className="font-bold text-white">{(comp.valuation.charterCapital / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ VND</span>
+                </div>
+                <div className="flex justify-between pb-2 border-b border-[#182030]/60">
+                  <span className="text-text-muted font-sans font-medium">Cổ phiếu lưu hành</span>
+                  <span className="font-bold text-white">{comp.valuation.outstandingShares.toLocaleString()} CP</span>
+                </div>
+                <div className="flex justify-between pb-2 border-b border-[#182030]/60">
+                  <span className="text-text-muted font-sans font-medium">Vốn hóa thị trường</span>
+                  <span className="font-bold text-[#00c58e]">{(comp.valuation.marketCap / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ VND</span>
+                </div>
+                <div className="flex justify-between pb-2 border-b border-[#182030]/60">
+                  <span className="text-text-muted font-sans font-medium">Hệ số Beta</span>
+                  <span className="font-bold text-white">{comp.valuation.beta.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between pb-2 border-b border-[#182030]/60">
+                  <span className="text-text-muted font-sans font-medium">EPS cơ bản</span>
+                  <span className="font-bold text-[#00c58e]">{comp.valuation.eps.toLocaleString()} đ</span>
+                </div>
+                <div className="flex justify-between pb-2 border-b border-[#182030]/60">
+                  <span className="text-text-muted font-sans font-medium">P/E</span>
+                  <span className="font-bold text-white">{comp.valuation.pe}</span>
+                </div>
+                <div className="flex justify-between pb-2 border-b border-[#182030]/60">
+                  <span className="text-text-muted font-sans font-medium">P/B</span>
+                  <span className="font-bold text-white">{comp.valuation.pb}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-muted font-sans font-medium">Tỷ suất cổ tức</span>
+                  <span className="font-bold text-[#e040fb]">{comp.valuation.dividendYield}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 'Cổ đông':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-fade-in font-inter text-xs">
+            {/* Left Box: Shareholders Structure */}
+            <div className="lg:col-span-2 bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
+              <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Cơ Cấu Sở Hữu</h4>
+              <div className="flex flex-col gap-4">
+                {comp.shareholders.structure.map((item, i) => (
+                  <div key={i} className="flex flex-col gap-1.5">
+                    <div className="flex justify-between font-bold text-[10.5px]">
+                      <span className="text-text-secondary flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                        {item.name}
+                      </span>
+                      <span className="font-mono" style={{ color: item.color }}>{item.percentage.toFixed(2)}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-[#141a27] rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-[width] duration-500"
+                        style={{ width: `${item.percentage}%`, backgroundColor: item.color }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Right Box: Major Shareholders List */}
+            <div className="lg:col-span-3 bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
+              <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Danh Sách Cổ Đông Lớn</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px] text-left border-collapse font-mono">
+                  <thead>
+                    <tr className="text-text-muted border-b border-[#1b2233] h-8 font-sans">
+                      <th className="font-bold text-[9px] uppercase pb-2">Tên cổ đông</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2">Số lượng cổ phiếu</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2 pr-2">Tỷ lệ sở hữu</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comp.shareholders.major.map((sh, i) => (
+                      <tr key={i} className="h-10 border-b border-[#1b2233]/40 hover:bg-white/2 transition-colors">
+                        <td className="text-white font-sans font-bold">{sh.name}</td>
+                        <td className="text-right text-text-secondary">{sh.shares.toLocaleString()} CP</td>
+                        <td className="text-right font-bold text-[#00c58e] pr-2">{sh.percentage.toFixed(2)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      case 'Vốn và cổ tức':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-fade-in font-inter text-xs">
+            {/* Left Box: Capital History timeline */}
+            <div className="lg:col-span-2 bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
+              <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Lịch Sử Tăng Vốn</h4>
+              <div className="relative pl-6 border-l border-[#232d42] flex flex-col gap-6 py-2">
+                {comp.capitalHistory.map((cap, i) => (
+                  <div key={i} className="relative">
+                    <span className="absolute -left-[30px] top-1 w-2 h-2 rounded-full bg-[#00c58e] border-4 border-[#080b11]" />
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-outfit font-extrabold text-white text-[12px]">{cap.year}</span>
+                        <span className="text-[10px] text-text-muted font-bold">Vốn: {(cap.value / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷđ</span>
+                      </div>
+                      <span className="text-[10.5px] text-text-secondary">{cap.event}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Right Box: Dividends Table */}
+            <div className="lg:col-span-3 bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
+              <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Lịch Sử Chi Trả Cổ Tức</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px] text-left border-collapse">
+                  <thead>
+                    <tr className="text-text-muted border-b border-[#1b2233] h-8">
+                      <th className="font-bold text-[9px] uppercase pb-2">Ngày GDKHQ</th>
+                      <th className="font-bold text-[9px] uppercase pb-2">Hình thức chi trả</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2 pr-2">Tỷ lệ chi trả</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comp.dividends.map((div, i) => (
+                      <tr key={i} className="h-10 border-b border-[#1b2233]/40 hover:bg-white/2 transition-colors font-mono">
+                        <td className="text-white font-sans font-bold">{div.exDate}</td>
+                        <td className="text-sans">
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold ${div.type === 'Tiền mặt' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'}`}>
+                            {div.type}
+                          </span>
+                        </td>
+                        <td className="text-right font-bold text-white pr-2">{div.rate}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      case 'Tin tức':
+        return (
+          <div className="bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg animate-fade-in font-inter text-xs max-w-[1000px] mx-auto">
+            <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Tin Tức Doanh Nghiệp Liên Quan</h4>
+            <div className="flex flex-col gap-4">
+              {comp.news.map((item, i) => {
+                const badgeColor = item.sentiment === 'BULLISH' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : item.sentiment === 'BEARISH' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-gray-500/10 text-gray-400 border border-gray-500/20';
+                const badgeText = item.sentiment === 'BULLISH' ? 'Tích cực' : item.sentiment === 'BEARISH' ? 'Tiêu cực' : 'Trung lập';
+                
+                return (
+                  <div key={i} className="bg-[#141a27] p-4 rounded-xl border border-[#232d42]/30 hover:border-[#31405b]/60 transition-all duration-200 flex flex-col gap-2 relative group">
+                    <div className="flex justify-between items-start gap-4">
+                      <span className="font-bold text-white text-[12px] group-hover:text-[#00c58e] transition-colors leading-snug cursor-pointer">{item.title}</span>
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold uppercase shrink-0 ${badgeColor}`}>
+                        {badgeText}
+                      </span>
+                    </div>
+                    <div className="flex gap-4 text-[9.5px] text-text-muted font-bold">
+                      <span>📅 {item.date}</span>
+                      <span>📰 Nguồn: {item.source}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      case 'Lịch sự kiện':
+        return (
+          <div className="bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg animate-fade-in font-inter text-xs max-w-[800px] mx-auto">
+            <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-6 pb-2 border-b border-[#222b3e]">Lịch Sự Kiện Doanh Nghiệp</h4>
+            <div className="relative pl-8 border-l-2 border-[#232d42] flex flex-col gap-6 py-2">
+              {comp.events.map((evt, i) => (
+                <div key={i} className="relative">
+                  <span className="absolute -left-[38px] top-1.5 w-3.5 h-3.5 rounded-full bg-[#00c58e] border-[3px] border-[#080b11] shadow-lg flex items-center justify-center text-[7px]" />
+                  <div className="bg-[#141a27] p-4 rounded-xl border border-[#232d42]/30 flex justify-between items-center gap-4 hover:border-[#31405b]/50 transition-colors">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-white text-[12px]">{evt.title}</span>
+                      <span className="text-[10px] text-text-muted font-bold">📅 Dự kiến diễn ra ngày: {evt.date}</span>
+                    </div>
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-right shrink-0">
+                      <span className="text-[8px] text-text-muted font-bold block uppercase scale-90">Còn lại</span>
+                      <span className="font-outfit font-extrabold text-[#00c58e] text-sm">{evt.daysLeft} ngày</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      case 'Thống kê':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-fade-in font-inter text-xs">
+            {/* Left Box: 52-week pricing statistics */}
+            <div className="lg:col-span-2 bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg h-fit">
+              <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Biến Động Giá 52 Tuần</h4>
+              <div className="flex flex-col gap-3.5 font-mono text-[11px]">
+                <div className="flex justify-between pb-2 border-b border-[#182030]/60">
+                  <span className="text-text-muted font-sans font-medium">Thấp nhất 52 tuần</span>
+                  <span className="font-bold text-down">{comp.stats.yearlyRange.low.toLocaleString()} đ</span>
+                </div>
+                <div className="flex justify-between pb-2 border-b border-[#182030]/60">
+                  <span className="text-text-muted font-sans font-medium">Cao nhất 52 tuần</span>
+                  <span className="font-bold text-up">{comp.stats.yearlyRange.high.toLocaleString()} đ</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-muted font-sans font-medium">KL Khớp TB/Phiên</span>
+                  <span className="font-bold text-white">{comp.stats.yearlyRange.avgVolume.toLocaleString()} CP</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Right Box: Foreign Trading Net History */}
+            <div className="lg:col-span-3 bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
+              <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Giao Dịch Khối Ngoại (10 Phiên Gần Nhất)</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px] text-left border-collapse font-mono">
+                  <thead>
+                    <tr className="text-text-muted border-b border-[#1b2233] h-8 font-sans">
+                      <th className="font-bold text-[9px] uppercase pb-2">Phiên GD</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2">KL Mua</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2">KL Bán</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2 pr-2">Giá trị ròng</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comp.stats.foreignTrading.map((trade, i) => {
+                      const valueColor = trade.netValue >= 0 ? 'text-up' : 'text-down';
+                      const absValueTỷ = Math.abs(trade.netValue) / 1000000000;
+                      
+                      return (
+                        <tr key={i} className="h-10 border-b border-[#1b2233]/40 hover:bg-white/2 transition-colors">
+                          <td className="text-white font-sans font-bold">{trade.date}</td>
+                          <td className="text-right text-text-secondary">{trade.buyVol.toLocaleString()}</td>
+                          <td className="text-right text-text-secondary">{trade.sellVol.toLocaleString()}</td>
+                          <td className={`text-right font-bold pr-2 ${valueColor}`}>
+                            {trade.netValue >= 0 ? '+' : '-'}{absValueTỷ.toFixed(2)} Tỷđ
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      case 'Tài chính':
+        return (
+          <div className="grid grid-cols-1 gap-6 animate-fade-in font-inter text-xs max-w-[1200px] mx-auto">
+            {/* Box 1: Income Statement summary quarterly */}
+            <div className="bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
+              <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Kết Quả Kinh Doanh Theo Quý (VND)</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px] text-left border-collapse font-mono">
+                  <thead>
+                    <tr className="text-text-muted border-b border-[#1b2233] h-8 font-sans">
+                      <th className="font-bold text-[9px] uppercase pb-2">Kỳ Báo Cáo</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2">Doanh Thu Thuần</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2">Lợi Nhuận Gộp</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2 pr-2">Lợi Nhuận Sau Thuế</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comp.financials.quarters.map((q, i) => (
+                      <tr key={i} className="h-10 border-b border-[#1b2233]/40 hover:bg-white/2 transition-colors">
+                        <td className="text-white font-sans font-bold">{q.quarter}</td>
+                        <td className="text-right text-text-secondary">{(q.revenue / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ</td>
+                        <td className="text-right text-text-secondary">{(q.grossProfit / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ</td>
+                        <td className="text-right font-bold text-[#00c58e] pr-2">{(q.netProfit / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            {/* Box 2: Financial statement yearly with efficiency ratios */}
+            <div className="bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
+              <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Hiệu Quả Vận Hành & Tài Chính Theo Năm (VND)</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px] text-left border-collapse font-mono">
+                  <thead>
+                    <tr className="text-text-muted border-b border-[#1b2233] h-8 font-sans">
+                      <th className="font-bold text-[9px] uppercase pb-2">Năm Tài Chính</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2">Tổng Doanh Thu</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2">Lợi Nhuận Ròng</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2">Hệ Số ROE (%)</th>
+                      <th className="font-bold text-[9px] uppercase text-right pb-2 pr-2">Hệ Số ROA (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comp.financials.years.map((y, i) => (
+                      <tr key={i} className="h-10 border-b border-[#1b2233]/40 hover:bg-white/2 transition-colors">
+                        <td className="text-white font-sans font-bold">{y.year}</td>
+                        <td className="text-right text-text-secondary">{(y.revenue / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ</td>
+                        <td className="text-right text-[#00c58e] font-bold">{(y.netProfit / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ</td>
+                        <td className="text-right text-white font-bold">{y.roe.toFixed(2)}%</td>
+                        <td className="text-right text-[#00cfff] font-bold pr-2">{y.roa.toFixed(2)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      default:
+        return <div className="text-center py-8 text-text-muted italic">Không tìm thấy thông tin phù hợp.</div>;
+    }
+  };
+
   if (!isOpen) return null;
 
   const currentPrice = latestQuote ? Number(latestQuote.price) : tc;
@@ -701,348 +1080,352 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
           ))}
         </nav>
 
-        {/* ─── 3. MAIN WORKSPACE 3-COLUMN ─── */}
+        {/* ─── 3. MAIN WORKSPACE ─── */}
         <div className="flex-grow flex w-full overflow-hidden">
+          {activeTab === 'Giao dịch' ? (
+            <>
+              {/* COLUMN 1: CHART & TOOLS (58% width) */}
+              <section className="w-[58%] h-full flex border-r border-[#151a24] bg-[#06070a] overflow-hidden">
 
-          {/* COLUMN 1: CHART & TOOLS (58% width) */}
-          <section className="w-[58%] h-full flex border-r border-[#151a24] bg-[#06070a] overflow-hidden">
-
-            {/* Interactive Drawing tools bar (Fully functional trendline draw togglers!) */}
-            <div className="w-[45px] shrink-0 h-full border-r border-[#151a24] bg-[#090b11] flex flex-col items-center py-4 gap-4 text-text-muted text-[13px]">
-              <button
-                onClick={() => setActiveTool('')}
-                className={`bg-transparent border-0 cursor-pointer p-1 rounded transition-colors ${!activeTool ? 'text-white bg-white/10' : 'text-text-muted hover:text-white'}`}
-                title="Con trỏ chuột"
-              >
-                🖱️
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTool('trendline');
-                  setDrawingStep(0);
-                  setDrawingPoint1(null);
-                  setDrawStatus('Click điểm bắt đầu trên đồ thị để chọn điểm 1');
-                }}
-                className={`bg-transparent border-0 cursor-pointer p-1 rounded transition-colors ${activeTool === 'trendline' ? 'text-[#00c58e] bg-[#00c58e]/10' : 'text-text-muted hover:text-white'}`}
-                title="Vẽ đường xu hướng (Click 2 điểm trên chart)"
-              >
-                📈
-              </button>
-              <button
-                onClick={clearDrawings}
-                className="bg-transparent border-0 cursor-pointer p-1 rounded text-red-400 hover:text-red-300 transition-colors"
-                title="Xóa tất cả đường vẽ"
-              >
-                🗑️
-              </button>
-            </div>
-
-            <div className="flex-grow h-full flex flex-col overflow-hidden">
-              {/* Chart details top strip */}
-              <div className="flex justify-between items-center px-4 py-2 border-b border-[#131822] bg-[#080b11] text-[10px] font-bold text-text-secondary">
-                <div className="flex items-center gap-3">
-                  <span className="text-[#00c58e]">{symbol.toUpperCase()}</span>
-                  <span className="text-white bg-white/10 px-1 rounded">{timeframe}</span>
-                  <span>HOSE</span>
-
-                  {/* Indicators toggle bar */}
-                  <div className="flex items-center gap-2 ml-4 pl-4 border-l border-[#1a2233]">
-                    <label className="flex items-center gap-1 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={showSMA}
-                        onChange={(e) => setShowSMA(e.target.checked)}
-                        className="rounded border-[#2d3748] accent-[#ffb300]"
-                      />
-                      <span className="text-[#ffb300]">SMA(20)</span>
-                    </label>
-                    <label className="flex items-center gap-1 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={showEMA}
-                        onChange={(e) => setShowEMA(e.target.checked)}
-                        className="rounded border-[#2d3748] accent-[#00cfff]"
-                      />
-                      <span className="text-[#00cfff]">EMA(50)</span>
-                    </label>
-                  </div>
-
-                  {/* Active drawing tool notification info */}
-                  {drawStatus && (
-                    <span className="ml-4 text-purple-400 font-extrabold animate-pulse">
-                      ✏️ {drawStatus}
-                    </span>
-                  )}
+                {/* Interactive Drawing tools bar (Fully functional trendline draw togglers!) */}
+                <div className="w-[45px] shrink-0 h-full border-r border-[#151a24] bg-[#090b11] flex flex-col items-center py-4 gap-4 text-text-muted text-[13px]">
+                  <button
+                    onClick={() => setActiveTool('')}
+                    className={`bg-transparent border-0 cursor-pointer p-1 rounded transition-colors ${!activeTool ? 'text-white bg-white/10' : 'text-text-muted hover:text-white'}`}
+                    title="Con trỏ chuột"
+                  >
+                    🖱️
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTool('trendline');
+                      setDrawingStep(0);
+                      setDrawingPoint1(null);
+                      setDrawStatus('Click điểm bắt đầu trên đồ thị để chọn điểm 1');
+                    }}
+                    className={`bg-transparent border-0 cursor-pointer p-1 rounded transition-colors ${activeTool === 'trendline' ? 'text-[#00c58e] bg-[#00c58e]/10' : 'text-text-muted hover:text-white'}`}
+                    title="Vẽ đường xu hướng (Click 2 điểm trên chart)"
+                  >
+                    📈
+                  </button>
+                  <button
+                    onClick={clearDrawings}
+                    className="bg-transparent border-0 cursor-pointer p-1 rounded text-red-400 hover:text-red-300 transition-colors"
+                    title="Xóa tất cả đường vẽ"
+                  >
+                    🗑️
+                  </button>
                 </div>
 
-                {/* Interactive Intervals */}
-                <div className="flex gap-1.5 bg-white/2 p-0.5 rounded border border-white/5">
-                  {(['1m', '5m', '15m', '1D', '1W'] as const).map(tf => (
-                    <span
-                      key={tf}
-                      onClick={() => handleTimeframeChange(tf)}
-                      className={`px-1.5 py-0.5 rounded text-[8px] cursor-pointer font-extrabold transition-colors ${timeframe === tf ? 'bg-[#00c58e]/20 text-[#00c58e]' : 'text-text-muted hover:text-white'}`}
-                    >
-                      {tf}
-                    </span>
-                  ))}
-                </div>
-              </div>
+                <div className="flex-grow h-full flex flex-col overflow-hidden">
+                  {/* Chart details top strip */}
+                  <div className="flex justify-between items-center px-4 py-2 border-b border-[#131822] bg-[#080b11] text-[10px] font-bold text-text-secondary">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[#00c58e]">{symbol.toUpperCase()}</span>
+                      <span className="text-white bg-white/10 px-1 rounded">{timeframe}</span>
+                      <span>HOSE</span>
 
-              {/* Candlestick chart viewport */}
-              <div className="flex-grow w-full relative bg-[#06070a]">
-                {loadingChart && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-[#06070a]/90 z-20">
-                    <Loader2 size={32} className="pulse text-[#00c58e] animate-spin" />
-                  </div>
-                )}
+                      {/* Indicators toggle bar */}
+                      <div className="flex items-center gap-2 ml-4 pl-4 border-l border-[#1a2233]">
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={showSMA}
+                            onChange={(e) => setShowSMA(e.target.checked)}
+                            className="rounded border-[#2d3748] accent-[#ffb300]"
+                          />
+                          <span className="text-[#ffb300]">SMA(20)</span>
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={showEMA}
+                            onChange={(e) => setShowEMA(e.target.checked)}
+                            className="rounded border-[#2d3748] accent-[#00cfff]"
+                          />
+                          <span className="text-[#00cfff]">EMA(50)</span>
+                        </label>
+                      </div>
 
-                {/* AI Loading overlay */}
-                {aiLoading && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#06070a]/95 z-25 text-center p-4">
-                    <Loader2 className="animate-spin text-warning mb-3" size={32} />
-                    <h5 className="font-outfit text-warning font-bold text-sm mb-1">Mạng Nơ-ron AI Đang Quét...</h5>
-                    <p className="text-[10px] text-text-secondary leading-relaxed">Đang đối chiếu các tín hiệu kỹ thuật & tin tức của {symbol.toUpperCase()}</p>
-                  </div>
-                )}
-
-                {/* AI Summary Error banner */}
-                {aiMessage && (
-                  <div className="absolute top-4 left-4 right-4 bg-rose-500/10 border border-rose-500/20 text-bearish text-xs text-center p-2.5 rounded-lg z-25 font-medium">
-                    ⚠️ {aiMessage}
-                  </div>
-                )}
-
-                {/* AI Summary report overlay card */}
-                {aiSummary && (
-                  <div className="absolute top-4 left-4 right-4 bg-[#0d1017]/95 border border-warning/30 rounded-xl p-4 z-25 max-h-[90%] overflow-y-auto shadow-2xl animate-scale-up font-inter">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-warning font-bold text-xs uppercase tracking-wide flex items-center gap-1">
-                        ⭐ Luận Điểm Đầu Tư AI - {symbol.toUpperCase()}
-                      </span>
-                      <button
-                        onClick={() => setAiSummary(null)}
-                        className="bg-transparent border-0 text-text-muted hover:text-white cursor-pointer p-0.5"
-                      >
-                        <X size={16} />
-                      </button>
+                      {/* Active drawing tool notification info */}
+                      {drawStatus && (
+                        <span className="ml-4 text-purple-400 font-extrabold animate-pulse">
+                          ✏️ {drawStatus}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-text-secondary leading-relaxed mb-3">
-                      {aiSummary.summary}
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                      <div className="bg-emerald-500/5 border border-emerald-500/10 p-2.5 rounded-lg text-[10.5px]">
-                        <span className="text-emerald-400 font-bold block mb-1">📈 Động lực tăng trưởng:</span>
-                        <ul className="pl-3 list-disc text-text-muted flex flex-col gap-0.5">
-                          {aiSummary.drivers.map((d, i) => <li key={i}>{d}</li>)}
-                        </ul>
-                      </div>
-                      <div className="bg-rose-500/5 border border-rose-500/10 p-2.5 rounded-lg text-[10.5px]">
-                        <span className="text-rose-400 font-bold block mb-1">📉 Rủi ro catalysts:</span>
-                        <ul className="pl-3 list-disc text-text-muted flex flex-col gap-0.5">
-                          {aiSummary.risks.map((r, i) => <li key={i}>{r}</li>)}
-                        </ul>
-                      </div>
+
+                    {/* Interactive Intervals */}
+                    <div className="flex gap-1.5 bg-white/2 p-0.5 rounded border border-white/5">
+                      {(['1m', '5m', '15m', '1D', '1W'] as const).map(tf => (
+                        <span
+                          key={tf}
+                          onClick={() => handleTimeframeChange(tf)}
+                          className={`px-1.5 py-0.5 rounded text-[8px] cursor-pointer font-extrabold transition-colors ${timeframe === tf ? 'bg-[#00c58e]/20 text-[#00c58e]' : 'text-text-muted hover:text-white'}`}
+                        >
+                          {tf}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                )}
 
-                <div ref={chartContainerRef} className="w-full h-full" />
-              </div>
+                  {/* Candlestick chart viewport */}
+                  <div className="flex-grow w-full relative bg-[#06070a]">
+                    {loadingChart && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#06070a]/90 z-20">
+                        <Loader2 size={32} className="pulse text-[#00c58e] animate-spin" />
+                      </div>
+                    )}
 
-              {/* Timeframe controls bar & ranges (Functional zooming!) */}
-              <div className="flex justify-between items-center py-2 px-4 border-t border-[#131822] bg-[#080b11] text-[9.5px] text-text-muted font-bold">
-                <div className="flex gap-2">
-                  {(['1d', '5d', '1m', '3m', '6m', '1y', '5y', 'All'] as const).map(rangeType => (
-                    <span
-                      key={rangeType}
-                      onClick={() => handleRangeChange(rangeType)}
-                      className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${range === rangeType ? 'bg-white/10 text-white font-extrabold' : 'hover:text-white'}`}
+                    {/* AI Loading overlay */}
+                    {aiLoading && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#06070a]/95 z-25 text-center p-4">
+                        <Loader2 className="animate-spin text-warning mb-3" size={32} />
+                        <h5 className="font-outfit text-warning font-bold text-sm mb-1">Mạng Nơ-ron AI Đang Quét...</h5>
+                        <p className="text-[10px] text-text-secondary leading-relaxed">Đang đối chiếu các tín hiệu kỹ thuật & tin tức của {symbol.toUpperCase()}</p>
+                      </div>
+                    )}
+
+                    {/* AI Summary Error banner */}
+                    {aiMessage && (
+                      <div className="absolute top-4 left-4 right-4 bg-rose-500/10 border border-rose-500/20 text-bearish text-xs text-center p-2.5 rounded-lg z-25 font-medium">
+                        ⚠️ {aiMessage}
+                      </div>
+                    )}
+
+                    {/* AI Summary report overlay card */}
+                    {aiSummary && (
+                      <div className="absolute top-4 left-4 right-4 bg-[#0d1017]/95 border border-warning/30 rounded-xl p-4 z-25 max-h-[90%] overflow-y-auto shadow-2xl animate-scale-up font-inter">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="text-warning font-bold text-xs uppercase tracking-wide flex items-center gap-1">
+                            ⭐ Luận Điểm Đầu Tư AI - {symbol.toUpperCase()}
+                          </span>
+                          <button
+                            onClick={() => setAiSummary(null)}
+                            className="bg-transparent border-0 text-text-muted hover:text-white cursor-pointer p-0.5"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                        <p className="text-xs text-text-secondary leading-relaxed mb-3">
+                          {aiSummary.summary}
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                          <div className="bg-emerald-500/5 border border-emerald-500/10 p-2.5 rounded-lg text-[10.5px]">
+                            <span className="text-emerald-400 font-bold block mb-1">📈 Động lực tăng trưởng:</span>
+                            <ul className="pl-3 list-disc text-text-muted flex flex-col gap-0.5">
+                              {aiSummary.drivers.map((d, i) => <li key={i}>{d}</li>)}
+                            </ul>
+                          </div>
+                          <div className="bg-rose-500/5 border border-rose-500/10 p-2.5 rounded-lg text-[10.5px]">
+                            <span className="text-rose-400 font-bold block mb-1">📉 Rủi ro catalysts:</span>
+                            <ul className="pl-3 list-disc text-text-muted flex flex-col gap-0.5">
+                              {aiSummary.risks.map((r, i) => <li key={i}>{r}</li>)}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div ref={chartContainerRef} className="w-full h-full" />
+                  </div>
+
+                  {/* Timeframe controls bar & ranges (Functional zooming!) */}
+                  <div className="flex justify-between items-center py-2 px-4 border-t border-[#131822] bg-[#080b11] text-[9.5px] text-text-muted font-bold">
+                    <div className="flex gap-2">
+                      {(['1d', '5d', '1m', '3m', '6m', '1y', '5y', 'All'] as const).map(rangeType => (
+                        <span
+                          key={rangeType}
+                          onClick={() => handleRangeChange(rangeType)}
+                          className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${range === rangeType ? 'bg-white/10 text-white font-extrabold' : 'hover:text-white'}`}
+                        >
+                          {rangeType.toUpperCase()}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-3 text-text-muted">
+                      <span className="cursor-pointer hover:text-white">%</span>
+                      <span className="cursor-pointer hover:text-white">log</span>
+                      <span className="text-[#00c58e] cursor-pointer" title="Auto fit scaling" onClick={() => handleRangeChange('All')}>tự động</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* COLUMN 2: DEPTH BOOK & VISUAL DEPTH CHART (21% width) */}
+              <section className="w-[21%] h-full flex flex-col border-r border-[#151a24] bg-[#080b11] overflow-y-auto shrink-0 select-none">
+
+                {/* Depth values card */}
+                <div className="p-3 border-b border-[#151a24]">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Độ sầu thị trường</span>
+                    <span className="text-[8.5px] text-text-muted font-bold">Tổng KL Mua/Bán</span>
+                  </div>
+
+                  {/* Buy/Sell Volume Ratio indicator bar */}
+                  <div className="flex h-3 rounded-full overflow-hidden text-[8px] font-extrabold text-white text-center mb-3">
+                    <div
+                      className="bg-emerald-500 transition-[width] duration-300 leading-3 pl-1.5 text-left"
+                      style={{ width: `${buyPercent}%` }}
                     >
-                      {rangeType.toUpperCase()}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-3 text-text-muted">
-                  <span className="cursor-pointer hover:text-white">%</span>
-                  <span className="cursor-pointer hover:text-white">log</span>
-                  <span className="text-[#00c58e] cursor-pointer" title="Auto fit scaling" onClick={() => handleRangeChange('All')}>tự động</span>
-                </div>
-              </div>
-            </div>
-          </section>
+                      Dư mua: {buyVolumeTotal.toLocaleString()}
+                    </div>
+                    <div
+                      className="bg-red-500 transition-[width] duration-300 leading-3 pr-1.5 text-right"
+                      style={{ width: `${100 - buyPercent}%` }}
+                    >
+                      Dư bán: {sellVolumeTotal.toLocaleString()}
+                    </div>
+                  </div>
 
-          {/* COLUMN 2: DEPTH BOOK & VISUAL DEPTH CHART (21% width) */}
-          <section className="w-[21%] h-full flex flex-col border-r border-[#151a24] bg-[#080b11] overflow-y-auto shrink-0 select-none">
-
-            {/* Depth values card */}
-            <div className="p-3 border-b border-[#151a24]">
-              <div className="flex justify-between mb-2">
-                <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Độ sầu thị trường</span>
-                <span className="text-[8.5px] text-text-muted font-bold">Tổng KL Mua/Bán</span>
-              </div>
-
-              {/* Buy/Sell Volume Ratio indicator bar */}
-              <div className="flex h-3 rounded-full overflow-hidden text-[8px] font-extrabold text-white text-center mb-3">
-                <div
-                  className="bg-emerald-500 transition-[width] duration-300 leading-3 pl-1.5 text-left"
-                  style={{ width: `${buyPercent}%` }}
-                >
-                  Dư mua: {buyVolumeTotal.toLocaleString()}
-                </div>
-                <div
-                  className="bg-red-500 transition-[width] duration-300 leading-3 pr-1.5 text-right"
-                  style={{ width: `${100 - buyPercent}%` }}
-                >
-                  Dư bán: {sellVolumeTotal.toLocaleString()}
-                </div>
-              </div>
-
-              {/* Bids/Asks depth table grid */}
-              <table className="w-full text-[10.5px] border-collapse">
-                <thead>
-                  <tr className="text-text-muted border-b border-[#151a24]/80 h-5">
-                    <th className="text-left pb-0.5 font-bold uppercase text-[9px] w-2/5">KL</th>
-                    <th className="text-right pb-0.5 font-bold uppercase text-[9px] w-1/5 pr-1">Giá mua</th>
-                    <th className="text-left pb-0.5 font-bold uppercase text-[9px] w-1/5 pl-1">Giá bán</th>
-                    <th className="text-right pb-0.5 font-bold uppercase text-[9px] w-2/5">KL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bids.map((bid, idx) => {
-                    const ask = asks[idx] || { price: 0, volume: 0, percentage: 0 };
-                    const bidPriceColor = bid.price > tc ? 'text-up' : bid.price < tc ? 'text-down' : 'text-ref';
-                    const askPriceColor = ask.price > tc ? 'text-up' : ask.price < tc ? 'text-down' : 'text-ref';
-
-                    return (
-                      <tr key={idx} className="h-6 hover:bg-white/2 transition-colors">
-                        <td className="relative text-left text-white font-medium pl-1">
-                          <div
-                            className="absolute left-0 top-0.5 bottom-0.5 bg-emerald-500/10 rounded transition-[width] duration-300"
-                            style={{ width: `${bid.percentage}%` }}
-                          />
-                          <span className="relative z-10">{bid.volume.toLocaleString()}</span>
-                        </td>
-                        <td className={`${bidPriceColor} font-extrabold text-right pr-1`}>{bid.price.toLocaleString()}</td>
-
-                        <td className={`${askPriceColor} font-extrabold text-left pl-1`}>{ask.price.toLocaleString()}</td>
-                        <td className="relative text-right text-white font-medium pr-1">
-                          <div
-                            className="absolute right-0 top-0.5 bottom-0.5 bg-red-500/10 rounded transition-[width] duration-300"
-                            style={{ width: `${ask.percentage}%` }}
-                          />
-                          <span className="relative z-10">{ask.volume.toLocaleString()}</span>
-                        </td>
+                  {/* Bids/Asks depth table grid */}
+                  <table className="w-full text-[10.5px] border-collapse">
+                    <thead>
+                      <tr className="text-text-muted border-b border-[#151a24]/80 h-5">
+                        <th className="text-left pb-0.5 font-bold uppercase text-[9px] w-2/5">KL</th>
+                        <th className="text-right pb-0.5 font-bold uppercase text-[9px] w-1/5 pr-1">Giá mua</th>
+                        <th className="text-left pb-0.5 font-bold uppercase text-[9px] w-1/5 pl-1">Giá bán</th>
+                        <th className="text-right pb-0.5 font-bold uppercase text-[9px] w-2/5">KL</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {bids.map((bid, idx) => {
+                        const ask = asks[idx] || { price: 0, volume: 0, percentage: 0 };
+                        const bidPriceColor = bid.price > tc ? 'text-up' : bid.price < tc ? 'text-down' : 'text-ref';
+                        const askPriceColor = ask.price > tc ? 'text-up' : ask.price < tc ? 'text-down' : 'text-ref';
 
-            {/* Visual Depth Chart columns */}
-            <div className="flex flex-col gap-2 p-3 bg-[#0c0f16]/30 border-b border-[#151a24]">
-              <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Biểu đồ độ sâu thị trường</span>
-              <div className="h-[120px] w-full flex items-end justify-between gap-1 px-2 pt-2 relative">
-                {/* Bids volume bars */}
-                <div className="flex-1 h-full flex items-end justify-end gap-1 border-r border-[#1a2233]/40 pr-1">
-                  {bids.slice().reverse().map((bid, i) => {
-                    const maxVolume = Math.max(...[...bids, ...asks].map(x => x.volume), 1);
-                    const h = (bid.volume / maxVolume) * 90;
-                    return (
-                      <div key={i} className="flex-1 h-full flex flex-col justify-end items-center gap-1 group relative">
-                        <div
-                          style={{ height: `${h}%` }}
-                          className="w-full bg-emerald-500/25 border border-emerald-500/40 rounded-t hover:bg-emerald-500/45 transition-all duration-150"
-                        />
-                        <span className="text-[8px] text-emerald-500 font-bold scale-90">{bid.price.toLocaleString()}</span>
-                        <div className="absolute bottom-full mb-1 hidden group-hover:block bg-[#141923] border border-[#2d3748]/60 text-[8px] text-white p-1 rounded z-30 shadow-xl whitespace-nowrap">
-                          Mua: {bid.price} | KL: {bid.volume.toLocaleString()}
-                        </div>
-                      </div>
-                    );
-                  })}
+                        return (
+                          <tr key={idx} className="h-6 hover:bg-white/2 transition-colors">
+                            <td className="relative text-left text-white font-medium pl-1">
+                              <div
+                                className="absolute left-0 top-0.5 bottom-0.5 bg-emerald-500/10 rounded transition-[width] duration-300"
+                                style={{ width: `${bid.percentage}%` }}
+                              />
+                              <span className="relative z-10">{bid.volume.toLocaleString()}</span>
+                            </td>
+                            <td className={`${bidPriceColor} font-extrabold text-right pr-1`}>{bid.price.toLocaleString()}</td>
+
+                            <td className={`${askPriceColor} font-extrabold text-left pl-1`}>{ask.price.toLocaleString()}</td>
+                            <td className="relative text-right text-white font-medium pr-1">
+                              <div
+                                className="absolute right-0 top-0.5 bottom-0.5 bg-red-500/10 rounded transition-[width] duration-300"
+                                style={{ width: `${ask.percentage}%` }}
+                              />
+                              <span className="relative z-10">{ask.volume.toLocaleString()}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
-                {/* Asks volume bars */}
-                <div className="flex-1 h-full flex items-end justify-start gap-1 pl-1">
-                  {asks.map((ask, i) => {
-                    const maxVolume = Math.max(...[...bids, ...asks].map(x => x.volume), 1);
-                    const h = (ask.volume / maxVolume) * 90;
-                    return (
-                      <div key={i} className="flex-1 h-full flex flex-col justify-end items-center gap-1 group relative">
-                        <div
-                          style={{ height: `${h}%` }}
-                          className="w-full bg-red-500/25 border border-red-500/40 rounded-t hover:bg-red-500/45 transition-all duration-150"
-                        />
-                        <span className="text-[8px] text-red-500 font-bold scale-90">{ask.price.toLocaleString()}</span>
-                        <div className="absolute bottom-full mb-1 hidden group-hover:block bg-[#141923] border border-[#2d3748]/60 text-[8px] text-white p-1 rounded z-30 shadow-xl whitespace-nowrap">
-                          Bán: {ask.price} | KL: {ask.volume.toLocaleString()}
-                        </div>
-                      </div>
-                    );
-                  })}
+                {/* Visual Depth Chart columns */}
+                <div className="flex flex-col gap-2 p-3 bg-[#0c0f16]/30 border-b border-[#151a24]">
+                  <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Biểu đồ độ sâu thị trường</span>
+                  <div className="h-[120px] w-full flex items-end justify-between gap-1 px-2 pt-2 relative">
+                    {/* Bids volume bars */}
+                    <div className="flex-1 h-full flex items-end justify-end gap-1 border-r border-[#1a2233]/40 pr-1">
+                      {bids.slice().reverse().map((bid, i) => {
+                        const maxVolume = Math.max(...[...bids, ...asks].map(x => x.volume), 1);
+                        const h = (bid.volume / maxVolume) * 90;
+                        return (
+                          <div key={i} className="flex-1 h-full flex flex-col justify-end items-center gap-1 group relative">
+                            <div
+                              style={{ height: `${h}%` }}
+                              className="w-full bg-emerald-500/25 border border-emerald-500/40 rounded-t hover:bg-emerald-500/45 transition-all duration-150"
+                            />
+                            <span className="text-[8px] text-emerald-500 font-bold scale-90">{bid.price.toLocaleString()}</span>
+                            <div className="absolute bottom-full mb-1 hidden group-hover:block bg-[#141923] border border-[#2d3748]/60 text-[8px] text-white p-1 rounded z-30 shadow-xl whitespace-nowrap">
+                              Mua: {bid.price} | KL: {bid.volume.toLocaleString()}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Asks volume bars */}
+                    <div className="flex-1 h-full flex items-end justify-start gap-1 pl-1">
+                      {asks.map((ask, i) => {
+                        const maxVolume = Math.max(...[...bids, ...asks].map(x => x.volume), 1);
+                        const h = (ask.volume / maxVolume) * 90;
+                        return (
+                          <div key={i} className="flex-1 h-full flex flex-col justify-end items-center gap-1 group relative">
+                            <div
+                              style={{ height: `${h}%` }}
+                              className="w-full bg-red-500/25 border border-red-500/40 rounded-t hover:bg-red-500/45 transition-all duration-150"
+                            />
+                            <span className="text-[8px] text-red-500 font-bold scale-90">{ask.price.toLocaleString()}</span>
+                            <div className="absolute bottom-full mb-1 hidden group-hover:block bg-[#141923] border border-[#2d3748]/60 text-[8px] text-white p-1 rounded z-30 shadow-xl whitespace-nowrap">
+                              Bán: {ask.price} | KL: {ask.volume.toLocaleString()}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </section>
 
-          </section>
+              {/* COLUMN 3: REAL-TIME TRANSACTION LOGS (21% width) */}
+              <section className="w-[21%] h-full flex flex-col bg-[#080b11] overflow-hidden shrink-0">
 
-          {/* COLUMN 3: REAL-TIME TRANSACTION LOGS (21% width) */}
-          <section className="w-[21%] h-full flex flex-col bg-[#080b11] overflow-hidden shrink-0">
+                <div className="p-3 border-b border-[#151a24] flex justify-between items-center shrink-0">
+                  <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Khớp lệnh</span>
+                  <div className="flex gap-2 text-[9px] font-bold text-[#7b8a9b]">
+                    <span>KL: <span className="text-white">{(trades.reduce((acc, t) => acc + t.volume, 0) || 45300).toLocaleString()}</span></span>
+                    <span className="text-up">M: {buyPercent.toFixed(0)}%</span>
+                    <span className="text-down">B: {(100 - buyPercent).toFixed(0)}%</span>
+                  </div>
+                </div>
 
-            <div className="p-3 border-b border-[#151a24] flex justify-between items-center shrink-0">
-              <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Khớp lệnh</span>
-              <div className="flex gap-2 text-[9px] font-bold text-[#7b8a9b]">
-                <span>KL: <span className="text-white">{(trades.reduce((acc, t) => acc + t.volume, 0) || 45300).toLocaleString()}</span></span>
-                <span className="text-up">M: {buyPercent.toFixed(0)}%</span>
-                <span className="text-down">B: {(100 - buyPercent).toFixed(0)}%</span>
-              </div>
-            </div>
-
-            {/* Trades history dynamic stream */}
-            <div className="flex-grow overflow-y-auto">
-              <table className="w-full text-[10.5px]">
-                <thead>
-                  <tr className="sticky top-0 bg-[#0d1017] text-text-muted border-b border-[#151a24] h-7 z-10">
-                    <th className="text-left pl-3 font-semibold text-[9px] uppercase">Thời gian</th>
-                    <th className="text-right font-semibold text-[9px] uppercase">Giá</th>
-                    <th className="text-right font-semibold text-[9px] uppercase">+/-</th>
-                    <th className="text-right pr-3 font-semibold text-[9px] uppercase">KL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trades.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="text-center p-8 text-text-muted font-bold text-xs italic">
-                        Không có dữ liệu
-                      </td>
-                    </tr>
-                  ) : (
-                    trades.map((t, idx) => {
-                      const diff = Number(t.price) - tc;
-                      return (
-                        <tr key={idx} className="h-6 border-b border-[#151a24]/30 hover:bg-white/2 transition-colors">
-                          <td className="pl-3 text-text-muted font-mono">{t.time}</td>
-                          <td className={`${t.price > tc ? 'text-up' : t.price < tc ? 'text-down' : 'text-ref'} font-extrabold text-right`}>
-                            {t.price.toLocaleString()}
-                          </td>
-                          <td className={`${diff >= 0 ? 'text-up' : 'text-down'} text-right font-semibold font-mono text-[9px]`}>
-                            {diff >= 0 ? '+' : ''}{diff.toLocaleString()}
-                          </td>
-                          <td className={`text-right pr-3 font-semibold font-mono ${t.type === 'BUY' ? 'text-up' : 'text-down'}`}>
-                            {t.volume.toLocaleString()}
+                {/* Trades history dynamic stream */}
+                <div className="flex-grow overflow-y-auto">
+                  <table className="w-full text-[10.5px]">
+                    <thead>
+                      <tr className="sticky top-0 bg-[#0d1017] text-text-muted border-b border-[#151a24] h-7 z-10">
+                        <th className="text-left pl-3 font-semibold text-[9px] uppercase">Thời gian</th>
+                        <th className="text-right font-semibold text-[9px] uppercase">Giá</th>
+                        <th className="text-right font-semibold text-[9px] uppercase">+/-</th>
+                        <th className="text-right pr-3 font-semibold text-[9px] uppercase">KL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {trades.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="text-center p-8 text-text-muted font-bold text-xs italic">
+                            Không có dữ liệu
                           </td>
                         </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                      ) : (
+                        trades.map((t, idx) => {
+                          const diff = Number(t.price) - tc;
+                          return (
+                            <tr key={idx} className="h-6 border-b border-[#151a24]/30 hover:bg-white/2 transition-colors">
+                              <td className="pl-3 text-text-muted font-mono">{t.time}</td>
+                              <td className={`${t.price > tc ? 'text-up' : t.price < tc ? 'text-down' : 'text-ref'} font-extrabold text-right`}>
+                                {t.price.toLocaleString()}
+                              </td>
+                              <td className={`${diff >= 0 ? 'text-up' : 'text-down'} text-right font-semibold font-mono text-[9px]`}>
+                                {diff >= 0 ? '+' : ''}{diff.toLocaleString()}
+                              </td>
+                              <td className={`text-right pr-3 font-semibold font-mono ${t.type === 'BUY' ? 'text-up' : 'text-down'}`}>
+                                {t.volume.toLocaleString()}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
+          ) : (
+            <div className="w-full h-full overflow-y-auto bg-[#06080d] p-6 text-text-primary scrollbar-thin">
+              {renderSubTab()}
             </div>
-
-          </section>
-
+          )}
         </div>
       </div>
     </div>

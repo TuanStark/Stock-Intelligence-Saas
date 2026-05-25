@@ -22,4 +22,8 @@ export interface ContextData {
     latestQuote?: any;
     activeSignals: any[];
     recentNews: any[];
+    companyProfile?: any;
+    companyShareholders?: any[];
+    companyDividends?: any[];
+    companyFinancialQuarters?: any[];
 }
