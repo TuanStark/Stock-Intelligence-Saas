@@ -140,6 +140,17 @@ export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [flashingSymbols, setFlashingSymbols] = useState<Record<string, 'up' | 'down'>>({});
 
+  // SSI iBoard Enhanced States
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [boardMarketTab, setBoardMarketTab] = useState<'VN30' | 'HOSE' | 'HNX' | 'UPCOM' | 'WATCHLIST'>('VN30');
+  const [boardQuotes, setBoardQuotes] = useState<Record<string, Mover>>({});
+  const [indices, setIndices] = useState({
+    vnIndex: { val: 1250.32, change: 15.22, pct: 0.0123, vol: '642.5M', valTraded: '15,230 tỷ' },
+    vn30: { val: 1265.45, change: 18.40, pct: 0.0147, vol: '185.3M', valTraded: '6,850 tỷ' },
+    hnxIndex: { val: 235.15, change: -0.45, pct: -0.0019, vol: '85.2M', valTraded: '1,420 tỷ' },
+    upcomIndex: { val: 92.40, change: 0.12, pct: 0.0013, vol: '45.8M', valTraded: '650 tỷ' },
+  });
+
   const handleAIScan = async () => {
     if (isAnalyzing) return;
     setIsAnalyzing(true);
@@ -184,6 +195,43 @@ export default function Dashboard() {
       console.error('Lỗi lưu tương tác AI:', e);
     }
   };
+
+  // Sync Sidebar Collapsed Mode automatically on Dashboard
+  useEffect(() => {
+    if (activeTab === 'dashboard') {
+      setIsSidebarCollapsed(true);
+    } else {
+      setIsSidebarCollapsed(false);
+    }
+  }, [activeTab]);
+
+  // Indices fluctuation simulation
+  useEffect(() => {
+    if (activeTab !== 'dashboard') return;
+    const idxInterval = setInterval(() => {
+      setIndices((prev) => {
+        const fluctuate = (item: any) => {
+          const delta = (Math.random() - 0.5) * 1.5;
+          const newVal = Math.max(10, Number((item.val + delta).toFixed(2)));
+          const newChange = Number((item.change + delta).toFixed(2));
+          const newPct = newChange / (newVal - newChange);
+          return {
+            ...item,
+            val: newVal,
+            change: newChange,
+            pct: newPct,
+          };
+        };
+        return {
+          vnIndex: fluctuate(prev.vnIndex),
+          vn30: fluctuate(prev.vn30),
+          hnxIndex: fluctuate(prev.hnxIndex),
+          upcomIndex: fluctuate(prev.upcomIndex),
+        };
+      });
+    }, 4000);
+    return () => clearInterval(idxInterval);
+  }, [activeTab]);
 
   // Fetch Personalization Data (Recommended Feed & Portfolio HHI Intelligence)
   useEffect(() => {
@@ -234,6 +282,42 @@ export default function Dashboard() {
         }
         setTopMovers(uniqueMovers.slice(0, 4));
 
+        // Seed Board Quotes from topMovers and common Vietnamese symbols
+        const initialQuotes: Record<string, Mover> = {};
+        
+        // Seed HOSE/VN30 baseline
+        movers.forEach(m => {
+          initialQuotes[m.symbol] = m;
+        });
+
+        // Seed HNX baseline
+        const hnxTickers = [
+          { s: 'SHS', n: 'Sài Gòn - Hà Nội Securities', p: 18500 },
+          { s: 'PVS', n: 'Dầu khí PVS', p: 38000 },
+          { s: 'IDC', n: 'IDICO', p: 55000 },
+          { s: 'CEO', n: 'CEO Group', p: 16000 }
+        ];
+        hnxTickers.forEach(t => {
+          if (!initialQuotes[t.s]) {
+            initialQuotes[t.s] = { symbol: t.s, name: t.n, price: t.p, change: 100, changePercent: 0.0054, latestSignal: null };
+          }
+        });
+
+        // Seed UPCOM baseline
+        const upcomTickers = [
+          { s: 'ACV', n: 'Cảng hàng không', p: 110000 },
+          { s: 'BSR', n: 'Lọc hóa dầu Bình Sơn', p: 22000 },
+          { s: 'VEA', n: 'Máy động lực', p: 45000 },
+          { s: 'VGI', n: 'Viettel Global', p: 78000 }
+        ];
+        upcomTickers.forEach(t => {
+          if (!initialQuotes[t.s]) {
+            initialQuotes[t.s] = { symbol: t.s, name: t.n, price: t.p, change: -200, changePercent: -0.0025, latestSignal: null };
+          }
+        });
+
+        setBoardQuotes(initialQuotes);
+
         // Deduplicate recentSignals by ID
         const signals: Signal[] = resData.data.recentSignals || [];
         const uniqueSignals: Signal[] = [];
@@ -283,6 +367,20 @@ export default function Dashboard() {
           return copy;
         });
       }, 500);
+
+      // Update Board Quotes
+      setBoardQuotes((prev) => {
+        const existing = prev[tick.symbol] || { symbol: tick.symbol, name: tick.symbol, price: tick.price, change: tick.change, changePercent: tick.changePercent, latestSignal: null };
+        return {
+          ...prev,
+          [tick.symbol]: {
+            ...existing,
+            price: tick.price,
+            change: tick.change,
+            changePercent: tick.changePercent,
+          }
+        };
+      });
 
       // Update Top Movers card values instantly on the dashboard
       setTopMovers((prevMovers) => {
@@ -546,6 +644,96 @@ export default function Dashboard() {
     }
   };
 
+  // Add Watchlist Quick Action directly from Symbol
+  const handleAddWatchlistFromSymbol = async (sym: string) => {
+    if (session && token) {
+      try {
+        const result = await watchlistApi.addItem(sym);
+        if (result.success) {
+          // Re-fetch watchlist
+          const listRes = await watchlistApi.getItems();
+          if (listRes.success && listRes.data) {
+            setWatchlistItems(listRes.data.items || []);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      const currentList = JSON.parse(localStorage.getItem('stock_intel_guest_watchlist') || '[]');
+      if (!currentList.includes(sym)) {
+        currentList.push(sym);
+        localStorage.setItem('stock_intel_guest_watchlist', JSON.stringify(currentList));
+      }
+      // Re-hydrate local watchlist
+      const quoteData = await marketApi.getDetail(sym);
+      if (quoteData.success && quoteData.data) {
+        const q = quoteData.data.latestQuote;
+        const newItem = {
+          id: sym,
+          instrument: {
+            symbol: sym,
+            name: quoteData.data.instrument.name,
+            price: q ? Number(q.price) : 0,
+            change: q ? Number(q.change) : 0,
+            changePercent: q ? Number(q.changePercent) : 0,
+            latestSignal: quoteData.data.signals[0] || null
+          }
+        };
+        setWatchlistItems(prev => [...prev.filter(item => item.instrument.symbol !== sym), newItem]);
+      }
+    }
+  };
+
+  // Filter stock lists based on active category
+  const getFilteredMoverList = (): Mover[] => {
+    let activeSymbols: string[] = [];
+    if (boardMarketTab === 'VN30') {
+      activeSymbols = ['FPT', 'HPG', 'TCB', 'VCB', 'VHM', 'VIC'];
+    } else if (boardMarketTab === 'HOSE') {
+      activeSymbols = ['VCB', 'BID', 'CTG', 'TCB', 'MBB', 'VPB', 'ACB', 'VHM', 'VIC', 'VRE', 'FPT', 'HPG'];
+    } else if (boardMarketTab === 'HNX') {
+      activeSymbols = ['SHS', 'PVS', 'IDC', 'CEO'];
+    } else if (boardMarketTab === 'UPCOM') {
+      activeSymbols = ['ACV', 'BSR', 'VEA', 'VGI'];
+    } else if (boardMarketTab === 'WATCHLIST') {
+      return watchlistItems.map(item => ({
+        symbol: item.instrument.symbol,
+        name: item.instrument.name,
+        price: item.instrument.price,
+        change: item.instrument.change,
+        changePercent: item.instrument.changePercent,
+        latestSignal: item.instrument.latestSignal
+      }));
+    }
+
+    return activeSymbols.map(sym => {
+      if (boardQuotes[sym]) {
+        return boardQuotes[sym];
+      }
+      // Fallback baseline
+      return { symbol: sym, name: sym, price: 25000, change: 0, changePercent: 0, latestSignal: null };
+    });
+  };
+
+  // Render SVG Sparkline
+  const renderSparkline = (change: number) => {
+    const isUp = change >= 0;
+    const points = isUp 
+      ? '0,18 10,14 20,20 30,12 40,8 50,11 60,4 70,2' 
+      : '0,2 10,8 20,4 30,14 40,11 50,18 60,15 70,22';
+    return (
+      <svg className="w-10 h-5" viewBox="0 0 70 24">
+        <polyline
+          fill="none"
+          stroke={isUp ? '#00e676' : '#ff1744'}
+          strokeWidth="1.5"
+          points={points}
+        />
+      </svg>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary">
       {/* Sidebar Mobile Backdrop Overlay */}
@@ -557,120 +745,153 @@ export default function Dashboard() {
       />
 
       {/* ─── SIDEBAR NAVIGATION ─── */}
-      <aside className={`glass-panel fixed top-6 bottom-6 w-[260px] flex flex-col p-6 z-50 rounded-2xl transition-all duration-300 -translate-x-[320px] md:translate-x-0 left-6 ${
+      <aside className={`sidebar-transition group fixed top-0 bottom-0 left-0 flex flex-col z-50 rounded-none border-r border-board-border bg-[#090b11] -translate-x-[320px] md:translate-x-0 ${
         isSidebarOpen ? 'translate-x-0' : ''
+      } ${
+        isSidebarCollapsed 
+          ? 'w-[70px] hover:w-[260px] p-3 hover:p-6' 
+          : 'w-[260px] p-6'
       }`}>
-        <div className="flex items-center gap-2.5 mb-10">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-blue-500 flex items-center justify-center font-extrabold text-lg text-white">S</div>
-          <h2 className="font-outfit text-lg font-extrabold tracking-tight">
+        {/* Sidebar Header */}
+        <div className="flex items-center gap-2.5 mb-10 overflow-hidden shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-blue-500 flex items-center justify-center font-extrabold text-lg text-white shrink-0">S</div>
+          <h2 className={`font-outfit text-lg font-extrabold tracking-tight transition-opacity duration-200 ${
+            isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:block' : 'opacity-100 block'
+          }`}>
             STOCK<span className="text-accent">INTEL</span>
           </h2>
         </div>
 
         {/* Tab Buttons */}
-        <nav className="flex flex-col gap-2 flex-grow">
+        <nav className="flex flex-col gap-2 flex-grow overflow-y-auto overflow-x-hidden">
           <button
             onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}
-            className={`flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+              isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+            } ${
               activeTab === 'dashboard' 
                 ? 'bg-accent/15 text-accent' 
                 : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
             }`}
           >
-            <TrendingUp size={18} />
-            {t('sidebar.dashboard')}
+            <TrendingUp size={18} className="shrink-0" />
+            <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
+              {t('sidebar.dashboard')}
+            </span>
           </button>
 
           <button
             onClick={() => { setActiveTab('watchlist'); setIsSidebarOpen(false); }}
-            className={`flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+              isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+            } ${
               activeTab === 'watchlist' 
                 ? 'bg-accent/15 text-accent' 
                 : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
             }`}
           >
-            <Bookmark size={18} />
-            {t('sidebar.watchlist')}
+            <Bookmark size={18} className="shrink-0" />
+            <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
+              {t('sidebar.watchlist')}
+            </span>
           </button>
 
           <button
             onClick={() => { setActiveTab('signals'); setIsSidebarOpen(false); }}
-            className={`flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+              isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+            } ${
               activeTab === 'signals' 
                 ? 'bg-accent/15 text-accent' 
                 : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
             }`}
           >
-            <Sparkles size={18} />
-            {t('sidebar.signals')}
+            <Sparkles size={18} className="shrink-0" />
+            <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
+              {t('sidebar.signals')}
+            </span>
           </button>
 
           <button
             onClick={() => { setActiveTab('alerts'); setIsSidebarOpen(false); }}
-            className={`flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+              isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+            } ${
               activeTab === 'alerts' 
                 ? 'bg-accent/15 text-accent' 
                 : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
             }`}
           >
-            <Bell size={18} />
-            {t('sidebar.alerts')}
+            <Bell size={18} className="shrink-0" />
+            <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
+              {t('sidebar.alerts')}
+            </span>
           </button>
 
           <button
             onClick={() => { setActiveTab('personalization'); setIsSidebarOpen(false); }}
-            className={`flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+            className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 ${
+              isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+            } ${
               activeTab === 'personalization' 
                 ? 'bg-accent/15 text-accent' 
                 : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
             }`}
           >
-            <Sparkles size={18} className="text-warning" />
-            Phân tích AI & Gợi ý
+            <Sparkles size={18} className="text-warning shrink-0" />
+            <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
+              Phân tích AI & Gợi ý
+            </span>
           </button>
 
           <Link href="/pricing" className="no-underline">
             <button
-              className="flex items-center gap-3 w-full py-3 px-4 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 bg-transparent text-text-secondary hover:bg-surface-hover hover:text-accent w-full"
+              className={`flex items-center gap-3 w-full py-3 border-0 rounded-lg font-outfit font-semibold text-sm cursor-pointer text-left transition-all duration-200 bg-transparent text-text-secondary hover:bg-surface-hover hover:text-accent w-full ${
+                isSidebarCollapsed ? 'px-3.5 group-hover:px-4' : 'px-4'
+              }`}
             >
-              <Building2 size={18} />
-              {t('sidebar.pricing')}
+              <Building2 size={18} className="shrink-0" />
+              <span className={isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate' : 'opacity-100 inline'}>
+                {t('sidebar.pricing')}
+              </span>
             </button>
           </Link>
         </nav>
 
         {/* Dynamic Locale Selector */}
-        <div className="flex gap-2 mb-4 justify-center">
+        <div className={`flex gap-2 mb-4 justify-center shrink-0 ${isSidebarCollapsed ? 'flex-col group-hover:flex-row' : 'flex-row'}`}>
           <button
             onClick={() => setLocale('vi')}
-            className={`py-1 px-2.5 rounded-[6px] text-[11px] font-bold cursor-pointer transition-colors border ${
-              locale === 'vi' 
-                ? 'border-accent bg-accent/15 text-accent' 
-                : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
-            }`}
+            className="py-1 px-2.5 rounded-[6px] text-[11px] font-bold cursor-pointer transition-colors border border-board-border bg-transparent text-text-secondary hover:text-text-primary"
+            style={locale === 'vi' ? { borderColor: 'var(--color-accent)', backgroundColor: 'var(--color-surface-hover)', color: 'var(--color-accent)' } : {}}
           >
             VI
           </button>
           <button
             onClick={() => setLocale('en')}
-            className={`py-1 px-2.5 rounded-[6px] text-[11px] font-bold cursor-pointer transition-colors border ${
-              locale === 'en' 
-                ? 'border-accent bg-accent/15 text-accent' 
-                : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
-            }`}
+            className="py-1 px-2.5 rounded-[6px] text-[11px] font-bold cursor-pointer transition-colors border border-board-border bg-transparent text-text-secondary hover:text-text-primary"
+            style={locale === 'en' ? { borderColor: 'var(--color-accent)', backgroundColor: 'var(--color-surface-hover)', color: 'var(--color-accent)' } : {}}
           >
             EN
           </button>
         </div>
 
         {/* User profile footer */}
-        <div className="glass-panel p-4 rounded-lg border border-board-border text-xs">
+        <div className="glass-panel p-4 rounded-lg border border-board-border text-xs shrink-0 overflow-hidden">
           {user ? (
             <div className="flex flex-col gap-2">
-              <div className="overflow-hidden text-ellipsis whitespace-nowrap font-semibold">
-                {user.email}
+              {/* Collapsed Mode Avatar Indicator */}
+              <div className={`flex items-center gap-2 ${isSidebarCollapsed ? 'justify-center group-hover:justify-start' : 'justify-start'}`}>
+                <div className="w-6 h-6 rounded-full bg-accent/20 text-accent font-extrabold flex items-center justify-center shrink-0">👤</div>
+                <div className={`overflow-hidden text-ellipsis whitespace-nowrap font-semibold transition-opacity duration-200 ${
+                  isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:block' : 'opacity-100 block'
+                }`}>
+                  {user.email}
+                </div>
               </div>
-              <div className="flex justify-between items-center">
+              <div className={`justify-between items-center ${
+                isSidebarCollapsed ? 'hidden group-hover:flex' : 'flex'
+              }`}>
                 <span className="badge badge-bullish text-[10px] py-0.5 px-2">
                   {userTier}
                 </span>
@@ -685,10 +906,10 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="flex flex-col gap-2 text-center">
-              <span className="text-text-secondary font-semibold">{t('sidebar.guestUser')}</span>
+              <span className={`text-text-secondary font-semibold ${isSidebarCollapsed ? 'hidden group-hover:block' : 'block'}`}>{t('sidebar.guestUser')}</span>
               <Link href="/login" className="no-underline">
-                <button className="btn-primary py-1.5 px-3 text-xs w-full justify-center">
-                  {t('common.login')}
+                <button className={`btn-primary py-1.5 text-xs w-full justify-center ${isSidebarCollapsed ? 'px-1 group-hover:px-3' : 'px-3'}`}>
+                  <span className={isSidebarCollapsed ? 'group-hover:inline' : 'inline'}>{t('common.login')}</span>
                 </button>
               </Link>
             </div>
@@ -697,23 +918,36 @@ export default function Dashboard() {
       </aside>
 
       {/* ─── MAIN CONTENT CONTAINER ─── */}
-      <main className="pl-6 md:pl-[300px] pr-6 py-6 min-h-screen flex flex-col w-full">
+      <main className={`sidebar-transition pr-6 py-6 min-h-screen flex flex-col w-full ${
+        isSidebarCollapsed 
+          ? 'pl-6 md:pl-[100px]' 
+          : 'pl-6 md:pl-[300px]'
+      }`}>
 
         {/* ─── TOP HEADER BAR with SEARCH ─── */}
-        <header className="flex items-center justify-between gap-4 pb-6 border-b border-board-border">
+        <header className="flex items-center justify-between gap-4 pb-4 border-b border-board-border">
           <div className="flex items-center gap-3 flex-grow">
             {/* Hamburger Button for mobile */}
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="btn-secondary p-2.5 md:hidden"
+              className="btn-secondary p-2 md:hidden"
             >
-              {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
+              {isSidebarOpen ? <X size={16} /> : <Menu size={16} />}
+            </button>
+
+            {/* Sidebar toggle button for desktop */}
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="btn-secondary p-2 hidden md:flex items-center justify-center"
+              title="Thu nhỏ/Mở rộng Sidebar"
+            >
+              <Menu size={16} />
             </button>
 
             {/* Autocomplete Input Container */}
             <div className="relative w-full max-w-md" ref={autocompleteRef}>
-              <div className="glass-panel flex items-center gap-2.5 bg-surface border border-board-border rounded-lg py-2 px-4 focus-within:border-accent transition-all duration-200">
-                <Search size={18} className="text-text-muted" />
+              <div className="glass-panel flex items-center gap-2 bg-surface border border-board-border rounded-lg py-1.5 px-3.5 focus-within:border-accent transition-all duration-200">
+                <Search size={16} className="text-text-muted" />
                 <input
                   type="text"
                   placeholder={t('common.searchPlaceholder')}
@@ -721,7 +955,7 @@ export default function Dashboard() {
                   onChange={handleSearchChange}
                   className="bg-transparent border-none outline-none text-text-primary text-sm w-full"
                 />
-                {loadingSearch && <Loader2 size={16} className="animate-spin text-text-muted" />}
+                {loadingSearch && <Loader2 size={14} className="animate-spin text-text-muted" />}
               </div>
 
               {/* Search Autocomplete Panel */}
@@ -735,13 +969,13 @@ export default function Dashboard() {
                     searchResults.map((item) => (
                       <Link key={item.id} href={`/instruments/${item.symbol}`} className="no-underline" onClick={() => setShowAutocomplete(false)}>
                         <button
-                          className="flex items-center justify-between w-full py-2.5 px-4 rounded-md text-text-primary hover:bg-surface-hover transition-colors text-left"
+                          className="flex items-center justify-between w-full py-2 px-4 rounded-md text-text-primary hover:bg-surface-hover transition-colors text-left"
                         >
                           <div>
-                            <span className="font-extrabold text-accent mr-2.5">{item.symbol}</span>
+                            <span className="font-extrabold text-accent mr-2">{item.symbol}</span>
                             <span className="text-xs text-text-secondary">{item.name}</span>
                           </div>
-                          <ChevronRight size={16} className="text-text-muted" />
+                          <ChevronRight size={14} className="text-text-muted" />
                         </button>
                       </Link>
                     ))
@@ -751,13 +985,85 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-3">
-            <div className="flex items-center gap-2 py-1.5 px-3 bg-bullish/10 border border-bullish/25 rounded text-bullish text-xs font-semibold">
-              <TrendingUp size={16} />
-              VN-INDEX: 1,250.32 (+1.25%)
-            </div>
+          <div className="hidden lg:flex items-center gap-2 py-1 px-3 bg-white/2 border border-white/5 rounded text-xs text-text-muted">
+            <span className="font-semibold text-text-secondary">Trạng thái cổng luồng:</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+            <span className="text-emerald-500 font-bold">CONNECTED</span>
           </div>
         </header>
+
+        {/* ─── SSI iBOARD INDICES TICKER STRIP ─── */}
+        {activeTab === 'dashboard' && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 py-4 border-b border-board-border bg-[#080b11]/30 rounded-lg mb-4">
+            {/* Index 1: VN-INDEX */}
+            <div className="flex items-center justify-between px-4 border-r border-board-border/60">
+              <div>
+                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">VN-INDEX</span>
+                <span className={`text-base font-extrabold tracking-tight ${indices.vnIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
+                  {indices.vnIndex.val.toLocaleString()}
+                </span>
+                <span className={`block text-[9px] font-bold ${indices.vnIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
+                  {indices.vnIndex.change >= 0 ? '+' : ''}{indices.vnIndex.change.toLocaleString()} ({indices.vnIndex.change >= 0 ? '+' : ''}{(indices.vnIndex.pct * 100).toFixed(2)}%)
+                </span>
+                <span className="block text-[8px] text-text-muted">KL: {indices.vnIndex.vol} | GT: {indices.vnIndex.valTraded}</span>
+              </div>
+              <div className="shrink-0 pl-2">
+                {renderSparkline(indices.vnIndex.change)}
+              </div>
+            </div>
+
+            {/* Index 2: VN30 */}
+            <div className="flex items-center justify-between px-4 border-r border-board-border/60">
+              <div>
+                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">VN30</span>
+                <span className={`text-base font-extrabold tracking-tight ${indices.vn30.change >= 0 ? 'text-up' : 'text-down'}`}>
+                  {indices.vn30.val.toLocaleString()}
+                </span>
+                <span className={`block text-[9px] font-bold ${indices.vn30.change >= 0 ? 'text-up' : 'text-down'}`}>
+                  {indices.vn30.change >= 0 ? '+' : ''}{indices.vn30.change.toLocaleString()} ({indices.vn30.change >= 0 ? '+' : ''}{(indices.vn30.pct * 100).toFixed(2)}%)
+                </span>
+                <span className="block text-[8px] text-text-muted">KL: {indices.vn30.vol} | GT: {indices.vn30.valTraded}</span>
+              </div>
+              <div className="shrink-0 pl-2">
+                {renderSparkline(indices.vn30.change)}
+              </div>
+            </div>
+
+            {/* Index 3: HNX-INDEX */}
+            <div className="flex items-center justify-between px-4 border-r border-board-border/60">
+              <div>
+                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">HNX-INDEX</span>
+                <span className={`text-base font-extrabold tracking-tight ${indices.hnxIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
+                  {indices.hnxIndex.val.toLocaleString()}
+                </span>
+                <span className={`block text-[9px] font-bold ${indices.hnxIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
+                  {indices.hnxIndex.change >= 0 ? '+' : ''}{indices.hnxIndex.change.toLocaleString()} ({indices.hnxIndex.change >= 0 ? '+' : ''}{(indices.hnxIndex.pct * 100).toFixed(2)}%)
+                </span>
+                <span className="block text-[8px] text-text-muted">KL: {indices.hnxIndex.vol} | GT: {indices.hnxIndex.valTraded}</span>
+              </div>
+              <div className="shrink-0 pl-2">
+                {renderSparkline(indices.hnxIndex.change)}
+              </div>
+            </div>
+
+            {/* Index 4: UPCOM-INDEX */}
+            <div className="flex items-center justify-between px-4">
+              <div>
+                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">UPCOM-INDEX</span>
+                <span className={`text-base font-extrabold tracking-tight ${indices.upcomIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
+                  {indices.upcomIndex.val.toLocaleString()}
+                </span>
+                <span className={`block text-[9px] font-bold ${indices.upcomIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
+                  {indices.upcomIndex.change >= 0 ? '+' : ''}{indices.upcomIndex.change.toLocaleString()} ({indices.upcomIndex.change >= 0 ? '+' : ''}{(indices.upcomIndex.pct * 100).toFixed(2)}%)
+                </span>
+                <span className="block text-[8px] text-text-muted">KL: {indices.upcomIndex.vol} | GT: {indices.upcomIndex.valTraded}</span>
+              </div>
+              <div className="shrink-0 pl-2">
+                {renderSparkline(indices.upcomIndex.change)}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ─── DYNAMIC SUBVIEW ─── */}
         <div className="mt-6 flex-1 flex flex-col">
@@ -772,190 +1078,213 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Dashboard Intro */}
-              <div className="mb-8">
-                <h1 className="font-outfit text-3xl font-extrabold tracking-tight mb-2 title-gradient">
-                  {t('dashboard.title')}
-                </h1>
-                <p className="text-text-secondary text-sm">
-                  {t('dashboard.description')}
-                </p>
+              {/* SSI iBoard Market Quick Tabs */}
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <div className="flex gap-1.5 bg-[#0e121a] p-1 rounded-lg border border-board-border">
+                  {([
+                    { key: 'VN30', label: 'VN30' },
+                    { key: 'HOSE', label: 'HOSE' },
+                    { key: 'HNX', label: 'HNX' },
+                    { key: 'UPCOM', label: 'UPCOM' },
+                    { key: 'WATCHLIST', label: 'BẢNG DANH MỤC' }
+                  ] as const).map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setBoardMarketTab(tab.key)}
+                      className={`py-1.5 px-3 rounded text-[11px] font-bold font-outfit border-0 cursor-pointer transition-all duration-200 ${
+                        boardMarketTab === tab.key
+                          ? 'bg-accent/25 text-accent shadow-md'
+                          : 'bg-transparent text-text-muted hover:text-white hover:bg-white/2'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="text-[11px] text-text-muted font-bold font-outfit">
+                  Hiển thị: <span className="text-white">
+                    {boardMarketTab === 'WATCHLIST' 
+                      ? `${watchlistItems.length} mã theo dõi` 
+                      : `${getFilteredMoverList().length} mã thị trường`}
+                  </span>
+                </div>
               </div>
 
-              {/* Grid Content */}
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              {/* iBoard Full-Width Trading Grid */}
+              <div className="w-full flex flex-col gap-5">
+                {loadingData ? (
+                  <div className="flex justify-center py-16">
+                    <Loader2 size={32} className="animate-spin text-accent" />
+                  </div>
+                ) : getFilteredMoverList().length === 0 ? (
+                  <div className="glass-panel py-16 text-center text-text-muted text-xs">
+                    {boardMarketTab === 'WATCHLIST' 
+                      ? 'Danh mục theo dõi của bạn đang trống. Chọn thêm các mã như FPT, HPG để theo dõi!' 
+                      : 'Không có dữ liệu cổ phiếu cho nhóm này.'}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-border-board shadow-2xl bg-board-bg w-full">
+                    <table className="iboard-table w-full min-w-[950px]">
+                      <thead>
+                        <tr>
+                          <th rowSpan={2} className="text-left pl-3">Mã CK</th>
+                          <th rowSpan={2}>Trần</th>
+                          <th rowSpan={2}>Sàn</th>
+                          <th rowSpan={2}>TC</th>
+                          <th colSpan={6} className="bg-bullish/5">Bên mua</th>
+                          <th colSpan={3} className="bg-white/5">Khớp lệnh</th>
+                          <th colSpan={6} className="bg-bearish/5">Bên bán</th>
+                          <th rowSpan={2}>Tổng KL</th>
+                          <th colSpan={2} className="bg-accent/5 pr-3">ĐTNN</th>
+                        </tr>
+                        <tr>
+                          <th className="bg-bullish/3">Giá 3</th>
+                          <th className="bg-bullish/3">KL 3</th>
+                          <th className="bg-bullish/3">Giá 2</th>
+                          <th className="bg-bullish/3">KL 2</th>
+                          <th className="bg-bullish/3">Giá 1</th>
+                          <th className="bg-bullish/3">KL 1</th>
+                          <th className="bg-white/2">Giá</th>
+                          <th className="bg-white/2">KL</th>
+                          <th className="bg-white/2">+/-</th>
+                          <th className="bg-bearish/3">Giá 1</th>
+                          <th className="bg-bearish/3">KL 1</th>
+                          <th className="bg-bearish/3">Giá 2</th>
+                          <th className="bg-bearish/3">KL 2</th>
+                          <th className="bg-bearish/3">Giá 3</th>
+                          <th className="bg-bearish/3">KL 3</th>
+                          <th className="bg-accent/3 text-[9px]">Mua</th>
+                          <th className="bg-accent/3 pr-3 text-[9px]">Bán</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {getFilteredMoverList().map((mover) => {
+                          const isUp = mover.changePercent >= 0;
+                          const tc = Math.round(Number(mover.price) - Number(mover.change));
+                          const tran = Math.round(tc * 1.07);
+                          const san = Math.round(tc * 0.93);
 
-                {/* LEFT COLUMN: Top Movers (Quotes) */}
-                <div className="xl:col-span-2 flex flex-col gap-5">
-                  <h3 className="font-outfit text-lg font-bold flex items-center gap-2">
-                    <TrendingUp size={20} className="text-accent" />
-                    {t('dashboard.moversTitle')}
-                  </h3>
+                          const flashClass = flashingSymbols[mover.symbol] === 'up' ? 'animate-flash-up' : flashingSymbols[mover.symbol] === 'down' ? 'animate-flash-down' : '';
 
-                  {loadingData ? (
-                    <div className="flex justify-center py-16">
-                      <Loader2 size={32} className="animate-spin text-accent" />
-                    </div>
-                  ) : topMovers.length === 0 ? (
-                    <div className="glass-panel py-16 text-center text-text-muted">
-                      {t('dashboard.noMovers')}
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto rounded-xl border border-border-board shadow-2xl bg-board-bg">
-                      <table className="iboard-table w-full min-w-[950px]">
-                        <thead>
-                          <tr>
-                            <th rowSpan={2} className="text-left pl-3">Mã CK</th>
-                            <th rowSpan={2}>Trần</th>
-                            <th rowSpan={2}>Sàn</th>
-                            <th rowSpan={2}>TC</th>
-                            <th colSpan={6} className="bg-bullish/5">Bên mua</th>
-                            <th colSpan={3} className="bg-white/5">Khớp lệnh</th>
-                            <th colSpan={6} className="bg-bearish/5">Bên bán</th>
-                            <th rowSpan={2} className="pr-3">Tổng KL</th>
-                          </tr>
-                          <tr>
-                            <th className="bg-bullish/3">Giá 3</th>
-                            <th className="bg-bullish/3">KL 3</th>
-                            <th className="bg-bullish/3">Giá 2</th>
-                            <th className="bg-bullish/3">KL 2</th>
-                            <th className="bg-bullish/3">Giá 1</th>
-                            <th className="bg-bullish/3">KL 1</th>
-                            <th className="bg-white/2">Giá</th>
-                            <th className="bg-white/2">KL</th>
-                            <th className="bg-white/2">+/-</th>
-                            <th className="bg-bearish/3">Giá 1</th>
-                            <th className="bg-bearish/3">KL 1</th>
-                            <th className="bg-bearish/3">Giá 2</th>
-                            <th className="bg-bearish/3">KL 2</th>
-                            <th className="bg-bearish/3">Giá 3</th>
-                            <th className="bg-bearish/3">KL 3</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {topMovers.map((mover) => {
-                            const isUp = mover.changePercent >= 0;
-                            const tc = Math.round(Number(mover.price) - Number(mover.change));
-                            const tran = Math.round(tc * 1.07);
-                            const san = Math.round(tc * 0.93);
+                          const currentPrice = Number(mover.price);
+                          const priceColor = currentPrice > tc ? 'text-up' : currentPrice < tc ? 'text-down' : 'text-ref';
+                          
+                          const bid1Price = Math.round(currentPrice - 50);
+                          const bid1Vol = Math.floor(18000 + (currentPrice % 300) * 100);
+                          const bid2Price = Math.round(currentPrice - 100);
+                          const bid2Vol = Math.floor(12000 + (currentPrice % 400) * 100);
+                          const bid3Price = Math.round(currentPrice - 150);
+                          const bid3Vol = Math.floor(8000 + (currentPrice % 500) * 100);
 
-                            const flashClass = flashingSymbols[mover.symbol] === 'up' ? 'animate-flash-up' : flashingSymbols[mover.symbol] === 'down' ? 'animate-flash-down' : '';
+                          const ask1Price = Math.round(currentPrice + 50);
+                          const ask1Vol = Math.floor(16000 + (currentPrice % 300) * 100);
+                          const ask2Price = Math.round(currentPrice + 100);
+                          const ask2Vol = Math.floor(11000 + (currentPrice % 400) * 100);
+                          const ask3Price = Math.round(currentPrice + 150);
+                          const ask3Vol = Math.floor(7000 + (currentPrice % 500) * 100);
 
-                            const currentPrice = Number(mover.price);
-                            const priceColor = currentPrice > tc ? 'text-up' : currentPrice < tc ? 'text-down' : 'text-ref';
-                            
-                            const bid1Price = Math.round(currentPrice - 50);
-                            const bid1Vol = Math.floor(25000 + (currentPrice % 300) * 100);
-                            const bid2Price = Math.round(currentPrice - 100);
-                            const bid2Vol = Math.floor(18000 + (currentPrice % 400) * 100);
-                            const bid3Price = Math.round(currentPrice - 150);
-                            const bid3Vol = Math.floor(12000 + (currentPrice % 500) * 100);
+                          const totalVolume = Math.floor(500000 + (currentPrice % 500) * 6200);
 
-                            const ask1Price = Math.round(currentPrice + 50);
-                            const ask1Vol = Math.floor(22000 + (currentPrice % 300) * 100);
-                            const ask2Price = Math.round(currentPrice + 100);
-                            const ask2Vol = Math.floor(16000 + (currentPrice % 400) * 100);
-                            const ask3Price = Math.round(currentPrice + 150);
-                            const ask3Vol = Math.floor(10000 + (currentPrice % 500) * 100);
+                          // Mock Foreigner transactions
+                          const forBuy = Math.floor(500 + (currentPrice % 37) * 250);
+                          const forSell = Math.floor(200 + (currentPrice % 17) * 150);
 
-                            const totalVolume = Math.floor(1000000 + (currentPrice % 500) * 8500);
+                          return (
+                            <tr 
+                              key={mover.symbol} 
+                              onClick={() => {
+                                setSelectedSymbol(mover.symbol);
+                                setIsModalOpen(true);
+                              }}
+                              className="cursor-pointer group/row"
+                            >
+                              <td className="text-left font-extrabold pl-3 text-text-primary group-hover/row:text-accent relative min-w-[100px]">
+                                <div className="flex items-center justify-between">
+                                  <span>★ {mover.symbol}</span>
+                                  {/* Quick floating Actions Box */}
+                                  <div className="hidden group-hover/row:flex items-center gap-1 absolute left-14 bg-board-bg/95 border border-board-border rounded p-0.5 z-20 shadow-xl">
+                                    <button 
+                                      title="Phân tích chi tiết"
+                                      onClick={(e) => { e.stopPropagation(); setSelectedSymbol(mover.symbol); setIsModalOpen(true); }}
+                                      className="bg-transparent border-0 text-accent hover:text-white cursor-pointer px-1 py-0.5 text-[10px]"
+                                    >
+                                      🔍
+                                    </button>
+                                    <button 
+                                      title="Thêm/Xóa danh mục theo dõi"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        const inWatchlist = watchlistItems.some(item => item.instrument.symbol === mover.symbol);
+                                        if (inWatchlist) {
+                                          await handleRemoveWatchlist(mover.symbol);
+                                        } else {
+                                          await handleAddWatchlistFromSymbol(mover.symbol);
+                                        }
+                                      }}
+                                      className={`bg-transparent border-0 cursor-pointer px-1 py-0.5 text-[10px] ${
+                                        watchlistItems.some(item => item.instrument.symbol === mover.symbol) ? 'text-yellow-500' : 'text-text-muted hover:text-yellow-500'
+                                      }`}
+                                    >
+                                      {watchlistItems.some(item => item.instrument.symbol === mover.symbol) ? '★' : '☆'}
+                                    </button>
+                                    <button 
+                                      title="Thiết lập cảnh báo giá"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setAlertSymbol(mover.symbol);
+                                        setAlertThreshold(mover.price.toString());
+                                        setActiveTab('alerts');
+                                      }}
+                                      className="bg-transparent border-0 text-warning hover:text-white cursor-pointer px-1 py-0.5 text-[10px]"
+                                    >
+                                      🔔
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                              
+                              <td className="text-ceil font-bold">{tran.toLocaleString()}</td>
+                              <td className="text-floor font-bold">{san.toLocaleString()}</td>
+                              <td className="text-ref font-bold">{tc.toLocaleString()}</td>
 
-                            return (
-                              <tr 
-                                key={mover.symbol} 
-                                onClick={() => {
-                                  setSelectedSymbol(mover.symbol);
-                                  setIsModalOpen(true);
-                                }}
-                                className="cursor-pointer"
-                              >
-                                <td className="text-left font-extrabold pl-3 text-text-primary">
-                                  ★ {mover.symbol}
-                                </td>
-                                
-                                <td className="text-ceil font-bold">{tran.toLocaleString()}</td>
-                                <td className="text-floor font-bold">{san.toLocaleString()}</td>
-                                <td className="text-ref font-bold">{tc.toLocaleString()}</td>
+                              <td className={bid3Price > tc ? 'text-up' : bid3Price < tc ? 'text-down' : 'text-ref'}>{bid3Price.toLocaleString()}</td>
+                              <td className="text-text-muted/65">{bid3Vol.toLocaleString()}</td>
+                              <td className={bid2Price > tc ? 'text-up' : bid2Price < tc ? 'text-down' : 'text-ref'}>{bid2Price.toLocaleString()}</td>
+                              <td className="text-text-muted/65">{bid2Vol.toLocaleString()}</td>
+                              <td className={bid1Price > tc ? 'text-up' : bid1Price < tc ? 'text-down' : 'text-ref'}>{bid1Price.toLocaleString()}</td>
+                              <td className="text-text-muted/65">{bid1Vol.toLocaleString()}</td>
 
-                                <td className={bid3Price > tc ? 'text-up' : bid3Price < tc ? 'text-down' : 'text-ref'}>{bid3Price.toLocaleString()}</td>
-                                <td className="text-text-muted">{bid3Vol.toLocaleString()}</td>
-                                <td className={bid2Price > tc ? 'text-up' : bid2Price < tc ? 'text-down' : 'text-ref'}>{bid2Price.toLocaleString()}</td>
-                                <td className="text-text-muted">{bid2Vol.toLocaleString()}</td>
-                                <td className={bid1Price > tc ? 'text-up' : bid1Price < tc ? 'text-down' : 'text-ref'}>{bid1Price.toLocaleString()}</td>
-                                <td className="text-text-muted">{bid1Vol.toLocaleString()}</td>
+                              <td className={`${priceColor} ${flashClass} font-extrabold bg-white/2`}>
+                                {currentPrice.toLocaleString()}
+                              </td>
+                              <td className="font-semibold text-text-primary text-[10px]">
+                                {Math.floor(50 + (currentPrice % 10) * 50).toLocaleString()}
+                              </td>
+                              <td className={`${priceColor} font-bold`}>
+                                {isUp ? '+' : ''}{Number(mover.change).toLocaleString()}
+                              </td>
 
-                                <td className={`${priceColor} ${flashClass} font-extrabold bg-white/2`}>
-                                  {currentPrice.toLocaleString()}
-                                </td>
-                                <td className="font-semibold text-text-primary">
-                                  {Math.floor(100 + (currentPrice % 10) * 100).toLocaleString()}
-                                </td>
-                                <td className={`${priceColor} font-bold`}>
-                                  {isUp ? '+' : ''}{Number(mover.change).toLocaleString()}
-                                </td>
+                              <td className={ask1Price > tc ? 'text-up' : ask1Price < tc ? 'text-down' : 'text-ref'}>{ask1Price.toLocaleString()}</td>
+                              <td className="text-text-muted/65">{ask1Vol.toLocaleString()}</td>
+                              <td className={ask2Price > tc ? 'text-up' : ask2Price < tc ? 'text-down' : 'text-ref'}>{ask2Price.toLocaleString()}</td>
+                              <td className="text-text-muted/65">{ask2Vol.toLocaleString()}</td>
+                              <td className={ask3Price > tc ? 'text-up' : ask3Price < tc ? 'text-down' : 'text-ref'}>{ask3Price.toLocaleString()}</td>
+                              <td className="text-text-muted/65">{ask3Vol.toLocaleString()}</td>
 
-                                <td className={ask1Price > tc ? 'text-up' : ask1Price < tc ? 'text-down' : 'text-ref'}>{ask1Price.toLocaleString()}</td>
-                                <td className="text-text-muted">{ask1Vol.toLocaleString()}</td>
-                                <td className={ask2Price > tc ? 'text-up' : ask2Price < tc ? 'text-down' : 'text-ref'}>{ask2Price.toLocaleString()}</td>
-                                <td className="text-text-muted">{ask2Vol.toLocaleString()}</td>
-                                <td className={ask3Price > tc ? 'text-up' : ask3Price < tc ? 'text-down' : 'text-ref'}>{ask3Price.toLocaleString()}</td>
-                                <td className="text-text-muted">{ask3Vol.toLocaleString()}</td>
+                              <td className="font-bold text-text-primary">
+                                {totalVolume.toLocaleString()}
+                              </td>
 
-                                <td className="font-semibold pr-3 text-text-primary">
-                                  {totalVolume.toLocaleString()}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-
-                {/* RIGHT COLUMN: Emerging Signals */}
-                <div className="xl:col-span-1 flex flex-col gap-5">
-                  <h3 className="font-outfit text-lg font-bold flex items-center gap-2">
-                    <Sparkles size={20} className="text-warning" />
-                    {t('dashboard.signalsTitle')}
-                  </h3>
-
-                  {loadingData ? (
-                    <div className="flex justify-center py-16">
-                      <Loader2 size={24} className="animate-spin text-warning" />
-                    </div>
-                  ) : recentSignals.length === 0 ? (
-                    <div className="glass-panel py-10 text-center text-text-muted text-xs">
-                      {t('dashboard.noSignals')}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      {recentSignals.map((signal) => {
-                        const isBuy = signal.type === 'BUY';
-                        return (
-                          <Link key={signal.id} href={`/instruments/${signal.symbol}`} className="no-underline">
-                            <div className="glass-panel p-4 rounded-xl border border-board-border cursor-pointer hover:border-accent/40 hover:bg-surface-hover/80 transition-all duration-200">
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="font-extrabold text-sm font-outfit text-text-primary">{signal.symbol}</span>
-                                <span className={`badge ${isBuy ? 'badge-bullish' : 'badge-bearish'} text-[10px]`}>
-                                  {signal.type}
-                                </span>
-                              </div>
-                              <p className="text-xs text-text-secondary mb-2 leading-relaxed line-clamp-2">
-                                {signal.reason}
-                              </p>
-                              <div className="flex justify-between text-[10px] text-text-muted">
-                                <span>{t('dashboard.via')} {signal.indicator}</span>
-                                <span>{new Date(signal.detectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                              </div>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
+                              <td className="text-up/90 text-[10.5px]">{forBuy.toLocaleString()}</td>
+                              <td className="text-down/90 pr-3 text-[10.5px]">{forSell.toLocaleString()}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1679,17 +2008,15 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Ticker Detail High-Fidelity Popup Modal */}
-      {selectedSymbol && (
-        <TickerDetailModal
-          symbol={selectedSymbol}
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedSymbol(null);
-          }}
-        />
-      )}
+      {/* SSI iBoard High-Fidelity Details Workspace Modal */}
+      <TickerDetailModal
+        symbol={selectedSymbol || ''}
+        isOpen={isModalOpen && !!selectedSymbol}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedSymbol(null);
+        }}
+      />
     </div>
   );
 }
