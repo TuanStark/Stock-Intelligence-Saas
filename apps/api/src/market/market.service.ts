@@ -5,6 +5,8 @@ import { Queue } from 'bullmq';
 
 @Injectable()
 export class MarketService {
+  private static pendingCandleRequests = new Map<string, Promise<void>>();
+
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue('ai-summary') private readonly aiSummaryQueue: Queue,
@@ -155,13 +157,107 @@ export class MarketService {
 
     if (!instrument) return null;
 
-    // Try to get actual candles
-    const dbCandles = await this.prisma.candle.findMany({
+    const requestKey = `${symbol.toUpperCase()}:${timeframe}`;
+
+    // 1. Try to get actual candles from DB
+    let dbCandles = await this.prisma.candle.findMany({
       where: { instrumentId: instrument.id, timeframe },
       orderBy: { timestamp: 'asc' }
     });
 
-    if (dbCandles.length >= 10) {
+    // 2. If candles are missing/cold, fetch them from VNDIRECT DChart API and cache them in DB
+    if (dbCandles.length < 10) {
+      let fetchPromise = MarketService.pendingCandleRequests.get(requestKey);
+
+      if (!fetchPromise) {
+        fetchPromise = (async () => {
+          try {
+            const cleanSym = symbol.toUpperCase();
+            // Fetch last 120 calendar days to comfortably cover 60-90 trading days
+            const toTime = Math.floor(Date.now() / 1000);
+            const fromTime = toTime - 120 * 24 * 60 * 60;
+
+            let resolution = 'D';
+            if (timeframe === '1m') resolution = '1';
+            else if (timeframe === '5m') resolution = '5';
+            else if (timeframe === '15m') resolution = '15';
+            else if (timeframe === '1W') resolution = 'W';
+
+            const url = `https://dchart-api.vndirect.com.vn/dchart/history?symbol=${cleanSym}&resolution=${resolution}&from=${fromTime}&to=${toTime}`;
+            
+            const response = await fetch(url, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              },
+            });
+
+            if (response.ok) {
+              const data = (await response.json()) as any;
+              if (data && data.s === 'ok' && data.t && data.t.length > 0) {
+                // Limit to the most recent 90 candles for storage optimization
+                const limit = 90;
+                const startIndex = Math.max(0, data.t.length - limit);
+                const candlesToSave = [];
+
+                for (let idx = startIndex; idx < data.t.length; idx++) {
+                  candlesToSave.push({
+                    instrumentId: instrument.id,
+                    timeframe,
+                    open: Math.round(data.o[idx] * 1000),
+                    high: Math.round(data.h[idx] * 1000),
+                    low: Math.round(data.l[idx] * 1000),
+                    close: Math.round(data.c[idx] * 1000),
+                    volume: data.v[idx] || 0,
+                    timestamp: new Date(data.t[idx] * 1000),
+                    source: 'VNDIRECT_DCHART',
+                  });
+                }
+
+                // Bulk upsert each candle record inside a transaction
+                for (const item of candlesToSave) {
+                  await this.prisma.candle.upsert({
+                    where: {
+                      instrumentId_timeframe_timestamp: {
+                        instrumentId: item.instrumentId,
+                        timeframe: item.timeframe,
+                        timestamp: item.timestamp,
+                      },
+                    },
+                    update: {
+                      open: item.open,
+                      high: item.high,
+                      low: item.low,
+                      close: item.close,
+                      volume: item.volume,
+                    },
+                    create: item,
+                  });
+                }
+                console.log(`Successfully fetched and seeded ${candlesToSave.length} real historical candles for ${cleanSym}`);
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to fetch and cache historical candles for ${symbol}:`, err);
+          } finally {
+            // Delete from pending requests once complete
+            MarketService.pendingCandleRequests.delete(requestKey);
+          }
+        })();
+
+        MarketService.pendingCandleRequests.set(requestKey, fetchPromise);
+      }
+
+      // Block until fetch completes
+      await fetchPromise;
+
+      // Re-query database
+      dbCandles = await this.prisma.candle.findMany({
+        where: { instrumentId: instrument.id, timeframe },
+        orderBy: { timestamp: 'asc' }
+      });
+    }
+
+    if (dbCandles.length > 0) {
       return {
         success: true,
         data: dbCandles.map(c => ({
@@ -177,39 +273,59 @@ export class MarketService {
 
     // Fallback: Generate authentic simulated historical daily bars for visually beautiful charts
     const generated = [];
-    const date = new Date();
-    date.setDate(date.getDate() - 60); // 60 days ago
 
-    // Base price depending on symbol (e.g. FPT ~ 75k, VND ~ 17k, HPG ~ 24k)
-    let basePrice = 25000;
-    const cleanSym = symbol.toUpperCase();
-    if (cleanSym === 'FPT') basePrice = 75000;
-    else if (cleanSym === 'VND') basePrice = 17500;
-    else if (cleanSym === 'VNM') basePrice = 59000;
-    else if (cleanSym === 'MSN') basePrice = 76000;
-    else if (cleanSym === 'MWG') basePrice = 79000;
+    // Try to get the latest quote from the database to use as the ending price of our walk!
+    const latestQuote = await this.prisma.quote.findFirst({
+      where: { symbol: symbol.toUpperCase() },
+      orderBy: { asOf: 'desc' }
+    });
 
-    let currentPrice = basePrice;
+    let endPrice = 25000;
+    if (latestQuote) {
+      endPrice = Number(latestQuote.price) || Number(latestQuote.previousClose) || 25000;
+    } else {
+      // Hardcoded fallback list if no quote in DB
+      const cleanSym = symbol.toUpperCase();
+      if (cleanSym === 'FPT') endPrice = 75000;
+      else if (cleanSym === 'VND') endPrice = 17500;
+      else if (cleanSym === 'VNM') endPrice = 59000;
+      else if (cleanSym === 'MSN') endPrice = 76000;
+      else if (cleanSym === 'MWG') endPrice = 79000;
+      else if (cleanSym === 'TCB') endPrice = 32000;
+    }
 
-    for (let i = 0; i < 60; i++) {
-      // Skip weekends
-      const day = date.getDay();
-      if (day === 0 || day === 6) {
-        date.setDate(date.getDate() + 1);
-        continue;
+    // 1. Generate 60 trading dates backwards from today (excluding weekends)
+    const dates: Date[] = [];
+    const checkDate = new Date();
+    checkDate.setUTCHours(0, 0, 0, 0); // Standardize to midnight
+
+    while (dates.length < 60) {
+      const day = checkDate.getDay();
+      if (day !== 0 && day !== 6) {
+        dates.push(new Date(checkDate));
       }
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+    // Reverse so dates are chronologically ascending
+    dates.reverse();
 
-      // Small daily random walk with mild upward trend
-      const dailyVolatility = 0.018; // 1.8% max daily volatility
-      const changePercent = (Math.random() - 0.46) * dailyVolatility; // slightly biased upwards
-      const open = currentPrice;
-      const close = currentPrice * (1 + changePercent);
+    // 2. Perform price random walk backwards from the ending price!
+    let currentPrice = endPrice;
+
+    for (let i = 59; i >= 0; i--) {
+      const candleDate = dates[i];
+
+      const dailyVolatility = 0.015; // 1.5% max daily volatility
+      const changePercent = (Math.random() - 0.52) * dailyVolatility; // slightly biased downwards going backward (upward trend forward)
+
+      const close = currentPrice;
+      const open = currentPrice / (1 + changePercent);
       const high = Math.max(open, close) * (1 + Math.random() * 0.008);
       const low = Math.min(open, close) * (1 - Math.random() * 0.008);
       const volume = Math.floor(1000000 + Math.random() * 5000000);
 
-      generated.push({
-        time: Math.floor(date.getTime() / 1000),
+      generated.unshift({
+        time: Math.floor(candleDate.getTime() / 1000),
         open: Math.round(open),
         high: Math.round(high),
         low: Math.round(low),
@@ -217,8 +333,7 @@ export class MarketService {
         volume
       });
 
-      currentPrice = close;
-      date.setDate(date.getDate() + 1);
+      currentPrice = open;
     }
 
     return {

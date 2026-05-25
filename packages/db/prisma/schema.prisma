@@ -264,7 +264,7 @@ model RawTick {
   time   DateTime
   symbol String
   price  Decimal  @db.Decimal(24, 8)
-  volume Int
+  volume BigInt
 
   @@id([symbol, time])
   @@map("raw_ticks")

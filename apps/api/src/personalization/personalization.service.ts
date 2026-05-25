@@ -281,7 +281,7 @@ export class PersonalizationService {
     // Capture Snapshot record in the background asynchronously for analytics history
     this.prisma.portfolioSnapshot.create({
       data: {
-        portfolioId,
+        portfolioId: portfolio.id,
         totalValue: totalPortfolioValue,
         cashBalance: 0,
         unrealizedPnl: 0,

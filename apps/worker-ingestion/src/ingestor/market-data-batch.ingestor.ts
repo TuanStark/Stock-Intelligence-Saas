@@ -57,7 +57,7 @@ export class MarketDataBatchIngestor implements OnModuleDestroy {
         VALUES ${values.join(', ')} 
         ON CONFLICT ("symbol", "time") 
         DO UPDATE SET 
-          "volume" = "raw_ticks"."volume" + EXCLUDED."volume",
+          "volume" = EXCLUDED."volume",
           "price" = EXCLUDED."price"
       `;
       await this.prisma.$executeRawUnsafe(sql, ...params);
