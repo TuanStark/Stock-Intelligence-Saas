@@ -244,6 +244,7 @@ export function TickerDetailPanel({ symbol, isOpen, onClose }: TickerDetailPanel
   useEffect(() => {
     if (!isOpen || !symbol || activeSubTab !== 'chart') return;
 
+    setLoadingChart(true);
     let chart: any;
     const timer = setTimeout(() => {
       if (chartContainerRef.current) {
@@ -320,6 +321,8 @@ export function TickerDetailPanel({ symbol, isOpen, onClose }: TickerDetailPanel
         chartRef.current.remove();
         chartRef.current = null;
       }
+      candlestickSeriesRef.current = null;
+      latestBarRef.current = null;
     };
   }, [isOpen, symbol, activeSubTab]);
 

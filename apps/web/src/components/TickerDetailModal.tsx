@@ -391,7 +391,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
 
   // Load raw candles, setup Lightweight chart and handle drawing callbacks
   useEffect(() => {
-    if (!isOpen || !symbol) return;
+    if (!isOpen || !symbol || activeTab !== 'Giao dịch') return;
 
     setLoadingChart(true);
     let chart: any;
@@ -505,9 +505,11 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
       }
       smaSeriesRef.current = null;
       emaSeriesRef.current = null;
+      candlestickSeriesRef.current = null;
+      latestBarRef.current = null;
       trendlineSeriesArrayRef.current = [];
     };
-  }, [isOpen, symbol]);
+  }, [isOpen, symbol, activeTab]);
 
   // Recalculates and renders candlestick data when timeframe or indicators change
   const renderIntervalChart = (newInterval: '1m' | '5m' | '15m' | '1D' | '1W') => {
