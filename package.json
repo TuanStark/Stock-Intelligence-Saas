@@ -19,6 +19,7 @@
     "db:studio": "pnpm --filter @stock-intel/db db:studio",
     "infra:up": "docker compose -f infra/docker/docker-compose.dev.yml up -d",
     "infra:down": "docker compose -f infra/docker/docker-compose.dev.yml down",
+    "infra:clear": "docker compose -f infra/docker/docker-compose.dev.yml down -v",
     "infra:reset": "docker compose -f infra/docker/docker-compose.dev.yml down -v && docker compose -f infra/docker/docker-compose.dev.yml up -d",
     "setup": "./scripts/dev-setup.sh"
   },
