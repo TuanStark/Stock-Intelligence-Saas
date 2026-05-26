@@ -5,6 +5,7 @@ import { MarketController } from './market.controller';
 import { MarketGateway } from './market.gateway';
 import { BullModule } from '@nestjs/bullmq';
 import { RedisModule } from '../redis/redis.module';
+import { FinancialDirectIngestor } from './financial-direct.ingestor';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { RedisModule } from '../redis/redis.module';
     }),
   ],
   controllers: [MarketController],
-  providers: [MarketService, MarketGateway],
-  exports: [MarketService, MarketGateway],
+  providers: [MarketService, MarketGateway, FinancialDirectIngestor],
+  exports: [MarketService, MarketGateway, FinancialDirectIngestor],
 })
 export class MarketModule { }
