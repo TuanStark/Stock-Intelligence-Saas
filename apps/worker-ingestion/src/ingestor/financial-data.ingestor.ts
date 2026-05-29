@@ -1,15 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import axios from 'axios';
+import YahooFinance from 'yahoo-finance2';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class FinancialDataIngestor {
   private readonly logger = new Logger(FinancialDataIngestor.name);
-
-  private readonly headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'application/json',
-  };
+  private readonly yf = new YahooFinance();
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -56,111 +52,91 @@ export class FinancialDataIngestor {
    */
   async ingestProfile(instrumentId: string, symbol: string): Promise<void> {
     const cleanSym = symbol.toUpperCase().trim();
-    this.logger.log(`[PROFILE] Fetching profile for ${cleanSym} from TCBS...`);
+    this.logger.log(`[PROFILE] Fetching profile for ${cleanSym} from Yahoo Finance...`);
 
-    const profileUrl = `https://apipublish.tcbs.com.vn/api/v1/stock/profile?ticker=${cleanSym}`;
-    const officersUrl = `https://apipublish.tcbs.com.vn/api/v1/stock/officer?ticker=${cleanSym}`;
+    const yahooSymbol = `${cleanSym}.VN`;
 
-    const [profileRes, officersRes] = await Promise.allSettled([
-      axios.get(profileUrl, { headers: this.headers, timeout: 8000 }),
-      axios.get(officersUrl, { headers: this.headers, timeout: 8000 }),
-    ]);
-
-    if (profileRes.status === 'rejected') {
-      throw new Error(`Failed to fetch stock profile for ${cleanSym} from TCBS: ${profileRes.reason.message}`);
-    }
-    
-    const data = profileRes.value.data;
-    if (!data || !data.charterCapital || !data.outstandingShares) {
-      throw new Error(`TCBS returned empty/invalid profile data for ${cleanSym}`);
-    }
-
-    const name = data.name || `${cleanSym} Joint Stock Company`;
-    const industry = data.industry || 'Financial Services';
-    const charterCapital = data.charterCapital;
-    const outstandingShares = data.outstandingShares;
-    const employees = data.noEmployees || 0;
-
-    // Parse Officers
-    const management: Array<{ name: string; position: string }> = [];
-    if (officersRes.status === 'fulfilled' && officersRes.value.data && Array.isArray(officersRes.value.data)) {
-      officersRes.value.data.slice(0, 5).forEach((off: any) => {
-        if (off.name && off.position) {
-          management.push({
-            name: off.name.trim(),
-            position: off.position.trim(),
-          });
-        }
-      });
-    }
-
-    if (management.length === 0) {
-      management.push({ name: 'Chưa cập nhật', position: 'Chủ tịch HĐQT' });
-    }
-
-    // Fetch valuation & key metrics (PE, PB, EPS, Beta)
-    let pe = 0;
-    let pb = 0;
-    let eps = 0;
-    let beta = 1.0;
-    let dividendYield = 0;
-
-    // Use a secondary metric API from TCBS to get real PE/PB
     try {
-      const ratioUrl = `https://apipublish.tcbs.com.vn/api/v1/stock/financial-ratio?ticker=${cleanSym}&period=quarter`;
-      const ratioRes = await axios.get(ratioUrl, { headers: this.headers, timeout: 8000 });
-      if (ratioRes.data && Array.isArray(ratioRes.data) && ratioRes.data.length > 0) {
-        const latest = ratioRes.data[ratioRes.data.length - 1];
-        // TCBS response mapping
-        pe = latest.priceToEarning || 0;
-        pb = latest.priceToBook || 0;
-        beta = latest.beta || 1.0;
-        dividendYield = (latest.dividendYield || 0) * 100; // standard format as percentage
-        eps = latest.earningPerShare || 0;
+      const summary = await this.yf.quoteSummary(yahooSymbol, {
+        modules: ['summaryProfile', 'defaultKeyStatistics', 'price', 'summaryDetail'],
+      }) as any;
+
+      if (!summary) {
+        throw new Error(`Empty Yahoo Finance response for ${yahooSymbol}`);
       }
-    } catch (err) {
-      this.logger.warn(`Could not fetch advanced ratios for ${cleanSym}: ${(err as Error).message}`);
+
+      const p = summary.price || {};
+      const sp = summary.summaryProfile || {};
+      const ks = summary.defaultKeyStatistics || {};
+      const sd = summary.summaryDetail || {};
+
+      const name = p.longName || p.shortName || `${cleanSym} Joint Stock Company`;
+      const industry = sp.industry || 'Financial Services';
+      const outstandingShares = ks.sharesOutstanding || p.sharesOutstanding || 0;
+      const charterCapital = outstandingShares * 10000; // Par value in VN is 10k VND per share
+      const employees = sp.fullTimeEmployees || 0;
+      const management: Array<{ name: string; position: string }> = [];
+
+      if (sp.companyOfficers && Array.isArray(sp.companyOfficers)) {
+        sp.companyOfficers.slice(0, 5).forEach((off: any) => {
+          if (off.name && off.title) {
+            management.push({
+              name: off.name.trim(),
+              position: off.title.trim(),
+            });
+          }
+        });
+      }
+
+      const pe = sd.trailingPE || sd.forwardPE || (p.regularMarketPrice && ks.trailingEps ? p.regularMarketPrice / ks.trailingEps : 0) || 0;
+      const pb = ks.priceToBook || sd.priceToBook || 0;
+      const eps = ks.trailingEps || 0;
+      const beta = ks.beta || sd.beta || 1.0;
+      const dividendYield = (sd.dividendYield || 0) * 100; // standard format as percentage e.g. 3.5%
+
+      const description = `Công ty Cổ phần ${name} là doanh nghiệp hoạt động trong lĩnh vực ${industry} tại Việt Nam. Công ty được niêm yết trên sàn chứng khoán với vốn điều lệ thực tế là ${(charterCapital / 1e9).toFixed(2)} tỷ VNĐ, hiện đang có khoảng ${employees} cán bộ công nhân viên hoạt động chuyên nghiệp.`;
+
+      await this.prisma.companyProfile.upsert({
+        where: { instrumentId },
+        update: {
+          description,
+          industry,
+          management: management as any,
+          charterCapital,
+          outstandingShares,
+          beta,
+          eps,
+          pe,
+          pb,
+          dividendYield,
+          updatedAt: new Date(),
+        },
+        create: {
+          instrumentId,
+          description,
+          industry,
+          management: management as any,
+          charterCapital,
+          outstandingShares,
+          beta,
+          eps,
+          pe,
+          pb,
+          dividendYield,
+        },
+      });
+
+      // Sync exchange industry info if instrument doesn't have it
+      await this.prisma.instrument.update({
+        where: { id: instrumentId },
+        data: { industry, name },
+      });
+
+      this.logger.log(`[PROFILE] Ingested profile successfully for ${cleanSym}`);
+    } catch (error) {
+      this.logger.error(`Yahoo Finance failed to fetch profile for ${cleanSym}: ${(error as Error).message}`);
+      throw error;
     }
-
-    const description = `Công ty Cổ phần ${name} là doanh nghiệp hoạt động trong lĩnh vực ${industry} tại Việt Nam. Công ty được niêm yết trên sàn chứng khoán với vốn điều lệ thực tế là ${(charterCapital / 1e9).toFixed(2)} tỷ VNĐ, hiện đang có khoảng ${employees} cán bộ công nhân viên hoạt động chuyên nghiệp.`;
-
-    await this.prisma.companyProfile.upsert({
-      where: { instrumentId },
-      update: {
-        description,
-        industry,
-        management: management as any,
-        charterCapital,
-        outstandingShares,
-        beta,
-        eps,
-        pe,
-        pb,
-        dividendYield,
-        updatedAt: new Date(),
-      },
-      create: {
-        instrumentId,
-        description,
-        industry,
-        management: management as any,
-        charterCapital,
-        outstandingShares,
-        beta,
-        eps,
-        pe,
-        pb,
-        dividendYield,
-      },
-    });
-
-    // Sync exchange industry info if instrument doesn't have it
-    await this.prisma.instrument.update({
-      where: { id: instrumentId },
-      data: { industry, name },
-    });
-
-    this.logger.log(`[PROFILE] Ingested profile successfully for ${cleanSym}`);
   }
 
   /**
@@ -168,47 +144,62 @@ export class FinancialDataIngestor {
    */
   async ingestShareholders(instrumentId: string, symbol: string): Promise<void> {
     const cleanSym = symbol.toUpperCase().trim();
-    this.logger.log(`[SHAREHOLDERS] Fetching shareholders for ${cleanSym} from TCBS...`);
+    this.logger.log(`[SHAREHOLDERS] Fetching shareholders for ${cleanSym}...`);
 
-    const ownershipUrl = `https://apipublish.tcbs.com.vn/api/v1/stock/ownership?ticker=${cleanSym}`;
-    const response = await axios.get(ownershipUrl, { headers: this.headers, timeout: 8000 });
-
-    if (response.data && Array.isArray(response.data)) {
-      // Get top 5 major shareholders
-      const rawShareholders = response.data.slice(0, 5);
-
-      for (const sh of rawShareholders) {
-        if (!sh.name) continue;
-
-        const name = sh.name.trim();
-        const percentage = sh.percentage || 0;
-        const shares = sh.shares ? BigInt(sh.shares) : BigInt(0);
-        const isForeign = sh.isForeign || false;
-
-        await this.prisma.companyShareholder.upsert({
-          where: {
-            instrumentId_name: {
-              instrumentId,
-              name,
-            },
-          },
-          update: {
-            shares,
-            percentage,
-            isForeign,
-            updatedAt: new Date(),
-          },
-          create: {
-            instrumentId,
-            name,
-            shares,
-            percentage,
-            isForeign,
-          },
+    let rawShareholders: any[] = [];
+    try {
+      const yahooSymbol = `${cleanSym}.VN`;
+      const summary = await this.yf.quoteSummary(yahooSymbol, {
+        modules: ['institutionOwnership', 'fundOwnership', 'majorDirectHolders'],
+      }) as any;
+      if (summary?.institutionOwnership?.ownershipList && Array.isArray(summary.institutionOwnership.ownershipList)) {
+        summary.institutionOwnership.ownershipList.slice(0, 5).forEach((item: any) => {
+          if (item.organization) {
+            rawShareholders.push({
+              name: item.organization,
+              percentage: (item.pctHeld || 0) * 100,
+              shares: item.position || 0,
+              isForeign: true,
+            });
+          }
         });
       }
-      this.logger.log(`[SHAREHOLDERS] Ingested ${rawShareholders.length} major shareholders for ${cleanSym}`);
+    } catch (e) {
+      this.logger.error(`Could not fetch shareholders from Yahoo for ${cleanSym}: ${(e as Error).message}`);
+      throw e;
     }
+
+    for (const sh of rawShareholders) {
+      if (!sh.name) continue;
+
+      const name = sh.name.trim();
+      const percentage = sh.percentage || 0;
+      const shares = sh.shares ? BigInt(sh.shares) : BigInt(0);
+      const isForeign = sh.isForeign || false;
+
+      await this.prisma.companyShareholder.upsert({
+        where: {
+          instrumentId_name: {
+            instrumentId,
+            name,
+          },
+        },
+        update: {
+          shares,
+          percentage,
+          isForeign,
+          updatedAt: new Date(),
+        },
+        create: {
+          instrumentId,
+          name,
+          shares,
+          percentage,
+          isForeign,
+        },
+      });
+    }
+    this.logger.log(`[SHAREHOLDERS] Ingested ${rawShareholders.length} major shareholders for ${cleanSym}`);
   }
 
   /**
@@ -216,49 +207,70 @@ export class FinancialDataIngestor {
    */
   async ingestDividends(instrumentId: string, symbol: string): Promise<void> {
     const cleanSym = symbol.toUpperCase().trim();
-    this.logger.log(`[DIVIDENDS] Fetching dividends for ${cleanSym} from TCBS...`);
+    this.logger.log(`[DIVIDENDS] Fetching dividends for ${cleanSym} from Yahoo Finance...`);
 
-    const url = `https://apipublish.tcbs.com.vn/api/v1/stock/dividend?ticker=${cleanSym}`;
-    const response = await axios.get(url, { headers: this.headers, timeout: 8000 });
+    let rawDividends: any[] = [];
+    try {
+      const yahooSymbol = `${cleanSym}.VN`;
+      const period1 = new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000);
+      const period2 = new Date();
+      const divResult = await this.yf.historical(yahooSymbol, {
+        period1,
+        period2,
+        events: 'dividends',
+      });
 
-    if (response.data && Array.isArray(response.data)) {
-      // Limit to last 5 dividends to prevent polluting DB
-      const rawDividends = response.data.slice(0, 6);
-
-      for (const div of rawDividends) {
-        // ExDate format should be parsed correctly, otherwise fallback
-        const exDateStr = div.exDate || div.publishDate;
-        if (!exDateStr) continue;
-
-        const exDate = new Date(exDateStr);
-        const type = div.type || 'CASH'; // CASH / STOCK
-        const rate = div.rate || '10%';
-        const value = div.value ? div.value : null;
-
-        await this.prisma.companyDividend.upsert({
-          where: {
-            instrumentId_exDate_type: {
-              instrumentId,
-              exDate,
-              type,
-            },
-          },
-          update: {
+      if (divResult && Array.isArray(divResult) && divResult.length > 0) {
+        rawDividends = divResult.map((item: any) => {
+          const value = item.dividends || 0;
+          const rate = value >= 10 ? `${((value / 10000) * 100).toFixed(0)}%` : `${(value * 100).toFixed(0)}%`;
+          return {
+            exDate: item.date,
+            type: 'CASH',
             rate,
             value,
-            updatedAt: new Date(),
-          },
-          create: {
+          };
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Yahoo Finance failed to fetch dividends for ${cleanSym}: ${(error as Error).message}`);
+      throw error;
+    }
+
+    const processedDividends = rawDividends.slice(0, 6);
+
+    for (const div of processedDividends) {
+      const exDateStr = div.exDate || div.publishDate;
+      if (!exDateStr) continue;
+
+      const exDate = new Date(exDateStr);
+      const type = div.type || 'CASH';
+      const rate = div.rate || '10%';
+      const value = div.value ? div.value : null;
+
+      await this.prisma.companyDividend.upsert({
+        where: {
+          instrumentId_exDate_type: {
             instrumentId,
             exDate,
             type,
-            rate,
-            value,
           },
-        });
-      }
-      this.logger.log(`[DIVIDENDS] Ingested ${rawDividends.length} dividends history for ${cleanSym}`);
+        },
+        update: {
+          rate,
+          value,
+          updatedAt: new Date(),
+        },
+        create: {
+          instrumentId,
+          exDate,
+          type,
+          rate,
+          value,
+        },
+      });
     }
+    this.logger.log(`[DIVIDENDS] Ingested ${processedDividends.length} dividends history for ${cleanSym}`);
   }
 
   /**
@@ -266,47 +278,42 @@ export class FinancialDataIngestor {
    */
   async ingestFinancials(instrumentId: string, symbol: string): Promise<void> {
     const cleanSym = symbol.toUpperCase().trim();
-    this.logger.log(`[FINANCIALS] Fetching financial statements for ${cleanSym}...`);
+    this.logger.log(`[FINANCIALS] Fetching financial statements for ${cleanSym} from Yahoo Finance...`);
 
-    // Fetch Quarters from TCBS Income Statement
-    const incomeQuarterUrl = `https://apipublish.tcbs.com.vn/api/v1/stock/income-statement?ticker=${cleanSym}&period=quarter`;
-    const incomeYearUrl = `https://apipublish.tcbs.com.vn/api/v1/stock/income-statement?ticker=${cleanSym}&period=year`;
-    
-    // Ratios for ROE/ROA
-    const ratioQuarterUrl = `https://apipublish.tcbs.com.vn/api/v1/stock/financial-ratio?ticker=${cleanSym}&period=quarter`;
-    const ratioYearUrl = `https://apipublish.tcbs.com.vn/api/v1/stock/financial-ratio?ticker=${cleanSym}&period=year`;
+    const yahooSymbol = `${cleanSym}.VN`;
+    let financials: any;
+    let roe = 0;
+    let roa = 0;
 
-    const [incQuarterRes, incYearRes, ratQuarterRes, ratYearRes] = await Promise.allSettled([
-      axios.get(incomeQuarterUrl, { headers: this.headers, timeout: 10000 }),
-      axios.get(incomeYearUrl, { headers: this.headers, timeout: 10000 }),
-      axios.get(ratioQuarterUrl, { headers: this.headers, timeout: 10000 }),
-      axios.get(ratioYearUrl, { headers: this.headers, timeout: 10000 }),
-    ]);
-
-    // 4.1 Process Quarters (Income Statement & Ratios)
-    if (incQuarterRes.status === 'fulfilled' && Array.isArray(incQuarterRes.value.data)) {
-      const incData = incQuarterRes.value.data.slice(-4); // Last 4 quarters
-      
-      const ratioData: Record<string, any> = {};
-      if (ratQuarterRes.status === 'fulfilled' && Array.isArray(ratQuarterRes.value.data)) {
-        ratQuarterRes.value.data.forEach((ratio: any) => {
-          if (ratio.year && ratio.quarter) {
-            const key = `Q${ratio.quarter}/${ratio.year}`;
-            ratioData[key] = ratio;
-          }
-        });
+    try {
+      financials = await this.yf.quoteSummary(yahooSymbol, {
+        modules: ['incomeStatementHistory', 'incomeStatementHistoryQuarterly', 'financialData'],
+      }) as any;
+      if (!financials) {
+        throw new Error('Empty financial quoteSummary response');
       }
 
-      for (const inc of incData) {
-        if (!inc.year || !inc.quarter) continue;
-        const quarterStr = `Q${inc.quarter}/${inc.year}`;
-        const revenue = inc.revenue || inc.sales || 0;
-        const grossProfit = inc.grossProfit || inc.grossProfitMargin || 0;
-        const netProfit = inc.postTaxProfit || inc.netProfit || 0;
+      const fd = financials.financialData || {};
+      roe = fd.returnOnEquity ? fd.returnOnEquity.raw * 100 : 0;
+      roa = fd.returnOnAssets ? fd.returnOnAssets.raw * 100 : 0;
+    } catch (error) {
+      this.logger.error(`Yahoo Finance failed to fetch financials for ${cleanSym}: ${(error as Error).message}`);
+      throw error;
+    }
 
-        const ratioObj = ratioData[quarterStr] || {};
-        const roe = ratioObj.roe ? ratioObj.roe * 100 : null; // format as percentage e.g. 15.5
-        const roa = ratioObj.roa ? ratioObj.roa * 100 : null;
+    // 4.1 Process Quarters
+    const quarterReports = financials?.incomeStatementHistoryQuarterly?.incomeStatementHistory || [];
+    if (Array.isArray(quarterReports) && quarterReports.length > 0) {
+      const incData = quarterReports.slice(-4);
+      for (const inc of incData) {
+        if (!inc.endDate) continue;
+        const date = new Date(inc.endDate);
+        const qNum = Math.floor(date.getMonth() / 3) + 1;
+        const quarterStr = `Q${qNum}/${date.getFullYear()}`;
+
+        const revenue = inc.totalRevenue?.raw ?? inc.totalRevenue ?? 0;
+        const grossProfit = inc.grossProfit?.raw ?? inc.grossProfit ?? 0;
+        const netProfit = inc.netIncome?.raw ?? inc.netIncome ?? 0;
 
         await this.prisma.companyFinancialQuarter.upsert({
           where: {
@@ -337,29 +344,18 @@ export class FinancialDataIngestor {
       this.logger.log(`[FINANCIALS] Processed ${incData.length} quarters for ${cleanSym}`);
     }
 
-    // 4.2 Process Years (Income Statement & Ratios)
-    if (incYearRes.status === 'fulfilled' && Array.isArray(incYearRes.value.data)) {
-      const incData = incYearRes.value.data.slice(-3); // Last 3 years
-      
-      const ratioData: Record<string, any> = {};
-      if (ratYearRes.status === 'fulfilled' && Array.isArray(ratYearRes.value.data)) {
-        ratYearRes.value.data.forEach((ratio: any) => {
-          if (ratio.year) {
-            ratioData[ratio.year.toString()] = ratio;
-          }
-        });
-      }
-
+    // 4.2 Process Years
+    const yearReports = financials?.incomeStatementHistory?.incomeStatementHistory || [];
+    if (Array.isArray(yearReports) && yearReports.length > 0) {
+      const incData = yearReports.slice(-3);
       for (const inc of incData) {
-        if (!inc.year) continue;
-        const yearStr = inc.year.toString();
-        const revenue = inc.revenue || inc.sales || 0;
-        const grossProfit = inc.grossProfit || inc.grossProfitMargin || 0;
-        const netProfit = inc.postTaxProfit || inc.netProfit || 0;
+        if (!inc.endDate) continue;
+        const date = new Date(inc.endDate);
+        const yearStr = date.getFullYear().toString();
 
-        const ratioObj = ratioData[yearStr] || {};
-        const roe = ratioObj.roe ? ratioObj.roe * 100 : 15.0; // fallback to 15%
-        const roa = ratioObj.roa ? ratioObj.roa * 100 : 8.0; // fallback to 8%
+        const revenue = inc.totalRevenue?.raw ?? inc.totalRevenue ?? 0;
+        const grossProfit = inc.grossProfit?.raw ?? inc.grossProfit ?? 0;
+        const netProfit = inc.netIncome?.raw ?? inc.netIncome ?? 0;
 
         await this.prisma.companyFinancialYear.upsert({
           where: {
