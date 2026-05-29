@@ -214,6 +214,7 @@ model Instrument {
   companyDividends         CompanyDividend[]
   companyFinancialQuarters CompanyFinancialQuarter[]
   companyFinancialYears    CompanyFinancialYear[]
+  marketKnowledgeChunks    MarketKnowledgeChunk[]
 
   @@unique([symbol, exchangeId])
   @@index([exchangeId])
@@ -673,6 +674,25 @@ model CompanyFinancialYear {
   @@unique([instrumentId, year])
   @@index([instrumentId])
   @@map("company_financial_years")
+}
+
+model MarketKnowledgeChunk {
+  id           String   @id @default(uuid())
+  instrumentId String?  @map("instrument_id")
+  symbol       String?
+  content      String   @db.Text
+  type         String   // "profile_description" | "news" | "technical_signals_summary"
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  instrument Instrument? @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  embedding    Float[]
+
+  @@index([symbol])
+  @@index([type])
+  @@map("market_knowledge_chunks")
 }
 
 

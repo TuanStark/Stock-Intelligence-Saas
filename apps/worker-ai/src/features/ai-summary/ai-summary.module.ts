@@ -6,6 +6,9 @@ import { AiSummaryRepository } from './ai-summary.repository';
 import { PromptBuilder } from './templates/prompt.builder';
 import { FallbackProvider } from './helper/fallback.provider';
 import { LlmClientService } from './helper/llm-client.service';
+import { MarkdownGeneratorService } from './helper/markdown-generator.service';
+import { EmbeddingIngesterService } from './helper/embedding-ingester.service';
+import { HybridRetrieverService } from './helper/hybrid-retriever.service';
 
 @Module({
   imports: [PrismaModule],
@@ -16,7 +19,15 @@ import { LlmClientService } from './helper/llm-client.service';
     PromptBuilder,
     FallbackProvider,
     LlmClientService,
+    MarkdownGeneratorService,
+    EmbeddingIngesterService,
+    HybridRetrieverService,
   ],
-  exports: [AiSummaryService],
+  exports: [
+    AiSummaryService,
+    MarkdownGeneratorService,
+    EmbeddingIngesterService,
+    HybridRetrieverService,
+  ],
 })
-export class AiSummaryModule { }
+export class AiSummaryModule {}
