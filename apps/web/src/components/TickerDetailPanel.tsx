@@ -36,32 +36,55 @@ const renderParsedSummary = (summaryText: string) => {
   if (!summaryText) return null;
 
   const hasPosition = summaryText.includes('ĐÁNH GIÁ VỊ THẾ');
-  const hasAction = summaryText.includes('CHIẾN LƯỢC HÀNH ĐỘNG');
-  const hasPrice = summaryText.includes('VÙNG GIÁ THAM KHẢO');
+  const hasAction = summaryText.includes('CHIẾN LƯỢC');
+  const hasPrice = summaryText.includes('VÙNG GIÁ');
 
   if (hasPosition || hasAction || hasPrice) {
-    const extractPart = (text: string, marker: string, nextMarker?: string) => {
-      const startIndex = text.indexOf(marker);
+    const extractPart = (text: string, markers: string[], nextMarkers?: string[]) => {
+      let startIndex = -1;
+      let matchedMarker = '';
+      for (const m of markers) {
+        startIndex = text.indexOf(m);
+        if (startIndex !== -1) {
+          matchedMarker = m;
+          break;
+        }
+      }
+      
       if (startIndex === -1) return '';
       
-      const contentStart = startIndex + marker.length;
-      const endIndex = nextMarker ? text.indexOf(nextMarker) : text.length;
+      const contentStart = startIndex + matchedMarker.length;
+      
+      let endIndex = text.length;
+      if (nextMarkers) {
+        for (const nm of nextMarkers) {
+          const idx = text.indexOf(nm);
+          if (idx !== -1 && idx > contentStart) {
+            endIndex = idx;
+            break;
+          }
+        }
+      }
       
       let chunk = text.slice(contentStart, endIndex).trim();
       chunk = chunk.replace(/^[:\*\s]+/, '').replace(/[:\*\s]+$/, '');
       return chunk;
     };
 
-    const positionText = extractPart(summaryText, 'ĐÁNH GIÁ VỊ THẾ', 'CHIẾN LƯỢC HÀNH ĐỘNG') || extractPart(summaryText, '📌 **ĐÁNH GIÁ VỊ THẾ:**', '🎯 **CHIẾN LƯỢC HÀNH ĐỘNG:**');
-    const actionText = extractPart(summaryText, 'CHIẾN LƯỢC HÀNH ĐỘNG', 'VÙNG GIÁ THAM KHẢO') || extractPart(summaryText, '🎯 **CHIẾN LƯỢC HÀNH ĐỘNG:**', '💸 **VÙNG GIÁ THAM KHẢO:**');
-    const priceText = extractPart(summaryText, 'VÙNG GIÁ THAM KHẢO') || extractPart(summaryText, '💸 **VÙNG GIÁ THAM KHẢO:**');
+    const positionStart = ['📌 **ĐÁNH GIÁ VỊ THẾ & LÝ DO:**', '📌 **ĐÁNH GIÁ VỊ THẾ:**', 'ĐÁNH GIÁ VỊ THẾ & LÝ DO', 'ĐÁNH GIÁ VỊ THẾ'];
+    const actionStart = ['🎯 **CHIẾN LƯỢC PHÂN BỔ & HÀNH ĐỘNG CHI TIẾT:**', '🎯 **CHIẾN LƯỢC HÀNH ĐỘNG:**', 'CHIẾN LƯỢC PHÂN BỔ & HÀNH ĐỘNG CHI TIẾT', 'CHIẾN LƯỢC HÀ HÀNH ĐỘNG'];
+    const priceStart = ['💸 **VÙNG GIÁ THAM KHẢO & ĐIỂM DỪNG:**', '💸 **VÙNG GIÁ THAM KHẢO:**', 'VÙNG GIÁ THAM KHẢO & ĐIỂM DỪNG', 'VÙNG GIÁ THAM KHẢO'];
+
+    const positionText = extractPart(summaryText, positionStart, actionStart);
+    const actionText = extractPart(summaryText, actionStart, priceStart);
+    const priceText = extractPart(summaryText, priceStart);
 
     return (
       <div className="flex flex-col gap-2.5 mb-1">
         {positionText && (
           <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl">
             <span className="flex items-center gap-1.5 text-blue-400 font-bold text-[10.5px] uppercase tracking-wider mb-1.5">
-              📌 Đánh giá vị thế
+              📌 Đánh giá vị thế & Lý do
             </span>
             <p className="text-[11.5px] text-text-secondary leading-relaxed m-0">{positionText}</p>
           </div>
@@ -69,7 +92,7 @@ const renderParsedSummary = (summaryText: string) => {
         {actionText && (
           <div className="p-3 bg-warning/5 border border-warning/15 rounded-xl">
             <span className="flex items-center gap-1.5 text-warning font-bold text-[10.5px] uppercase tracking-wider mb-1.5">
-              🎯 Chiến lược hành động
+              🎯 Chiến lược phân bổ & Hành động chi tiết
             </span>
             <p className="text-[11.5px] text-text-secondary leading-relaxed m-0">{actionText}</p>
           </div>
@@ -77,7 +100,7 @@ const renderParsedSummary = (summaryText: string) => {
         {priceText && (
           <div className="p-3 bg-emerald-500/5 border border-emerald-500/15 rounded-xl">
             <span className="flex items-center gap-1.5 text-emerald-400 font-bold text-[10.5px] uppercase tracking-wider mb-1.5">
-              💸 Vùng giá tham khảo
+              💸 Vùng giá tham khảo & Điểm dừng quản trị
             </span>
             <p className="text-[11.5px] text-text-secondary leading-relaxed m-0">{priceText}</p>
           </div>
