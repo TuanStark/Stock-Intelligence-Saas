@@ -77,6 +77,9 @@ export const env = {
     // URLs
     WEB_URL: process.env.WEB_URL || 'http://localhost:3000',
     API_URL: process.env.API_URL || 'http://localhost:3001',
+    
+    // Developer toggles
+    DISABLE_AI_RATE_LIMIT: process.env.DISABLE_AI_RATE_LIMIT === 'true',
 } as const;
 
 // ─── 3. Fail-Fast Startup Validations ───────────────────────

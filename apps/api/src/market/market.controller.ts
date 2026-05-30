@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Param, Query, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, NotFoundException, Req, UseGuards } from '@nestjs/common';
 import { MarketService } from './market.service';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 
 @Controller('market')
 export class MarketController {
@@ -49,8 +50,14 @@ export class MarketController {
   }
 
   @Post('instruments/:symbol/ai-summary')
-  async triggerAiSummary(@Param('symbol') symbol: string) {
-    const result = await this.marketService.triggerAiSummary(symbol);
+  @UseGuards(OptionalJwtAuthGuard)
+  async triggerAiSummary(
+    @Param('symbol') symbol: string,
+    @Req() req: any,
+  ) {
+    const user = req.user || null;
+    const ip = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
+    const result = await this.marketService.triggerAiSummary(symbol, user, ip);
     if (!result) {
       throw new NotFoundException(`Instrument ${symbol} not found`);
     }

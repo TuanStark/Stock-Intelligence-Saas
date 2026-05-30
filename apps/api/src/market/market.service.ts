@@ -4,6 +4,8 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { FinancialDirectIngestor } from './financial-direct.ingestor';
 import YahooFinance from 'yahoo-finance2';
+import { RedisService } from '../redis/redis.service';
+import { env } from '../env';
 
 @Injectable()
 export class MarketService {
@@ -15,6 +17,7 @@ export class MarketService {
     @InjectQueue('ai-summary') private readonly aiSummaryQueue: Queue,
     @InjectQueue('financial-ingestion') private readonly financialIngestionQueue: Queue,
     private readonly directIngestor: FinancialDirectIngestor,
+    private readonly redis: RedisService,
   ) { }
 
   async getOverview() {
@@ -157,7 +160,7 @@ export class MarketService {
     };
   }
 
-  async triggerAiSummary(symbol: string) {
+  async triggerAiSummary(symbol: string, user?: any, ip: string = '127.0.0.1') {
     const instrument = await this.prisma.instrument.findFirst({
       where: { symbol: symbol.toUpperCase() },
       include: {
@@ -166,6 +169,38 @@ export class MarketService {
     });
 
     if (!instrument) return null;
+
+    const limit = user ? (user.tier === 'API' ? 200 : user.tier === 'PRO' ? 50 : 5) : 2;
+    const key = user ? `rate-limit:ai-summary:user:${user.id}` : `rate-limit:ai-summary:ip:${ip}`;
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const client = this.redis.getClient();
+
+    // ─── Distributed Sliding Window Rate Limiting (Redis Sorted Sets) ───
+    if (env.DISABLE_AI_RATE_LIMIT) {
+      console.log('⚠️ AI Rate limiting is explicitly disabled via DISABLE_AI_RATE_LIMIT=true env flag.');
+    } else {
+      try {
+        // 1. Remove timestamps older than 24 hours
+        await client.zremrangebyscore(key, '-inf', now - oneDayMs);
+
+        // 2. Count requests in active sliding window
+        const requestCount = await client.zcard(key);
+
+        if (requestCount >= limit) {
+          const userMsg = user
+            ? `Bạn đã đạt giới hạn yêu cầu AI trong ngày (${limit} lượt/ngày) cho gói ${user.tier}. Vui lòng nâng cấp gói hoặc quay lại sau!`
+            : `Gói Khách truy cập (chưa đăng nhập) bị giới hạn ${limit} lượt phân tích AI mỗi ngày. Vui lòng đăng ký tài khoản miễn phí để nhận thêm lượt phân tích!`;
+          return {
+            success: false,
+            message: userMsg,
+          };
+        }
+      } catch (redisErr) {
+        // Graceful fallback if Redis rate-limiting fails to ensure high availability
+        console.error('Redis rate-limiting failed, falling back to local cooldown check:', redisErr);
+      }
+    }
 
     const latestSummary = instrument.aiSummaries[0];
 
@@ -177,6 +212,16 @@ export class MarketService {
           success: false,
           message: 'Phân tích AI vừa mới được cập nhật. Vui lòng thử lại sau ít phút!'
         };
+      }
+    }
+
+    // 3. Log current request in sliding window and update TTL if rate limiting is enabled
+    if (!env.DISABLE_AI_RATE_LIMIT) {
+      try {
+        await client.zadd(key, now.toString(), now.toString());
+        await client.expire(key, 86400); // 24 hours TTL to clean up Redis automatically
+      } catch (redisErr) {
+        console.error('Failed to log rate limit entry in Redis:', redisErr);
       }
     }
 
