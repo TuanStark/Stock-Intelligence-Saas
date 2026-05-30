@@ -32,6 +32,67 @@ interface AiSummary {
   risks: string[];
 }
 
+const renderParsedSummary = (summaryText: string) => {
+  if (!summaryText) return null;
+
+  const hasPosition = summaryText.includes('ĐÁNH GIÁ VỊ THẾ');
+  const hasAction = summaryText.includes('CHIẾN LƯỢC HÀNH ĐỘNG');
+  const hasPrice = summaryText.includes('VÙNG GIÁ THAM KHẢO');
+
+  if (hasPosition || hasAction || hasPrice) {
+    const extractPart = (text: string, marker: string, nextMarker?: string) => {
+      const startIndex = text.indexOf(marker);
+      if (startIndex === -1) return '';
+      
+      const contentStart = startIndex + marker.length;
+      const endIndex = nextMarker ? text.indexOf(nextMarker) : text.length;
+      
+      let chunk = text.slice(contentStart, endIndex).trim();
+      chunk = chunk.replace(/^[:\*\s]+/, '').replace(/[:\*\s]+$/, '');
+      return chunk;
+    };
+
+    const positionText = extractPart(summaryText, 'ĐÁNH GIÁ VỊ THẾ', 'CHIẾN LƯỢC HÀNH ĐỘNG') || extractPart(summaryText, '📌 **ĐÁNH GIÁ VỊ THẾ:**', '🎯 **CHIẾN LƯỢC HÀNH ĐỘNG:**');
+    const actionText = extractPart(summaryText, 'CHIẾN LƯỢC HÀNH ĐỘNG', 'VÙNG GIÁ THAM KHẢO') || extractPart(summaryText, '🎯 **CHIẾN LƯỢC HÀNH ĐỘNG:**', '💸 **VÙNG GIÁ THAM KHẢO:**');
+    const priceText = extractPart(summaryText, 'VÙNG GIÁ THAM KHẢO') || extractPart(summaryText, '💸 **VÙNG GIÁ THAM KHẢO:**');
+
+    return (
+      <div className="flex flex-col gap-2.5 mb-1">
+        {positionText && (
+          <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+            <span className="flex items-center gap-1.5 text-blue-400 font-bold text-[10.5px] uppercase tracking-wider mb-1.5">
+              📌 Đánh giá vị thế
+            </span>
+            <p className="text-[11.5px] text-text-secondary leading-relaxed m-0">{positionText}</p>
+          </div>
+        )}
+        {actionText && (
+          <div className="p-3 bg-warning/5 border border-warning/15 rounded-xl">
+            <span className="flex items-center gap-1.5 text-warning font-bold text-[10.5px] uppercase tracking-wider mb-1.5">
+              🎯 Chiến lược hành động
+            </span>
+            <p className="text-[11.5px] text-text-secondary leading-relaxed m-0">{actionText}</p>
+          </div>
+        )}
+        {priceText && (
+          <div className="p-3 bg-emerald-500/5 border border-emerald-500/15 rounded-xl">
+            <span className="flex items-center gap-1.5 text-emerald-400 font-bold text-[10.5px] uppercase tracking-wider mb-1.5">
+              💸 Vùng giá tham khảo
+            </span>
+            <p className="text-[11.5px] text-text-secondary leading-relaxed m-0">{priceText}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="whitespace-pre-wrap text-[11.5px] text-text-secondary leading-relaxed mb-1">
+      {summaryText}
+    </div>
+  );
+};
+
 export function TickerDetailPanel({ symbol, isOpen, onClose }: TickerDetailPanelProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
@@ -587,13 +648,7 @@ export function TickerDetailPanel({ symbol, isOpen, onClose }: TickerDetailPanel
                   <span className="text-text-secondary font-semibold">Tín cậy: {Math.round(Number(aiSummary.confidence) * 100)}%</span>
                 </div>
 
-                <div className="glass-panel p-3.5 bg-warning/5 border border-warning/15 rounded-xl text-xs text-text-secondary leading-relaxed shadow-sm">
-                  <p className="font-bold text-warning mb-1 flex items-center gap-1.5 uppercase text-[10px] tracking-wide">
-                    <Sparkles size={11} />
-                    Luận Điểm Quyết Định
-                  </p>
-                  {aiSummary.summary}
-                </div>
+                {renderParsedSummary(aiSummary.summary)}
 
                 {/* Drivers & Risks list stack */}
                 <div className="flex flex-col gap-3">
