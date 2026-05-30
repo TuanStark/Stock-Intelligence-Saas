@@ -32,6 +32,7 @@ export class MarkdownGeneratorService {
     // 1. Chỉ số định giá cơ bản
     md += `## 1. THÔNG TIN CHỈ SỐ ĐỊNH GIÁ HIỆN TẠI\n`;
     if (profile) {
+      md += `- **Thị giá cổ phiếu hiện tại:** ${quotePrice.toLocaleString('vi-VN')} VNĐ\n`;
       md += `- **Ngành nghề:** ${profile.industry}\n`;
       md += `- **Vốn điều lệ:** ${(Number(profile.charterCapital) / 1e9).toFixed(2)} Tỷ VNĐ\n`;
       md += `- **Số lượng cổ phiếu lưu hành:** ${Number(profile.outstandingShares).toLocaleString('vi-VN')} CP\n`;

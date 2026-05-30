@@ -103,31 +103,13 @@ export class AiSummaryService {
     } catch (error) {
       this.logger.warn(`LLM analysis failed for ${cleanSym}, using fallback provider`, error);
 
-      // Thống nhất tuyệt đối: Nếu LLM lỗi thì fallback sinh báo cáo thực từ dữ liệu cứng thay vì mock ảo
-      let realReportFallback = '';
-      try {
-        realReportFallback = await this.markdownGenerator.generateMarkdownReport(instrumentId, cleanSym);
-      } catch (reportErr) {
-        this.logger.error(`Failed to generate fallback markdown report for ${cleanSym}: ${reportErr}`);
-      }
-
-      // Tạo một cấu trúc báo cáo thay thế tối thiểu dựa trên dữ liệu thật của hệ thống
-      const realSummaryText = realReportFallback 
-        ? `[BÁO CÁO PHÂN TÍCH TỰ ĐỘNG THAY THẾ]\nDo hệ thống LLM đang tải quá giới hạn, dưới đây là tổng hợp dữ liệu thực từ hệ thống:\n\n${realReportFallback}`
-        : this.fallbackProvider.getFallbackData(cleanSym).summary;
-
-      const fallbackResponse = {
-        summary: realSummaryText,
-        sentiment: 'NEUTRAL' as const,
-        confidence: 0.5,
-        drivers: ['Dữ liệu thực từ hệ thống'],
-        risks: ['LLM tạm thời ngắt kết nối'],
-      };
+      // Lấy dữ liệu giả lập tài chính định tính chất lượng cao bằng tiếng Việt của FallbackProvider
+      const fallbackResponse = this.fallbackProvider.getFallbackData(cleanSym);
 
       const fallback = await this.repository.createSummary(
         instrumentId,
         fallbackResponse,
-        'system-realdata-fallback-v1',
+        'system-simulation-fallback-v1',
         this.CACHE_HOURS,
       );
 
