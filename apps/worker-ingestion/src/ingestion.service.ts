@@ -257,7 +257,8 @@ export class IngestionService implements OnModuleInit {
         try {
           const cleanSym = inst.symbol.toUpperCase();
           const toTime = Math.floor(Date.now() / 1000);
-          const fromTime = toTime - 120 * 24 * 60 * 60; // Fetch 120 calendar days to comfortably cover 60+ trading days
+          const daysToFetch = 3 * 365; // Fetch 3 full years to synchronize endless charts
+          const fromTime = toTime - daysToFetch * 24 * 60 * 60;
 
           const url = `https://dchart-api.vndirect.com.vn/dchart/history?symbol=${cleanSym}&resolution=D&from=${fromTime}&to=${toTime}`;
           
@@ -270,7 +271,7 @@ export class IngestionService implements OnModuleInit {
           if (response.ok) {
             const data = (await response.json()) as any;
             if (data && data.s === 'ok' && data.t && data.t.length > 0) {
-              const limit = 90;
+              const limit = 1000; // Synchronize up to 1000 daily candles for rich history
               const startIndex = Math.max(0, data.t.length - limit);
               const candlesToSave = [];
 
@@ -288,26 +289,13 @@ export class IngestionService implements OnModuleInit {
                 });
               }
 
-              for (const item of candlesToSave) {
-                await this.prisma.candle.upsert({
-                  where: {
-                    instrumentId_timeframe_timestamp: {
-                      instrumentId: item.instrumentId,
-                      timeframe: item.timeframe,
-                      timestamp: item.timestamp,
-                    },
-                  },
-                  update: {
-                    open: item.open,
-                    high: item.high,
-                    low: item.low,
-                    close: item.close,
-                    volume: item.volume,
-                  },
-                  create: item,
-                });
-              }
-              this.logger.log(` Successfully synchronized ${candlesToSave.length} real historical daily candles for ${cleanSym}`);
+              // High-performance bulk insert to avoid DB overloading during startup pre-warming
+              await this.prisma.candle.createMany({
+                data: candlesToSave,
+                skipDuplicates: true,
+              });
+              
+              this.logger.log(` Successfully pre-warmed ${candlesToSave.length} real historical daily candles for ${cleanSym}`);
             }
           }
         } catch (e) {

@@ -269,17 +269,21 @@ export class MarketService {
       orderBy: { timestamp: 'asc' }
     });
 
-    // 2. If candles are missing/cold, fetch them from VNDIRECT DChart API and cache them in DB
-    if (dbCandles.length < 10) {
+    // 2. If candles are missing/cold (or we have less than the desired long-term history), fetch them from VNDIRECT DChart API
+    const minCandles = timeframe === '1D' ? 500 : timeframe === '1W' ? 200 : 1000;
+    
+    if (dbCandles.length < minCandles) {
       let fetchPromise = MarketService.pendingCandleRequests.get(requestKey);
 
       if (!fetchPromise) {
         fetchPromise = (async () => {
           try {
             const cleanSym = symbol.toUpperCase();
-            // Fetch last 120 calendar days to comfortably cover 60-90 trading days
+            
+            // Set dynamic fetch window based on timeframe (e.g. 3 years for Daily, 5 years for Weekly, 30 days for Intraday)
             const toTime = Math.floor(Date.now() / 1000);
-            const fromTime = toTime - 120 * 24 * 60 * 60;
+            const daysToFetch = timeframe === '1D' ? 3 * 365 : timeframe === '1W' ? 5 * 365 : 30;
+            const fromTime = toTime - daysToFetch * 24 * 60 * 60;
 
             let resolution = 'D';
             if (timeframe === '1m') resolution = '1';
@@ -298,8 +302,8 @@ export class MarketService {
             if (response.ok) {
               const data = (await response.json()) as any;
               if (data && data.s === 'ok' && data.t && data.t.length > 0) {
-                // Limit to the most recent 90 candles for storage optimization
-                const limit = 90;
+                // Set high storage limit to enable endless charts (1000 candles for Daily, 500 for Weekly, 2000 for Intraday)
+                const limit = timeframe === '1D' ? 1000 : timeframe === '1W' ? 500 : 2000;
                 const startIndex = Math.max(0, data.t.length - limit);
                 const candlesToSave = [];
 
@@ -317,26 +321,11 @@ export class MarketService {
                   });
                 }
 
-                // Bulk upsert each candle record inside a transaction
-                for (const item of candlesToSave) {
-                  await this.prisma.candle.upsert({
-                    where: {
-                      instrumentId_timeframe_timestamp: {
-                        instrumentId: item.instrumentId,
-                        timeframe: item.timeframe,
-                        timestamp: item.timestamp,
-                      },
-                    },
-                    update: {
-                      open: item.open,
-                      high: item.high,
-                      low: item.low,
-                      close: item.close,
-                      volume: item.volume,
-                    },
-                    create: item,
-                  });
-                }
+                // Perform high-performance bulk insert in exactly ONE single database query to prevent DB overload
+                await this.prisma.candle.createMany({
+                  data: candlesToSave,
+                  skipDuplicates: true,
+                });
                 console.log(`Successfully fetched and seeded ${candlesToSave.length} real historical candles for ${cleanSym}`);
               }
             }
