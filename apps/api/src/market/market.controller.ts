@@ -1,8 +1,12 @@
-import { Controller, Get, Post, Param, Query, NotFoundException, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, NotFoundException, Req, UseGuards, Res } from '@nestjs/common';
 import { MarketService } from './market.service';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+import { RateLimiterGuard } from '../common/guards/rate-limiter.guard';
+import { SignatureGuard } from '../common/guards/signature.guard';
+import { encryptPayload } from '../common/helpers/crypto.helper';
 
 @Controller('market')
+@UseGuards(RateLimiterGuard)
 export class MarketController {
   constructor(private readonly marketService: MarketService) { }
 
@@ -12,8 +16,16 @@ export class MarketController {
   }
 
   @Get('signals')
-  async getSignals(@Query('type') type?: string, @Query('strength') strength?: string) {
-    return this.marketService.getSignals(type, strength);
+  @UseGuards(SignatureGuard)
+  async getSignals(
+    @Query('type') type?: string,
+    @Query('strength') strength?: string,
+    @Res({ passthrough: true }) res?: any,
+  ) {
+    const rawData = await this.marketService.getSignals(type, strength);
+    const encrypted = encryptPayload(rawData);
+    res?.header('x-encrypted', 'true');
+    return encrypted;
   }
 
   @Get('instruments/search')
@@ -50,17 +62,20 @@ export class MarketController {
   }
 
   @Post('instruments/:symbol/ai-summary')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard, SignatureGuard)
   async triggerAiSummary(
     @Param('symbol') symbol: string,
     @Req() req: any,
+    @Res({ passthrough: true }) res?: any,
   ) {
     const user = req.user || null;
     const ip = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
-    const result = await this.marketService.triggerAiSummary(symbol, user, ip);
-    if (!result) {
+    const rawData = await this.marketService.triggerAiSummary(symbol, user, ip);
+    if (!rawData) {
       throw new NotFoundException(`Instrument ${symbol} not found`);
     }
-    return result;
+    const encrypted = encryptPayload(rawData);
+    res?.header('x-encrypted', 'true');
+    return encrypted;
   }
 }

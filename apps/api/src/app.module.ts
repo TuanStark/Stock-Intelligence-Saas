@@ -10,9 +10,14 @@ import { AlertModule } from './alerts/alerts.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { BullModule } from '@nestjs/bullmq';
 import { PersonalizationModule } from './personalization/personalization.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
     imports: [
+        ThrottlerModule.forRoot([{
+            ttl: 60000,
+            limit: 120, // Default: 120 requests per minute
+        }]),
         PrismaModule,
         RedisModule,
         AuthModule,
