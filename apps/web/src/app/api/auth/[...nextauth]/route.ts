@@ -24,12 +24,13 @@ export const authOptions: NextAuthOptions = {
           const result = await authApi.login(credentials.email, credentials.password);
 
           if (result.success && result.data) {
-            const { accessToken, user } = result.data;
+            const { accessToken, refreshToken, user } = result.data;
             return {
               id: user.id,
               email: user.email,
               name: user.email,
               accessToken,
+              refreshToken,
               tier: user.subscription?.tier || 'FREE',
             };
           }
@@ -48,8 +49,9 @@ export const authOptions: NextAuthOptions = {
           const result = await authApi.googleLogin(account.id_token);
 
           if (result.success && result.data) {
-            const { accessToken, user: apiUser } = result.data;
+            const { accessToken, refreshToken, user: apiUser } = result.data;
             token.accessToken = accessToken;
+            token.refreshToken = refreshToken;
             token.tier = apiUser.subscription?.tier || 'FREE';
           }
         } catch (error) {
@@ -57,6 +59,7 @@ export const authOptions: NextAuthOptions = {
         }
       } else if (user) {
         token.accessToken = (user as any).accessToken;
+        token.refreshToken = (user as any).refreshToken;
         token.tier = (user as any).tier;
       }
       
@@ -64,6 +67,7 @@ export const authOptions: NextAuthOptions = {
       if (trigger === 'update' && session) {
         if (session.tier) token.tier = session.tier;
         if (session.accessToken) token.accessToken = session.accessToken;
+        if (session.refreshToken) token.refreshToken = session.refreshToken;
       }
       
       return token;
@@ -71,6 +75,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         (session as any).accessToken = token.accessToken;
+        (session as any).refreshToken = token.refreshToken;
         (session as any).user.tier = token.tier;
         (session as any).user.id = token.sub;
       }

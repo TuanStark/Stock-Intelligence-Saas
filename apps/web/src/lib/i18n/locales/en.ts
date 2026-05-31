@@ -177,6 +177,8 @@ export const en = {
     passwordsMismatch: 'Passwords do not match',
     invalidCredentials: 'Invalid email or password',
     registrationFailed: 'Registration failed. Email might be in use.',
+    sessionExpired: 'Your login session has expired. Please sign in again.',
+    oauthError: 'Google sign-in was unsuccessful or unauthorized.',
   },
   stockDetail: {
     stockScore: 'HEALTH SCORE',

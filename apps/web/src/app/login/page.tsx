@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { useTranslation } from '@/lib/i18n/i18n-context';
@@ -9,8 +9,8 @@ import Link from 'next/link';
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+    <Suspense fallback = {
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4" >
         <Loader2 size={40} className="pulse text-accent" />
       </div>
     }>
@@ -29,6 +29,15 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam === 'SessionExpired') {
+      setErrorMsg(t('auth.sessionExpired'));
+    } else if (errorParam === 'OAuthSignin' || errorParam === 'OAuthCallback') {
+      setErrorMsg(t('auth.oauthError'));
+    }
+  }, [searchParams, t]);
 
   const callbackUrl = searchParams.get('callbackUrl') || '/';
 

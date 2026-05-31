@@ -175,6 +175,8 @@ export const vi = {
     passwordsMismatch: 'Mật khẩu xác nhận không khớp',
     invalidCredentials: 'Email hoặc mật khẩu không chính xác',
     registrationFailed: 'Đăng ký thất bại. Email có thể đã được sử dụng.',
+    sessionExpired: 'Phiên đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại.',
+    oauthError: 'Đăng nhập bằng Google không thành công hoặc không hợp lệ.',
   },
   stockDetail: {
     stockScore: 'ĐIỂM SỨC KHỎE',

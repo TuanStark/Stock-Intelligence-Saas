@@ -48,6 +48,7 @@ export class AuthController {
             success: true,
             data: {
                 accessToken: result.accessToken,
+                refreshToken: result.refreshToken,
                 user: result.user,
             },
         };
@@ -67,6 +68,7 @@ export class AuthController {
             success: true,
             data: {
                 accessToken: result.accessToken,
+                refreshToken: result.refreshToken,
                 user: result.user,
             },
         };
@@ -86,6 +88,7 @@ export class AuthController {
             success: true,
             data: {
                 accessToken: result.accessToken,
+                refreshToken: result.refreshToken,
                 user: result.user,
             },
         };
@@ -96,8 +99,9 @@ export class AuthController {
     async refresh(
         @Req() req: any,
         @Res({ passthrough: true }) res: any,
+        @Body() body: { refreshToken?: string },
     ) {
-        const refreshToken = req.cookies?.['refresh_token'];
+        const refreshToken = req.cookies?.['refresh_token'] || body?.refreshToken;
         if (!refreshToken) {
             return {
                 success: false,
@@ -116,6 +120,7 @@ export class AuthController {
             success: true,
             data: {
                 accessToken: result.accessToken,
+                refreshToken: result.refreshToken,
             },
         };
     }
