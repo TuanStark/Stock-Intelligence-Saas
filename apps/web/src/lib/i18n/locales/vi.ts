@@ -162,6 +162,8 @@ export const vi = {
     email: 'Địa chỉ Email',
     password: 'Mật khẩu',
     loginBtn: 'Đăng Nhập Vào Hệ Thống',
+    googleBtn: 'Tiếp tục với Google',
+    orDivider: 'hoặc tiếp tục bằng',
     noAccount: 'Chưa có tài khoản?',
     signupPrompt: 'Đăng ký ngay tại đây',
     registerTitle: 'Khởi Tạo Tài Khoản',

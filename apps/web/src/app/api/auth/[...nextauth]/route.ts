@@ -1,8 +1,14 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
+import { authApi } from '@/lib/api/auth.api';
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -15,16 +21,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const res = await fetch('http://localhost:3001/api/v1/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-            headers: { 'Content-Type': 'application/json' },
-          });
-
-          const result = await res.json();
+          const result = await authApi.login(credentials.email, credentials.password);
 
           if (result.success && result.data) {
             const { accessToken, user } = result.data;
@@ -45,8 +42,20 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
-      if (user) {
+    async jwt({ token, user, account, trigger, session }) {
+      if (account?.provider === 'google' && account.id_token) {
+        try {
+          const result = await authApi.googleLogin(account.id_token);
+
+          if (result.success && result.data) {
+            const { accessToken, user: apiUser } = result.data;
+            token.accessToken = accessToken;
+            token.tier = apiUser.subscription?.tier || 'FREE';
+          }
+        } catch (error) {
+          console.error('NextAuth google jwt error:', error);
+        }
+      } else if (user) {
         token.accessToken = (user as any).accessToken;
         token.tier = (user as any).tier;
       }

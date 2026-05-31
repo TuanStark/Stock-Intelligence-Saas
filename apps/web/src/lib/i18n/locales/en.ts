@@ -164,6 +164,8 @@ export const en = {
     email: 'Email address',
     password: 'Password',
     loginBtn: 'Log In to Workspace',
+    googleBtn: 'Continue with Google',
+    orDivider: 'or continue with',
     noAccount: "Don't have an account?",
     signupPrompt: 'Register here',
     registerTitle: 'Create Your Workspace',

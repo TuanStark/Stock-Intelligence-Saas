@@ -94,11 +94,14 @@ enum AlertStatus {
 model User {
   id           String     @id @default(uuid())
   email        String     @unique
-  passwordHash String     @map("password_hash")
+  passwordHash String?    @map("password_hash")
+  name         String?
+  avatarUrl    String?    @map("avatar_url")
   status       UserStatus @default(ACTIVE)
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
+  oauthAccounts OAuthAccount[]
   subscription  Subscription?
   apiKeys       ApiKey[]
   refreshTokens RefreshToken[]
@@ -156,6 +159,21 @@ model RefreshToken {
   @@index([userId])
   @@index([familyId])
   @@map("refresh_tokens")
+}
+
+model OAuthAccount {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  provider       String   // e.g. "google"
+  providerUserId String   @map("provider_user_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@map("oauth_accounts")
 }
 
 // ─── Market Data ──────────────────────────────────────────

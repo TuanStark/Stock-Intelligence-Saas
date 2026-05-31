@@ -24,6 +24,10 @@ class LoginDto {
     password!: string;
 }
 
+class GoogleLoginDto {
+    idToken!: string;
+}
+
 // ─── Controller ────────────────────────────────────────────
 
 @Controller('auth')
@@ -56,6 +60,25 @@ export class AuthController {
         @Res({ passthrough: true }) res: any,
     ) {
         const result = await this.authService.login(dto.email, dto.password);
+
+        this.setRefreshCookie(res, result.refreshToken);
+
+        return {
+            success: true,
+            data: {
+                accessToken: result.accessToken,
+                user: result.user,
+            },
+        };
+    }
+
+    @Post('google')
+    @HttpCode(HttpStatus.OK)
+    async googleLogin(
+        @Body() dto: GoogleLoginDto,
+        @Res({ passthrough: true }) res: any,
+    ) {
+        const result = await this.authService.loginOrRegisterWithGoogle(dto.idToken);
 
         this.setRefreshCookie(res, result.refreshToken);
 

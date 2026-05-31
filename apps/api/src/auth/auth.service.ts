@@ -110,10 +110,155 @@ export class AuthService {
             throw new UnauthorizedException('Account is not active');
         }
 
+        if (!user.passwordHash) {
+            throw new UnauthorizedException('This account is registered via Google. Please log in using Google.');
+        }
+
         const passwordValid = await bcrypt.compare(password, user.passwordHash);
         if (!passwordValid) {
             throw new UnauthorizedException('Invalid credentials');
         }
+
+        const tier = user.subscription?.tier || 'FREE';
+        return this.generateAuthTokens(user.id, user.email, tier);
+    }
+
+    // ─── Google Login ──────────────────────────────────────
+
+    async loginOrRegisterWithGoogle(idToken: string): Promise<AuthTokens> {
+        if (!idToken) {
+            throw new BadRequestException('Google ID Token is required');
+        }
+
+        const googleClientId = process.env.GOOGLE_CLIENT_ID;
+        if (!googleClientId) {
+            throw new BadRequestException('Google Client ID is not configured on the server');
+        }
+
+        let payload: any;
+        try {
+            const { OAuth2Client } = require('google-auth-library');
+            const client = new OAuth2Client(googleClientId);
+            const ticket = await client.verifyIdToken({
+                idToken,
+                audience: googleClientId,
+            });
+            payload = ticket.getPayload();
+        } catch (error) {
+            throw new UnauthorizedException('Invalid Google ID Token');
+        }
+
+        if (!payload || !payload.email) {
+            throw new BadRequestException('Invalid token payload');
+        }
+
+        const email = payload.email.toLowerCase().trim();
+        const googleUserId = payload.sub; // Google ID
+        const name = payload.name || null;
+        const avatarUrl = payload.picture || null;
+
+        // Perform transactional login / register
+        const user = await this.prisma.$transaction(async (tx: any) => {
+            // 1. Check if OAuthAccount already exists
+            const existingOAuthAccount = await tx.oAuthAccount.findUnique({
+                where: {
+                    provider_providerUserId: {
+                        provider: 'google',
+                        providerUserId: googleUserId,
+                    },
+                },
+                include: { user: { include: { subscription: true } } },
+            });
+
+            if (existingOAuthAccount) {
+                const existingUser = existingOAuthAccount.user;
+                if (existingUser.status !== 'ACTIVE') {
+                    throw new UnauthorizedException('Account is suspended or deleted');
+                }
+
+                // Optionally update name/avatar if they changed or were null
+                if ((!existingUser.name && name) || (!existingUser.avatarUrl && avatarUrl)) {
+                    await tx.user.update({
+                        where: { id: existingUser.id },
+                        data: {
+                            name: existingUser.name || name,
+                            avatarUrl: existingUser.avatarUrl || avatarUrl,
+                        },
+                    });
+                }
+
+                return existingUser;
+            }
+
+            // 2. No OAuthAccount found. Check if User with the same email exists
+            const existingUserByEmail = await tx.user.findUnique({
+                where: { email },
+                include: { subscription: true },
+            });
+
+            if (existingUserByEmail) {
+                if (existingUserByEmail.status !== 'ACTIVE') {
+                    throw new UnauthorizedException('Account is suspended or deleted');
+                }
+
+                // Link this OAuthAccount to the existing User
+                await tx.oAuthAccount.create({
+                    data: {
+                        userId: existingUserByEmail.id,
+                        provider: 'google',
+                        providerUserId: googleUserId,
+                    },
+                });
+
+                // Update name/avatar if needed
+                if ((!existingUserByEmail.name && name) || (!existingUserByEmail.avatarUrl && avatarUrl)) {
+                    await tx.user.update({
+                        where: { id: existingUserByEmail.id },
+                        data: {
+                            name: existingUserByEmail.name || name,
+                            avatarUrl: existingUserByEmail.avatarUrl || avatarUrl,
+                        },
+                    });
+                }
+
+                return existingUserByEmail;
+            }
+
+            // 3. Brand new user! Register them
+            const newUser = await tx.user.create({
+                data: {
+                    email,
+                    passwordHash: null,
+                    name,
+                    avatarUrl,
+                    status: 'ACTIVE',
+                },
+            });
+
+            // Create Free subscription
+            await tx.subscription.create({
+                data: {
+                    userId: newUser.id,
+                    tier: 'FREE',
+                    status: 'ACTIVE',
+                },
+            });
+
+            // Link the Google OAuth account
+            await tx.oAuthAccount.create({
+                data: {
+                    userId: newUser.id,
+                    provider: 'google',
+                    providerUserId: googleUserId,
+                },
+            });
+
+            // Return the new user with subscription included
+            return {
+                ...newUser,
+                subscription: { tier: 'FREE' },
+            };
+        });
 
         const tier = user.subscription?.tier || 'FREE';
         return this.generateAuthTokens(user.id, user.email, tier);
