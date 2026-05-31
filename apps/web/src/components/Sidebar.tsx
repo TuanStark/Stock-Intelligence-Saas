@@ -10,6 +10,7 @@ import {
   Bell,
   Building2,
   LogOut,
+  LogIn,
   X,
   Menu
 } from 'lucide-react';
@@ -181,7 +182,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Dynamic Locale Selector */}
         <div
-          className={`flex gap-2 mb-4 justify-center shrink-0 ${
+          className={`flex gap-2 mb-4 justify-center items-center shrink-0 ${
             isSidebarCollapsed ? 'flex-col group-hover:flex-row' : 'flex-row'
           }`}
         >
@@ -218,7 +219,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* User profile footer */}
-        <div className="glass-panel p-4 rounded-lg border border-board-border text-xs shrink-0 overflow-hidden transition-all duration-200">
+        <div className={`glass-panel rounded-lg border border-board-border text-xs shrink-0 overflow-hidden transition-all duration-200 ${
+          isSidebarCollapsed ? 'p-2 group-hover:p-4' : 'p-4'
+        }`}>
           {user ? (
             <div className="flex flex-col gap-2">
               {/* Collapsed Mode - Avatar + Hover Expand */}
@@ -265,22 +268,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           ) : (
             /* Guest Mode */
-            <div className="flex flex-col gap-2 text-center">
+            <div className="flex flex-col gap-2 text-center items-center justify-center">
               <span
-                className={`text-text-secondary font-semibold transition-opacity ${
-                  isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'
+                className={`text-text-secondary font-semibold transition-opacity text-xs truncate w-full ${
+                  isSidebarCollapsed ? 'opacity-0 group-hover:opacity-100 hidden group-hover:block' : 'opacity-100 block'
                 }`}
               >
                 {t('sidebar.guestUser')}
               </span>
 
-              <Link href="/login" className="no-underline">
+              <Link href="/login" className="no-underline w-full">
                 <button
-                  className={`btn-primary py-1.5 text-xs w-full justify-center transition-all ${
-                    isSidebarCollapsed ? 'px-2 group-hover:px-4' : 'px-4'
-                  }`}
+                  className="btn-primary py-1.5 text-xs w-full flex items-center justify-center gap-2 transition-all"
+                  title={t('common.login')}
                 >
-                  {t('common.login')}
+                  <LogIn size={14} className="shrink-0" />
+                  <span
+                    className={
+                      isSidebarCollapsed
+                        ? 'opacity-0 group-hover:opacity-100 hidden group-hover:inline truncate'
+                        : 'opacity-100 inline'
+                    }
+                  >
+                    {t('common.login')}
+                  </span>
                 </button>
               </Link>
             </div>
