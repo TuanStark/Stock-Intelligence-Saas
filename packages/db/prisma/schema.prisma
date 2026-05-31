@@ -114,6 +114,7 @@ model User {
   interestProfile      UserInterestProfile?
   recommendationScores RecommendationScore[]
   notifications        PersonalizedNotification[]
+  billingTransactions  BillingTransaction[]
 
   @@map("users")
 }
@@ -516,6 +517,8 @@ enum ActivityType {
   INTERACT_AI
   ADD_WATCHLIST
   ADD_PORTFOLIO
+  SUBSCRIBE
+  UNSUBSCRIBE
 }
 
 enum NotificationPriority {
@@ -711,6 +714,40 @@ model MarketKnowledgeChunk {
   @@index([symbol])
   @@index([type])
   @@map("market_knowledge_chunks")
+}
+
+// ─── Billing & Payments ───────────────────────────────────
+
+enum BillingTxStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+}
+
+enum PaymentProvider {
+  PAYOS
+  SEPAY
+}
+
+model BillingTransaction {
+  id            String          @id @default(uuid())
+  userId        String          @map("user_id")
+  amount        Decimal         @db.Decimal(24, 8)
+  tier          SubscriptionTier
+  provider      PaymentProvider
+  referenceCode String          @unique @map("reference_code")
+  providerTxId  String?         @unique @map("provider_tx_id")
+  status        BillingTxStatus @default(PENDING)
+  metadata      Json?
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([referenceCode])
+  @@map("billing_transactions")
 }
 
 
