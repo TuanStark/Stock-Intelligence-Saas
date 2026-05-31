@@ -316,6 +316,7 @@ export function TickerDetailPanel({ symbol, isOpen, onClose }: TickerDetailPanel
             setTran(Math.round(basePrice * 1.07));
             setSan(Math.round(basePrice * 0.93));
             generateMockDepth(Number(quote.price) || basePrice);
+            generateMockTradesHistory(Number(quote.price) || basePrice, basePrice);
           }
           if (res.data.aiSummary) {
             setAiSummary(res.data.aiSummary);
@@ -328,6 +329,32 @@ export function TickerDetailPanel({ symbol, isOpen, onClose }: TickerDetailPanel
     fetchDetails();
 
     // 2. Initialize Mock Depth
+    function generateMockTradesHistory(price: number, basePrice: number) {
+      const mockTrades: TradeLog[] = [];
+      const now = new Date();
+      
+      for (let i = 0; i < 15; i++) {
+        const tradeTime = new Date(now.getTime() - i * Math.floor(3 + Math.random() * 12) * 1000);
+        const timeStr = tradeTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        const priceOffset = (Math.floor(Math.random() * 5) - 2) * 50;
+        const tradePrice = Math.max(Math.round(basePrice * 0.93), Math.min(Math.round(basePrice * 1.07), price + priceOffset));
+        
+        const tradeType: 'BUY' | 'SELL' = Math.random() > 0.48 ? 'BUY' : 'SELL';
+        const tradeVol = Math.floor(1 + Math.random() * 75) * 100;
+        
+        mockTrades.push({
+          time: timeStr,
+          price: tradePrice,
+          volume: tradeVol,
+          type: tradeType,
+          change: tradePrice - basePrice
+        });
+      }
+      
+      setTrades(mockTrades);
+    }
+
     function generateMockDepth(price: number) {
       const step = 50;
       const mockBids: OrderBookRow[] = [
