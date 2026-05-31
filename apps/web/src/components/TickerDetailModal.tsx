@@ -149,11 +149,11 @@ const renderParsedSummary = (summaryText: string) => {
           break;
         }
       }
-      
+
       if (startIndex === -1) return '';
-      
+
       const contentStart = startIndex + matchedMarker.length;
-      
+
       let endIndex = text.length;
       if (nextMarkers) {
         for (const nm of nextMarkers) {
@@ -164,7 +164,7 @@ const renderParsedSummary = (summaryText: string) => {
           }
         }
       }
-      
+
       let chunk = text.slice(contentStart, endIndex).trim();
       chunk = chunk.replace(/^[:\*\s]+/, '').replace(/[:\*\s]+$/, '');
       return chunk;
@@ -501,7 +501,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
             borderColor: '#1a2233',
           },
           width: chartContainerRef.current.clientWidth || 700,
-          height: 400,
+          height: chartContainerRef.current.clientHeight || 550,
         });
 
         const candlestickSeries = chart.addSeries(CandlestickSeries, {
@@ -577,7 +577,10 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
 
     const handleResize = () => {
       if (chart && chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+        chart.applyOptions({ 
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight
+        });
       }
     };
     window.addEventListener('resize', handleResize);
@@ -710,7 +713,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
     }
 
     const comp = financials as CompanyFinancials;
-    
+
     switch (activeTab) {
       case 'Hồ sơ':
         return (
@@ -721,7 +724,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                 <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-3 pb-2 border-b border-[#222b3e]">Giới Thiệu Doanh Nghiệp</h4>
                 <p className="text-text-secondary leading-relaxed text-[11.5px] whitespace-pre-line">{comp.overview.description}</p>
               </div>
-              
+
               <div className="bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
                 <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-3 pb-2 border-b border-[#222b3e]">Ban Lãnh Đạo Chủ Chốt</h4>
                 <div className="flex flex-col gap-2.5">
@@ -734,7 +737,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                 </div>
               </div>
             </div>
-            
+
             {/* Right Card: Valuation Info */}
             <div className="bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg h-fit">
               <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Chỉ Số Định Giá & Cơ Bản</h4>
@@ -745,7 +748,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                 </div>
                 <div className="flex justify-between pb-2 border-b border-[#182030]/60">
                   <span className="text-text-muted font-sans font-medium">Vốn điều lệ</span>
-                  <span className="font-bold text-white">{(comp.valuation.charterCapital / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ VND</span>
+                  <span className="font-bold text-white">{(comp.valuation.charterCapital / 1000000000).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tỷ VND</span>
                 </div>
                 <div className="flex justify-between pb-2 border-b border-[#182030]/60">
                   <span className="text-text-muted font-sans font-medium">Cổ phiếu lưu hành</span>
@@ -753,7 +756,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                 </div>
                 <div className="flex justify-between pb-2 border-b border-[#182030]/60">
                   <span className="text-text-muted font-sans font-medium">Vốn hóa thị trường</span>
-                  <span className="font-bold text-[#00c58e]">{(comp.valuation.marketCap / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ VND</span>
+                  <span className="font-bold text-[#00c58e]">{(comp.valuation.marketCap / 1000000000).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tỷ VND</span>
                 </div>
                 <div className="flex justify-between pb-2 border-b border-[#182030]/60">
                   <span className="text-text-muted font-sans font-medium">Hệ số Beta</span>
@@ -805,7 +808,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                 ))}
               </div>
             </div>
-            
+
             {/* Right Box: Major Shareholders List */}
             <div className="lg:col-span-3 bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
               <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Danh Sách Cổ Đông Lớn</h4>
@@ -845,7 +848,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                     <div className="flex flex-col gap-1">
                       <div className="flex items-baseline gap-2">
                         <span className="font-outfit font-extrabold text-white text-[12px]">{cap.year}</span>
-                        <span className="text-[10px] text-text-muted font-bold">Vốn: {(cap.value / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷđ</span>
+                        <span className="text-[10px] text-text-muted font-bold">Vốn: {(cap.value / 1000000000).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tỷđ</span>
                       </div>
                       <span className="text-[10.5px] text-text-secondary">{cap.event}</span>
                     </div>
@@ -853,7 +856,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                 ))}
               </div>
             </div>
-            
+
             {/* Right Box: Dividends Table */}
             <div className="lg:col-span-3 bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
               <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Lịch Sử Chi Trả Cổ Tức</h4>
@@ -892,7 +895,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
               {comp.news.map((item, i) => {
                 const badgeColor = item.sentiment === 'BULLISH' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : item.sentiment === 'BEARISH' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-gray-500/10 text-gray-400 border border-gray-500/20';
                 const badgeText = item.sentiment === 'BULLISH' ? 'Tích cực' : item.sentiment === 'BEARISH' ? 'Tiêu cực' : 'Trung lập';
-                
+
                 return (
                   <div key={i} className="bg-[#141a27] p-4 rounded-xl border border-[#232d42]/30 hover:border-[#31405b]/60 transition-all duration-200 flex flex-col gap-2 relative group">
                     <div className="flex justify-between items-start gap-4">
@@ -955,7 +958,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                 </div>
               </div>
             </div>
-            
+
             {/* Right Box: Foreign Trading Net History */}
             <div className="lg:col-span-3 bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
               <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Giao Dịch Khối Ngoại (10 Phiên Gần Nhất)</h4>
@@ -973,7 +976,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                     {comp.stats.foreignTrading.map((trade, i) => {
                       const valueColor = trade.netValue >= 0 ? 'text-up' : 'text-down';
                       const absValueTỷ = Math.abs(trade.netValue) / 1000000000;
-                      
+
                       return (
                         <tr key={i} className="h-10 border-b border-[#1b2233]/40 hover:bg-white/2 transition-colors">
                           <td className="text-white font-sans font-bold">{trade.date}</td>
@@ -1011,16 +1014,16 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                     {comp.financials.quarters.map((q, i) => (
                       <tr key={i} className="h-10 border-b border-[#1b2233]/40 hover:bg-white/2 transition-colors">
                         <td className="text-white font-sans font-bold">{q.quarter}</td>
-                        <td className="text-right text-text-secondary">{(q.revenue / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ</td>
-                        <td className="text-right text-text-secondary">{(q.grossProfit / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ</td>
-                        <td className="text-right font-bold text-[#00c58e] pr-2">{(q.netProfit / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ</td>
+                        <td className="text-right text-text-secondary">{(q.revenue / 1000000000).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tỷ</td>
+                        <td className="text-right text-text-secondary">{(q.grossProfit / 1000000000).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tỷ</td>
+                        <td className="text-right font-bold text-[#00c58e] pr-2">{(q.netProfit / 1000000000).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tỷ</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
-            
+
             {/* Box 2: Financial statement yearly with efficiency ratios */}
             <div className="bg-[#0d111b] border border-[#1b2233] rounded-xl p-5 shadow-lg">
               <h4 className="font-outfit text-sm font-extrabold text-[#00c58e] uppercase tracking-wider mb-4 pb-2 border-b border-[#222b3e]">Hiệu Quả Vận Hành & Tài Chính Theo Năm (VND)</h4>
@@ -1039,8 +1042,8 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                     {comp.financials.years.map((y, i) => (
                       <tr key={i} className="h-10 border-b border-[#1b2233]/40 hover:bg-white/2 transition-colors">
                         <td className="text-white font-sans font-bold">{y.year}</td>
-                        <td className="text-right text-text-secondary">{(y.revenue / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ</td>
-                        <td className="text-right text-[#00c58e] font-bold">{(y.netProfit / 1000000000).toLocaleString(undefined, {maximumFractionDigits: 1})} Tỷ</td>
+                        <td className="text-right text-text-secondary">{(y.revenue / 1000000000).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tỷ</td>
+                        <td className="text-right text-[#00c58e] font-bold">{(y.netProfit / 1000000000).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tỷ</td>
                         <td className="text-right text-white font-bold">{y.roe.toFixed(2)}%</td>
                         <td className="text-right text-[#00cfff] font-bold pr-2">{y.roa.toFixed(2)}%</td>
                       </tr>
@@ -1066,7 +1069,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
   const buyPercent = totalVolume > 0 ? (buyVolumeTotal / totalVolume) * 100 : 50;
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-[1000] p-4 select-none animate-fade-in font-inter">
+    <div className="fixed inset-0  backdrop-blur-sm flex items-center justify-center z-[1000] p-4 select-none animate-fade-in font-inter">
       {/* Click outside backdrop container to close */}
       <div className="absolute inset-0" onClick={onClose} />
 
@@ -1175,7 +1178,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
               {/* COLUMN 1: CHART & TOOLS (58% width) */}
               <section className="w-[58%] h-full flex border-r border-[#151a24] bg-[#06070a] overflow-hidden">
 
-                                {/* Interactive Drawing tools bar (Fully functional TradingView style!) */}
+                {/* Interactive Drawing tools bar (Fully functional TradingView style!) */}
                 <div className="w-[45px] shrink-0 h-full border-r border-[#151a24] bg-[#090b11] flex flex-col items-center py-4 gap-3.5 text-text-muted select-none">
                   <button
                     onClick={() => {
