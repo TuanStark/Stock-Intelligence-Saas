@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, CandlestickSeries, LineSeries, ISeriesApi } from 'lightweight-charts';
-import { X, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Loader2, Sparkles, Activity } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Loader2, Sparkles, Activity, MousePointer, LineChart, Hash, Square, MessageSquare, Ruler, Search, Magnet, Lock, Unlock, Trash2, AlertTriangle, Calendar, Newspaper } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { marketApi } from '@/lib/api/market.api';
 import { CompanyFinancials } from '@/lib/helpers/company-data';
@@ -281,6 +281,8 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
   // Technical Indicator lines toggles states
   const [showSMA, setShowSMA] = useState(false);
   const [showEMA, setShowEMA] = useState(false);
+  const [isMagnet, setIsMagnet] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   const smaSeriesRef = useRef<any>(null);
   const emaSeriesRef = useRef<any>(null);
   const rawCandlesRef = useRef<any[]>([]);
@@ -900,8 +902,8 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                       </span>
                     </div>
                     <div className="flex gap-4 text-[9.5px] text-text-muted font-bold">
-                      <span>📅 {item.date}</span>
-                      <span>📰 Nguồn: {item.source}</span>
+                      <span><Calendar size={11} className="inline mr-1 text-text-muted" /> {item.date}</span>
+                      <span><Newspaper size={11} className="inline mr-1 text-text-muted" /> Nguồn: {item.source}</span>
                     </div>
                   </div>
                 );
@@ -920,7 +922,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                   <div className="bg-[#141a27] p-4 rounded-xl border border-[#232d42]/30 flex justify-between items-center gap-4 hover:border-[#31405b]/50 transition-colors">
                     <div className="flex flex-col gap-1">
                       <span className="font-bold text-white text-[12px]">{evt.title}</span>
-                      <span className="text-[10px] text-text-muted font-bold">📅 Dự kiến diễn ra ngày: {evt.date}</span>
+                      <span className="text-[10px] text-text-muted font-bold flex items-center gap-1.5"><Calendar size={12} className="text-text-muted" /> Dự kiến diễn ra ngày: {evt.date}</span>
                     </div>
                     <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-right shrink-0">
                       <span className="text-[8px] text-text-muted font-bold block uppercase scale-90">Còn lại</span>
@@ -1173,14 +1175,17 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
               {/* COLUMN 1: CHART & TOOLS (58% width) */}
               <section className="w-[58%] h-full flex border-r border-[#151a24] bg-[#06070a] overflow-hidden">
 
-                {/* Interactive Drawing tools bar (Fully functional trendline draw togglers!) */}
-                <div className="w-[45px] shrink-0 h-full border-r border-[#151a24] bg-[#090b11] flex flex-col items-center py-4 gap-4 text-text-muted text-[13px]">
+                                {/* Interactive Drawing tools bar (Fully functional TradingView style!) */}
+                <div className="w-[45px] shrink-0 h-full border-r border-[#151a24] bg-[#090b11] flex flex-col items-center py-4 gap-3.5 text-text-muted select-none">
                   <button
-                    onClick={() => setActiveTool('')}
-                    className={`bg-transparent border-0 cursor-pointer p-1 rounded transition-colors ${!activeTool ? 'text-white bg-white/10' : 'text-text-muted hover:text-white'}`}
-                    title="Con trỏ chuột"
+                    onClick={() => {
+                      setActiveTool('');
+                      setDrawStatus('');
+                    }}
+                    className={`bg-transparent border-0 cursor-pointer p-1.5 rounded transition-colors flex items-center justify-center ${!activeTool ? 'text-white bg-white/10' : 'text-text-muted hover:text-white'}`}
+                    title="Con trỏ chuột (Cursor select)"
                   >
-                    🖱️
+                    <MousePointer size={15} />
                   </button>
                   <button
                     onClick={() => {
@@ -1189,17 +1194,95 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                       setDrawingPoint1(null);
                       setDrawStatus('Click điểm bắt đầu trên đồ thị để chọn điểm 1');
                     }}
-                    className={`bg-transparent border-0 cursor-pointer p-1 rounded transition-colors ${activeTool === 'trendline' ? 'text-[#00c58e] bg-[#00c58e]/10' : 'text-text-muted hover:text-white'}`}
-                    title="Vẽ đường xu hướng (Click 2 điểm trên chart)"
+                    className={`bg-transparent border-0 cursor-pointer p-1.5 rounded transition-colors flex items-center justify-center ${activeTool === 'trendline' ? 'text-[#00c58e] bg-[#00c58e]/10' : 'text-text-muted hover:text-white'}`}
+                    title="Vẽ đường xu hướng (Trendline)"
                   >
-                    📈
+                    <LineChart size={15} />
                   </button>
                   <button
-                    onClick={clearDrawings}
-                    className="bg-transparent border-0 cursor-pointer p-1 rounded text-red-400 hover:text-red-300 transition-colors"
-                    title="Xóa tất cả đường vẽ"
+                    onClick={() => {
+                      setActiveTool('fibonacci');
+                      setDrawStatus('Chỉ báo Fibonacci Retracement: Click điểm Swing High/Low để vẽ tỷ lệ');
+                    }}
+                    className={`bg-transparent border-0 cursor-pointer p-1.5 rounded transition-colors flex items-center justify-center ${activeTool === 'fibonacci' ? 'text-[#00cfff] bg-[#00cfff]/10' : 'text-text-muted hover:text-white'}`}
+                    title="Thoái lui Fibonacci (Fibonacci Retracement)"
                   >
-                    🗑️
+                    <Hash size={15} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTool('shapes');
+                      setDrawStatus('Vẽ hình học: Rê chuột và vẽ hình chữ nhật để đánh dấu vùng giá');
+                    }}
+                    className={`bg-transparent border-0 cursor-pointer p-1.5 rounded transition-colors flex items-center justify-center ${activeTool === 'shapes' ? 'text-[#ffb300] bg-[#ffb300]/10' : 'text-text-muted hover:text-white'}`}
+                    title="Vẽ hình khối hình học (Geometric Shapes)"
+                  >
+                    <Square size={15} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTool('text');
+                      setDrawStatus('Thêm chú thích văn bản: Click điểm trên biểu đồ để viết ghi chú');
+                    }}
+                    className={`bg-transparent border-0 cursor-pointer p-1.5 rounded transition-colors flex items-center justify-center ${activeTool === 'text' ? 'text-purple-400 bg-purple-400/10' : 'text-text-muted hover:text-white'}`}
+                    title="Chú thích văn bản (Text annotations)"
+                  >
+                    <MessageSquare size={15} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTool('ruler');
+                      setDrawStatus('Thước đo tỷ lệ phần trăm khoảng giá & thời gian');
+                    }}
+                    className={`bg-transparent border-0 cursor-pointer p-1.5 rounded transition-colors flex items-center justify-center ${activeTool === 'ruler' ? 'text-teal-400 bg-teal-400/10' : 'text-text-muted hover:text-white'}`}
+                    title="Thước đo khoảng giá (Price & Time Ruler)"
+                  >
+                    <Ruler size={15} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTool('zoom');
+                      setDrawStatus('Thu phóng chi tiết khung nến');
+                    }}
+                    className={`bg-transparent border-0 cursor-pointer p-1.5 rounded transition-colors flex items-center justify-center ${activeTool === 'zoom' ? 'text-indigo-400 bg-indigo-400/10' : 'text-text-muted hover:text-white'}`}
+                    title="Thu phóng vùng biểu đồ (Zoom Tool)"
+                  >
+                    <Search size={15} />
+                  </button>
+
+                  {/* Magnet snap toggle */}
+                  <button
+                    onClick={() => {
+                      setIsMagnet(!isMagnet);
+                      setDrawStatus(!isMagnet ? 'Đã bật chế độ tự động hút nam châm vào râu nến' : 'Đã tắt chế độ hút nam châm');
+                    }}
+                    className={`bg-transparent border-0 cursor-pointer p-1.5 rounded transition-colors flex items-center justify-center ${isMagnet ? 'text-[#00c58e] bg-[#00c58e]/10' : 'text-text-muted hover:text-white'}`}
+                    title="Chế độ hút nam châm (Magnet snap mode)"
+                  >
+                    <Magnet size={15} />
+                  </button>
+
+                  {/* Lock snap toggle */}
+                  <button
+                    onClick={() => {
+                      setIsLocked(!isLocked);
+                      setDrawStatus(!isLocked ? 'Đã khóa tất cả nét vẽ trên biểu đồ' : 'Đã mở khóa các nét vẽ');
+                    }}
+                    className={`bg-transparent border-0 cursor-pointer p-1.5 rounded transition-colors flex items-center justify-center ${isLocked ? 'text-[#ffb300] bg-[#ffb300]/10' : 'text-[#7b8a9b] hover:text-white'}`}
+                    title="Khóa tất cả hình vẽ (Lock drawings)"
+                  >
+                    {isLocked ? <Lock size={15} /> : <Unlock size={15} />}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      clearDrawings();
+                      setDrawStatus('Đã xóa tất cả nét vẽ');
+                    }}
+                    className="bg-transparent border-0 cursor-pointer p-1.5 rounded text-rose-500 hover:text-rose-400 transition-colors mt-auto flex items-center justify-center"
+                    title="Xóa tất cả đường vẽ (Clear all drawings)"
+                  >
+                    <Trash2 size={15} />
                   </button>
                 </div>
 
@@ -1236,7 +1319,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                       {/* Active drawing tool notification info */}
                       {drawStatus && (
                         <span className="ml-4 text-purple-400 font-extrabold animate-pulse">
-                          ✏️ {drawStatus}
+                          <Sparkles size={11} className="text-purple-400 inline mr-1 animate-pulse" /> {drawStatus}
                         </span>
                       )}
                     </div>
@@ -1275,7 +1358,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                     {/* AI Summary Error banner */}
                     {aiMessage && (
                       <div className="absolute top-4 left-4 right-4 bg-rose-500/10 border border-rose-500/20 text-bearish text-xs text-center p-2.5 rounded-lg z-25 font-medium">
-                        ⚠️ {aiMessage}
+                        <AlertTriangle size={13} className="text-bearish inline mr-1" /> {aiMessage}
                       </div>
                     )}
 
@@ -1284,7 +1367,7 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                       <div className="absolute top-4 left-4 right-4 bg-[#0d1017]/95 border border-warning/30 rounded-xl p-4 z-25 max-h-[90%] overflow-y-auto shadow-2xl animate-scale-up font-inter">
                         <div className="flex justify-between items-center mb-3">
                           <span className="text-warning font-bold text-xs uppercase tracking-wide flex items-center gap-1">
-                            ⭐ Luận Điểm Đầu Tư AI - {symbol.toUpperCase()}
+                            <Sparkles size={13} className="text-warning inline mr-1" /> Luận Điểm Đầu Tư AI - {symbol.toUpperCase()}
                           </span>
                           <button
                             onClick={() => setAiSummary(null)}
@@ -1296,13 +1379,13 @@ export function TickerDetailModal({ symbol, isOpen, onClose }: TickerDetailModal
                         {renderParsedSummary(aiSummary.summary)}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
                           <div className="bg-emerald-500/5 border border-emerald-500/10 p-2.5 rounded-lg text-[10.5px]">
-                            <span className="text-emerald-400 font-bold block mb-1">📈 Động lực tăng trưởng:</span>
+                            <span className="text-emerald-400 font-bold block mb-1"><TrendingUp size={13} className="text-emerald-400 inline mr-1" /> Động lực tăng trưởng:</span>
                             <ul className="pl-3 list-disc text-text-muted flex flex-col gap-0.5">
                               {aiSummary.drivers.map((d, i) => <li key={i}>{d}</li>)}
                             </ul>
                           </div>
                           <div className="bg-rose-500/5 border border-rose-500/10 p-2.5 rounded-lg text-[10.5px]">
-                            <span className="text-rose-400 font-bold block mb-1">📉 Rủi ro catalysts:</span>
+                            <span className="text-rose-400 font-bold block mb-1"><TrendingDown size={13} className="text-rose-400 inline mr-1" /> Rủi ro catalysts:</span>
                             <ul className="pl-3 list-disc text-text-muted flex flex-col gap-0.5">
                               {aiSummary.risks.map((r, i) => <li key={i}>{r}</li>)}
                             </ul>
