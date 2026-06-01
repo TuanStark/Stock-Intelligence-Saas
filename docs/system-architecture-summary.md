@@ -1,161 +1,212 @@
-# BÁO CÁO PHÂN TÍCH KIẾN TRÚC HỆ THỐNG
-## DỰ ÁN: **STOCK INTELLIGENCE SAAS PLATFORM**
+# TÀI LIỆU TOÀN CẢNH KIẾN TRÚC HỆ THỐNG
+## DỰ ÁN: **STOCK INTELLIGENCE SAAS PLATFORM** (Dành cho Thành viên mới)
 
-Hệ thống được thiết kế theo kiến trúc **Monorepo (Multi-service/Microservices-like)** sử dụng **Turborepo** và **pnpm workspaces**. Đây là kiến trúc tiêu chuẩn công nghiệp giúp chia sẻ mã nguồn (models, types, utils) giữa Backend, Frontend và các Workers chạy nền một cách dễ dàng, đồng thời cho phép mở rộng (scale) độc lập từng thành phần khi tải trọng tăng cao.
+Chào mừng bạn gia nhập đội ngũ phát triển **Stock Intelligence**! Tài liệu này cung cấp cái nhìn toàn cảnh, chi tiết và thực tế nhất về kiến trúc hệ thống hiện tại. Hãy đọc kỹ tài liệu này để hiểu cách các mảnh ghép (Backend, Frontend, Workers, Security, Payment, AI) hoạt động cùng nhau, giúp bạn bắt nhịp dự án nhanh nhất và tránh bị stuck (nghẽn) ở bất kỳ bước nào.
 
 ---
 
-## 1. Sơ đồ Luồng Dữ liệu Hệ thống (Data Pipeline Flow)
+## 1. Sơ đồ Luồng Dữ liệu Toàn hệ thống (System Data Pipeline)
 
-Dưới đây là sơ đồ cách dữ liệu chứng khoán được cào về, xử lý, lưu trữ và cung cấp tới người dùng cuối:
+Dưới đây là sơ đồ kiến trúc dòng chảy dữ liệu bao gồm cả luồng cào thông tin chứng khoán, bảo mật API, cổng thanh toán tự động, và lõi AI:
 
 ```mermaid
 flowchart TD
     subgraph External_APIs [Nguồn Dữ liệu Ngoài]
         YF[Yahoo Finance API]
-        MD[Market Data API]
+        PayOS_API[PayOS Gateway API]
+    end
+
+    subgraph Client_App [Tầng Client]
+        Web[apps/web: Next.js Frontend]
+    end
+
+    subgraph Security_Gateway [Tầng Bảo mật & API Gateway]
+        RateLimit[Throttler: Chống DDoS/Spam]
+        HMAC[Xác thực Chữ ký x-signature]
+        AES[Mã hóa Payload AES-256-GCM]
+    end
+
+    subgraph Backend_Server [Lõi Backend]
+        API[apps/api: NestJS Server]
     end
 
     subgraph Infrastructures [Tầng Hạ Tầng - Docker Compose]
         Postgres[(PostgreSQL & TimescaleDB)]
-        Redis[(Redis Cache & BullMQ)]
+        Redis[(Redis Cache & BullMQ Queue)]
         MinIO[(MinIO Object Storage)]
         Mailpit[Mailpit Local SMTP]
     end
 
-    subgraph Workers_Services [Tầng Xử lý & Workers]
-        WI[worker-ingestion: Scheduler]
-        WP[worker-processing: Indicators Calculator]
-        WA[worker-ai: LLM Report Generator]
+    subgraph Workers_Services [Tầng Xử lý Song Song & Workers]
+        WI[worker-ingestion: Cào dữ liệu]
+        WP[worker-processing: Tính chỉ số RSI/MACD]
+        WA[worker-ai: Phân tích LLM & LiteLLM]
+        WPay[worker-payment: Xử lý hóa đơn BullMQ]
     end
 
-    subgraph Backend_Gateway [Tầng API Gateway]
-        API[apps/api: NestJS API Server]
-    end
-
-    subgraph Frontend_App [Tầng Client]
-        Web[apps/web: Next.js Frontend]
-    end
+    %% Luồng Đăng nhập & API tương tác Client (Bảo mật 3 lớp)
+    Web -- 1. Gửi Request đính kèm x-signature --> RateLimit
+    RateLimit --> HMAC
+    HMAC -- 2. Giải mã dữ liệu nhận --> AES
+    AES --> API
+    API -- 3. Trả về Response mã hóa --> Web
 
     %% Luồng cào và xử lý dữ liệu (Data Ingestion Pipeline)
-    WI -- 1. Cron Job 30s --> YF
-    WI -- 2. Lưu giá trị hiện tại --> Postgres
-    WI -- 3. Đẩy dữ liệu lịch sử vào queue --> Redis
-    Redis -- 4. Nhận tác vụ và tính chỉ số kỹ thuật RSI/MACD --> WP
-    WP -- 5. Lưu tín hiệu giao dịch mới --> Postgres
+    WI -- 4. Định kỳ 30s cào giá --> YF
+    WI -- 5. Lưu giá trị hiện tại --> Postgres
+    WI -- 6. Đẩy dữ liệu lịch sử vào queue --> Redis
+    Redis -- 7. Nhận tác vụ và tính chỉ số kỹ thuật --> WP
+    WP -- 8. Lưu tín hiệu StockSignal --> Postgres
+    WP -- 9. Kích hoạt cảnh báo giá --> Mailpit
+
+    %% Luồng Thanh toán tự động (Payment Pipeline)
+    Web -- 10. Tạo hóa đơn VietQR --> API
+    PayOS_API -- 11. Gửi Webhook bảo mật --> API
+    API -- 12. Đẩy Job xử lý thanh toán --> Redis
+    Redis -- 13. Khóa phân tán & xử lý --> WPay
+    WPay -- 14. Nâng cấp gói cước Subscription --> Postgres
 
     %% Luồng AI & Báo cáo
-    Postgres -- 6. Lấy dữ liệu phân tích --> WA
-    WA -- 7. Gửi prompt đến LLM --> OpenAI((OpenAI / LiteLLM))
-    OpenAI -- 8. Trả về kết quả phân tích --> WA
-    WA -- 9. Lưu báo cáo phân tích AI & PDF --> Postgres & MinIO
-
-    %% Luồng Cảnh báo (Alerts)
-    WP -- 10. Kích hoạt sự kiện cảnh báo --> Mailpit
-    
-    %% Luồng Người dùng & API
-    Web -- 11. Đăng nhập / Truy vấn dữ liệu --> API
-    API -- 12. Đọc/Ghi dữ liệu xác thực & thị trường --> Postgres
-    API -- 13. Truy vấn cache nhanh --> Redis
+    Postgres -- 15. Lấy dữ liệu phân tích --> WA
+    WA -- 16. Gửi prompt đến LLM --> OpenAI((OpenAI / LiteLLM Proxy))
+    OpenAI -- 17. Trả về báo cáo AI --> WA
+    WA -- 18. Lưu báo cáo & PDF --> Postgres & MinIO
 ```
 
 ---
 
-## 2. Chi tiết Kiến trúc Monorepo & Quản lý Phụ thuộc
+## 2. Kiến trúc Monorepo & Quản lý Phụ thuộc (`pnpm workspaces`)
 
-Dự án sử dụng cơ chế **pnpm workspaces** định nghĩa tại file `pnpm-workspace.yaml` để liên kết các dự án con. Quá trình chia sẻ mã nguồn diễn ra tại thư mục `packages/`:
+Dự án được quản lý dưới dạng **Monorepo** bằng **Turborepo** và **pnpm**. Điều này cho phép chia sẻ mã nguồn dùng chung cực kỳ dễ dàng qua thư mục `packages/`:
 
-1.  **`packages/db`:** 
-    *   Đóng gói **Prisma ORM** và cấu hình schema.
-    *   Tất cả các Service như `apps/api`, `apps/worker-processing` muốn kết nối Database đều không tự viết schema riêng mà sẽ import trực tiếp thư viện nội bộ `@stock-intel/db`. Điều này đảm bảo tính nhất quán (Single Source of Truth).
-2.  **`packages/contracts`:**
-    *   Chứa các **TypeScript Types, Interfaces, DTOs (Data Transfer Objects)** và schemas xác thực (như Zod/Class-validator).
-    *   Giúp cả Frontend (`apps/web`) và Backend (`apps/api`) luôn đồng bộ về kiểu dữ liệu khi truyền nhận qua HTTP API.
-3.  **`packages/utils`:**
-    *   Chứa các hàm helper dùng chung như định dạng tiền tệ, xử lý ngày tháng, thuật toán tài chính cơ bản.
-4.  **`packages/config`:**
-    *   Chứa cấu hình chia sẻ cho ESLint, TypeScript (`tsconfig.json`), Prettier nhằm đồng bộ coding convention toàn dự án.
+### a. Phân bổ các Package dùng chung (`packages/`)
+*   **`packages/db`**: Đóng gói **Prisma ORM** và cấu hình schema. Mọi thao tác kết nối DB của các service con đều thông qua thư viện nội bộ `@stock-intel/db`. Điều này đảm bảo tính nhất quán (Single Source of Truth).
+*   **`packages/contracts`**: Chứa toàn bộ **TypeScript Types, Interfaces, DTOs (Data Transfer Objects)** và schemas xác thực Zod. Cả Frontend (`apps/web`) và Backend (`apps/api`) đều dùng chung package này để đồng bộ hóa cấu trúc dữ liệu truyền nhận.
+*   **`packages/utils`**: Chứa các hàm helper dùng chung như định dạng tiền tệ, xử lý ngày tháng, thuật toán tài chính.
+*   **`packages/config`**: Chứa cấu hình chia sẻ cho ESLint, TypeScript (`tsconfig.json`), Prettier nhằm đồng bộ coding style toàn dự án.
 
-**Turborepo (`turbo.json`)** đóng vai trò là "bộ não" quản lý build pipeline. Nó giúp tối ưu hóa việc chạy lệnh (như `build`, `lint`, `test`) bằng cách sử dụng cơ chế **Caching** (nếu code của service đó không đổi, lệnh build sẽ lấy từ cache lập tức thay vì build lại từ đầu).
+> [!IMPORTANT]
+> **Quy định pnpm v11 (Allow Builds):**
+> Kể từ phiên bản **pnpm v11**, thuộc tính `onlyBuiltDependencies` trong `package.json` đã bị loại bỏ. Tất cả các quyền thực thi build scripts của bên thứ ba (như `bcrypt`, `prisma`, `sharp`...) phải được khai báo rõ ràng trong thuộc tính `allowBuilds` tại tệp tin [`pnpm-workspace.yaml`](file:///c:/Users/tuanl/Documents/Project%20Tuan/Stock-Intelligence-Saas/pnpm-workspace.yaml). Nếu cài thư viện mới báo lỗi build, hãy bổ sung tên thư viện vào danh sách whitelist này.
 
 ---
 
-## 3. Phân tích Chi tiết Cơ sở Dữ liệu (Prisma Schema Deep Dive)
+## 3. Hệ thống Bảo mật API Gateway (API Security Layers)
 
-Schema cơ sở dữ liệu (`schema.prisma`) được thiết kế để giải quyết các nghiệp vụ tài chính phức tạp:
+Để bảo vệ tài nguyên dữ liệu thị trường và ngăn chặn các hành vi thu thập dữ liệu trái phép (crawlers), spam hoặc tấn công DDoS, cổng giao tiếp REST API được bảo mật qua 3 lớp:
 
-### a. Phân quyền và Gói dịch vụ (SaaS Monitization)
-*   **`User`**: Quản lý thông tin đăng nhập, trạng thái tài khoản (`UserStatus`: `ACTIVE`, `SUSPENDED`, `DELETED`).
-*   **`Subscription`**: Quản lý gói cước của người dùng (`SubscriptionTier`: `FREE`, `PRO`, `API`) cùng thời hạn gia hạn (`renewalAt`).
-*   **`ApiKey`**: Dành cho người dùng mua gói `API` để tự động tích hợp dữ liệu của hệ thống vào bot giao dịch của họ.
-
-### b. Quản lý Dữ liệu Thị trường (Time-series & Relational Data)
-*   **`Exchange` & `Sector` & `Instrument`**: Quản lý thông tin mã chứng khoán (ví dụ: Symbol: `AAPL`, Tên: `Apple Inc`, sàn `US Equities`, nhóm ngành công nghệ).
-*   **`Quote`**: Lưu trữ dữ liệu giá khớp lệnh liên tục (Giá mở cửa, cao nhất, thấp nhất, khối lượng giao dịch).
-*   **`Candle`**: Lưu trữ dữ liệu nến lịch sử cho các khung thời gian (`timeframe` như `1m`, `5m`, `1h`, `1d`). 
-    > **Thiết kế tối ưu:** Database sử dụng **TimescaleDB** (một extension của PostgreSQL chuyên cho dữ liệu chuỗi thời gian). TimescaleDB tự động phân vùng (partitioning) bảng `Quote` và `Candle` theo thời gian giúp các câu lệnh truy vấn hàng tỷ dòng dữ liệu nến chỉ mất vài mili-giây.
-
-### c. Nghiệp vụ Người dùng (Watchlists & Portfolios)
-*   **`Watchlist` & `WatchlistItem`**: Danh sách cổ phiếu người dùng đang quan tâm theo dõi.
-*   **`Portfolio`**: Danh mục tài sản thực tế của người dùng.
-*   **`PortfolioTransaction`**: Lưu lịch sử mua/bán (`BUY`/`SELL`), số lượng, mức giá và phí giao dịch (`fee`).
-*   **`PortfolioPosition`**: Tổng hợp số dư hiện tại của từng mã cổ phiếu, tự động tính toán **Giá vốn trung bình (Average Cost)** mỗi khi có giao dịch mua/bán mới.
-
-### d. Trí tuệ Nhân tạo & Tín hiệu Giao dịch (Intelligence Layers)
-*   **`StockSignal`**: Các tín hiệu kỹ thuật được tạo tự động (`RSI_OVERBOUGHT`, `MACD_BULLISH`, v.v.) đi kèm độ mạnh yếu (`strength`) và giải thích lý do bằng chữ (`explanation`).
-*   **`StockScore`**: Điểm số chấm điểm cổ phiếu từ 0 - 100 và xếp hạng (`STRONG_BUY`, `BUY`, `HOLD`, `SELL`) dựa trên 5 khía cạnh: kỹ thuật, cơ bản (fundamentals), đà tăng trưởng (momentum), định giá (valuation) và tâm lý đám đông (sentiment).
-*   **`AiSummary`**: Lưu phân tích từ mô hình AI bao gồm các yếu tố thúc đẩy (`drivers`), rủi ro (`risks`), xu hướng tâm lý (`sentiment`) và độ tin cậy (`confidence`).
+1.  **Rate Limiting (Throttler):** Giới hạn tần suất gọi API của mỗi IP nhằm ngăn chặn tấn công DDoS.
+2.  **HMAC Request Signature Verification:** 
+    *   Mỗi request từ client gửi đi đều được đính kèm 3 headers: `x-signature` (chữ ký băm HMAC-SHA256), `x-timestamp` (thời gian gửi), và `x-nonce` (chuỗi ngẫu nhiên chống tấn công phát lại - Replay Attack).
+    *   Backend tự tính toán lại chữ ký dựa trên Payload và Secret Key. Nếu không trùng khớp, request sẽ bị từ chối ngay lập tức.
+3.  **AES-256-GCM Payload Encryption:** 
+    *   Các dữ liệu nhạy cảm hoặc dữ liệu thị trường trả về từ Backend đều được mã hóa bằng thuật toán đối xứng AES-256-GCM ở lớp HTTP.
+    *   Client nhận về payload dạng chuỗi hex kèm mã xác thực tag và IV, giải mã trực tiếp ở client-side trong bộ lọc interceptor.
 
 ---
 
-## 4. Cách Hoạt động của Từng Service (`apps/`)
+## 4. Quy trình Đăng nhập, Google OAuth & Xoay vòng Token
 
-### 1. `apps/api` (NestJS REST API Server)
-*   Đóng vai trò là **Gateway** tương tác trực tiếp với người dùng cuối.
-*   Xử lý việc đăng ký, đăng nhập (sử dụng JWT lưu trong Cookie để bảo mật tránh lỗi XSS), quản lý hồ sơ người dùng.
-*   Cung cấp các API truy vấn giá cổ phiếu, dữ liệu nến cho biểu đồ, danh mục đầu tư, cấu hình cảnh báo.
-*   Khi có các truy vấn nặng về dữ liệu tĩnh hoặc dữ liệu ít thay đổi, nó sẽ truy cập **Redis** để lấy dữ liệu cache thay vì truy cập PostgreSQL.
+Hệ thống tích hợp cả đăng nhập bằng Email/Password truyền thống và **Google OAuth2** thông qua thư viện **NextAuth** phía Client và bộ kiểm tra ID Token trên Backend:
 
-### 2. `apps/worker-ingestion` (Dịch vụ Thu thập Dữ liệu)
-*   Sử dụng `@nestjs/schedule` để chạy các tác vụ nền định kỳ (Cron jobs).
-*   Mỗi 30 giây (trong môi trường phát triển local), nó tự động lấy danh sách cổ phiếu cần theo dõi (`WATCH_SYMBOLS`), gọi API bên ngoài để cập nhật giá mới nhất (`yahoo-finance2`), lưu trữ dữ liệu vào bảng `Quote`.
-*   Nó chịu trách nhiệm kích hoạt luồng tính toán kỹ thuật bằng cách nạp dữ liệu lịch sử và đẩy các task vào hàng đợi **Redis BullMQ**.
+```
+[Google Sign-In] ──> Lấy Google ID Token ──> Gửi lên API Backend ──> Xác thực Google Client ID
+                                                                           │
+                                                                           ▼
+[Cập nhật NextAuth] <── Trả về cặp Token mới <── Sinh Access Token + Refresh Token (Database)
+```
 
-### 3. `apps/worker-processing` (Dịch vụ Tính toán Kỹ thuật)
-*   Lắng nghe hàng đợi từ Redis. Khi nhận được task tính toán chỉ số, nó sử dụng thư viện toán học tài chính (`technicalindicators`) để tính toán RSI, MACD, Bollinger Bands...
-*   Nếu phát hiện chỉ số chạm ngưỡng bất thường (ví dụ: RSI dưới 30 - quá bán), nó sẽ ghi nhận một tín hiệu (`StockSignal`) mới vào Database và đẩy một sự kiện cảnh báo (Alert) vào queue.
-
-### 4. `apps/worker-ai` (Dịch vụ AI Phân tích)
-*   Được kích hoạt định kỳ hoặc khi có tin tức mới (`NewsArticle`) quan trọng được đưa vào hệ thống.
-*   Nó sẽ gom dữ liệu về giá, tin tức gần đây của mã cổ phiếu, sau đó gửi yêu cầu tới OpenAI API hoặc qua **LiteLLM** (một proxy giúp phân phối tải và dự phòng lỗi giữa nhiều mô hình như GPT-4, Claude, Llama).
-*   Nó tổng hợp các phản hồi JSON cấu trúc, lưu trữ vào bảng `AiSummary` phục vụ cho Frontend hiển thị biểu đồ phân tích thông minh.
-
-### 5. `apps/web` (Next.js Frontend)
-*   Được xây dựng bằng React & Next.js App Router để tối ưu hóa SEO cho trang landing page và tốc độ tải trang dashboard.
-*   Sử dụng các thư viện biểu đồ chuyên nghiệp (như Lightweight Charts của TradingView hoặc Recharts) để hiển thị nến kỹ thuật, các đường chỉ báo và lịch sử giao dịch trực quan.
-
----
-
-## 5. Các Công cụ Hạ tầng Bổ trợ (Tầng Infrastructure)
-
-Khi bạn khởi chạy dự án thông qua Docker Compose (`pnpm infra:up`), các container được cấu hình nhằm hỗ trợ phát triển local một cách tối đa:
-*   **Mailpit (Port 8025):** Là một SMTP server giả lập. Khi code backend gửi email cảnh báo giá hoặc mã kích hoạt tài khoản cho user, email đó sẽ không gửi đi thật mà rơi vào Mailpit. Bạn truy cập giao diện web của Mailpit để kiểm tra định dạng email trực quan.
-*   **Redis Commander (Port 8081):** Giao diện quản trị Redis giúp bạn kiểm tra xem cache đang lưu những gì, trạng thái các queue BullMQ đang chạy/lỗi ra sao.
-*   **MinIO Console (Port 9001):** S3-compatible Object Storage giúp giả lập Amazon S3 ở local để lưu trữ các file báo cáo PDF chứng khoán, ảnh đại diện người dùng.
+### Cơ chế tự động xoay vòng Token (Silent Token Rotation)
+*   **Access Token** có thời hạn ngắn (15 phút) để bảo mật. **Refresh Token** lưu ở Database có thời hạn dài (7 ngày).
+*   Khi Access Token hết hạn, Axios Interceptor trong [`api-client.ts`](file:///c:/Users/tuanl/Documents/Project%20Tuan/Stock-Intelligence-Saas/apps/web/src/lib/api/api-client.ts) sẽ tự động phát hiện mã lỗi `401` và thực hiện:
+    1.  Gửi ngầm request lên `/auth/refresh` kèm `refreshToken` để lấy cặp Token mới từ Backend.
+    2.  Gửi yêu cầu cập nhật lại Session NextAuth thông qua `POST /api/auth/session` với cấu trúc lồng chuẩn:
+        ```json
+        {
+          "trigger": "update",
+          "session": {
+            "accessToken": "new_access_token",
+            "refreshToken": "new_refresh_token"
+          }
+        }
+        ```
+    3.  Tự động gửi lại (retry) request ban đầu bị lỗi bằng Token mới mà người dùng không hề hay biết.
 
 ---
 
-## 6. Luồng Vận Hành Điển Hình (Ví dụ Thực tế)
+## 5. Hệ thống Thanh toán SaaS (PayOS / SePay Integration)
 
-Hãy tưởng tượng một kịch bản hệ thống vận hành thực tế:
-1.  **Cào dữ liệu:** `worker-ingestion` chạy cron job cào được giá cổ phiếu `TSLA` giảm mạnh từ $200 về $170.
-2.  **Lưu trữ & Kích hoạt tính toán:** Dữ liệu giá được lưu vào bảng `quotes`. Một task xử lý được gửi vào Redis BullMQ.
-3.  **Phát hiện tín hiệu:** `worker-processing` nhận task, tính toán thấy RSI của `TSLA` rơi xuống mức `22` (cực kỳ quá bán). Worker này tạo một bản ghi `StockSignal` (loại `RSI_OVERSOLD`, độ mạnh `HIGH`).
-4.  **Kích hoạt cảnh báo:**
-    *   Hệ thống quét bảng `AlertRule` thấy User Stark có đặt luật: *"Gửi email cho tôi nếu TSLA có tín hiệu quá bán"*
-    *   Hệ thống đẩy job gửi email vào queue.
-    *   Worker gửi email gửi qua Mailpit, User nhận được thông báo.
-5.  **AI Phân tích sâu:** 
-    *   `worker-ai` tự động gom thông tin: Giá giảm + RSI quá bán + tin tức xấu về chuỗi cung ứng của Tesla vừa cào được.
-    *   Nó gửi dữ liệu này cho OpenAI. OpenAI trả về phân tích: *Tâm lý Bearish ngắn hạn, nhưng RSI quá bán mạnh mở ra cơ hội bắt đáy dài hạn. Động lực tăng trưởng (driver): nhu cầu xe điện ở Trung Quốc vẫn duy trì tốt. Rủi ro (risk): thiếu hụt linh kiện.*
-    *   Báo cáo AI được cập nhật lên Dashboard. Stark mở `apps/web` ra xem và đưa ra quyết định giao dịch chính xác.
+Hệ thống hỗ trợ cả hai cổng thanh toán tự động phổ biến nhất tại Việt Nam là **PayOS** (cổng thanh toán VietQR chuyên nghiệp) và **SePay** (chuyển khoản ngân hàng trực tiếp).
+
+### a. Kiến trúc Xử lý Hóa đơn Bất đồng bộ (Asynchronous Payment Processing)
+Khi người dùng thực hiện thanh toán:
+1.  **Tạo giao dịch PENDING:** Hệ thống sinh mã hóa đơn duy nhất (`referenceCode` dạng `SIXXXXXXXX`) và lưu trạng thái `PENDING` vào bảng `BillingTransaction`.
+2.  **Quét VietQR động:** Hệ thống tự động tạo mã QR VietQR chuẩn NAPAS chứa thông tin Tài khoản thụ hưởng, Số tiền và chính xác Nội dung chuyển khoản là `referenceCode`.
+3.  **Nhận Webhook từ Cổng thanh toán:** 
+    *   Khi tiền vào tài khoản, PayOS hoặc SePay sẽ gửi một HTTP POST (Webhook) chứa thông tin giao dịch về API Backend (`/subscription/webhook/payos` hoặc `/subscription/webhook/sepay`).
+    *   Backend xác thực chữ ký số băm bảo mật (HMAC-SHA256) của webhook để chống giả mạo gói tin.
+4.  **Hàng đợi BullMQ (worker-payment):** 
+    *   Sau khi xác thực webhook hợp lệ, Backend đẩy một Job thanh toán vào hàng đợi Redis BullMQ có tên `payment-process`.
+    *   Dịch vụ [`apps/worker-payment`](file:///c:/Users/tuanl/Documents/Project%20Tuan/Stock-Intelligence-Saas/apps/worker-payment) sẽ xử lý Job bất đồng bộ này. Nó áp dụng cơ chế **Khóa phân tán (Distributed Lock)** bằng Redis trên `referenceCode` nhằm loại bỏ hoàn toàn rủi ro xử lý trùng lặp giao dịch (Double-spending/Concurrency issues).
+    *   Tiến hành cập nhật trạng thái hóa đơn thành `SUCCESS`, nâng cấp gói dịch vụ (`Subscription` thành `PRO` hoặc `API`) và giải phóng cache của user.
+
+### b. Cơ chế Bypass thông minh trong môi trường Development (Sandbox Mode)
+Để hỗ trợ việc kiểm thử (Testing/Manual Approval) nhanh chóng mà không cần phải chuyển tiền thật hay cấu hình webhook phức tạp:
+*   **Nút "Tôi Đã Chuyển Khoản":** Khi người dùng nhấn nút này:
+    *   **Trên Production (`NODE_ENV=production`):** Hệ thống sẽ chỉ kiểm tra trạng thái thực trong Database. Nếu ngân hàng chưa báo tiền về, nó sẽ trả về thông báo từ chối. API nâng cấp trực tiếp thủ công bị **khóa chặn hoàn toàn** (`403 Forbidden`).
+    *   **Trên Development (`NODE_ENV=development`):** Hệ thống sẽ cho phép bypass và gọi API `POST /subscription/direct-upgrade` để nâng cấp trực tiếp tài khoản vào database PostgreSQL ngay lập tức, phục vụ test local nhanh gọn.
+
+---
+
+## 6. Hướng dẫn Khởi chạy Nhanh & Cách Tránh Bị Stuck
+
+Để thiết lập môi trường phát triển local hoạt động hoàn hảo trong lần đầu tiên, hãy thực hiện đúng theo các bước sau:
+
+### Bước 1: Khởi động tầng Hạ tầng (Docker Compose)
+Chạy lệnh sau tại thư mục gốc dự án để khởi chạy Postgres, Redis, MinIO và Mailpit:
+```bash
+pnpm infra:up
+```
+> [!TIP]
+> *   Để kiểm tra email giả lập gửi đi: Truy cập giao diện **Mailpit** tại `http://localhost:8025`.
+> *   Để xem dữ liệu cache và queue: Truy cập **Redis Commander** tại `http://localhost:8081`.
+> *   Để xem file lưu trữ: Truy cập **MinIO Console** tại `http://localhost:9001` (User/Password: `minioadmin` / `minioadmin`).
+
+### Bước 2: Thiết lập Cơ sở dữ liệu (Prisma & Seed)
+Di chuyển vào thư mục package DB, chạy di trú database và nạp dữ liệu mẫu (Seed):
+```bash
+# Đồng bộ DB schema
+pnpm --filter @stock-intel/db prisma db push
+
+# Nạp dữ liệu thị trường và tài khoản mẫu ban đầu
+pnpm --filter @stock-intel/db prisma db seed
+```
+> [!NOTE]
+> Tài khoản mẫu mặc định sau khi seed:
+> *   Email: `admin@stockintel.com`
+> *   Mật khẩu: `Admin123!`
+
+### Bước 3: Đồng bộ hóa file cấu hình môi trường (.env)
+Next.js chạy độc lập và yêu cầu file `.env` cục bộ. Hãy đảm bảo bạn đã copy file cấu hình môi trường từ thư mục gốc vào thư mục Frontend:
+```bash
+copy .env apps/web/.env
+```
+
+### Bước 4: Khởi chạy toàn bộ hệ thống
+Khởi chạy tất cả các dịch vụ (API Backend, Web Frontend, Ingestion/Processing/Payment Workers) đồng thời bằng lệnh:
+```bash
+pnpm dev
+```
+> [!WARNING]
+> Nếu bạn thay đổi bất kỳ giá trị cấu hình nào trong file [`.env`](file:///c:/Users/tuanl/Documents/Project%20Tuan/Stock-Intelligence-Saas/.env) (Ví dụ: Thay đổi tài khoản ngân hàng thụ hưởng nhận tiền thực), **bạn bắt buộc phải khởi động lại (Restart) Dev Server** để Node.js nạp lại các biến môi trường mới.
+
+---
+
+## 7. Các lỗi thường gặp (Troubleshooting)
+
+| Triệu chứng | Nguyên nhân phổ biến | Cách khắc phục |
+| :--- | :--- | :--- |
+| **Lỗi `[ERR_PNPM_IGNORED_BUILDS]` khi cài thư viện** | Chưa cấp quyền build script cho thư viện đó trong pnpm v11 | Mở file `pnpm-workspace.yaml` bổ sung tên thư viện vào danh sách `allowBuilds` rồi chạy lại `pnpm install`. |
+| **Lỗi CORS Preflight Blocked** | Client gửi custom header bảo mật (`x-signature`, `x-nonce`) nhưng Backend chưa whitelist | Đảm bảo file `apps/api/src/main.ts` đã khai báo whitelist các header này trong cấu hình CORS `allowedHeaders`. |
+| **Không đăng nhập được bằng Google** | Thiếu file `.env` ở thư mục `apps/web` hoặc cấu hình Google OAuth sai | Chạy lệnh `copy .env apps/web/.env` và kiểm tra xem `GOOGLE_CLIENT_ID` trong console Google đã khớp với `.env` chưa. |
+| **Mã QR VietQR báo "Ngân hàng thụ hưởng không hợp lệ" khi quét** | Đang dùng thông tin ngân hàng giả lập mặc định | Thay đổi các cấu hình `PAYMENT_BANK_ID`, `PAYMENT_BANK_ACCOUNT`, `PAYMENT_BANK_NAME` trong `.env` thành thông tin thẻ ngân hàng thật của bạn rồi restart server backend. |
