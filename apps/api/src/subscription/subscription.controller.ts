@@ -42,10 +42,14 @@ export class SubscriptionController {
     @HttpCode(HttpStatus.OK)
     async handlePayosWebhook(
         @Body() payload: any,
-        @Headers('x-api-key') signature: string
+        @Headers('x-api-key') headerSignature?: string
     ) {
         if (!payload || !payload.data) {
             throw new BadRequestException('Invalid PayOS webhook payload');
+        }
+        const signature = payload.signature || headerSignature;
+        if (!signature) {
+            throw new BadRequestException('PayOS signature is missing in body or headers');
         }
         return this.subscriptionService.handlePayosWebhook(payload, signature);
     }

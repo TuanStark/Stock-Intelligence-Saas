@@ -21,7 +21,14 @@ async function bootstrap() {
         origin: process.env.WEB_URL || 'http://localhost:3000',
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'X-Request-Id',
+            'x-signature',
+            'x-timestamp',
+            'x-nonce',
+        ],
     });
 
     // ─── Global Pipes, Filters, Interceptors ──────────────
