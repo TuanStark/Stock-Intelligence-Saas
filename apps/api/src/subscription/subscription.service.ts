@@ -244,4 +244,26 @@ export class SubscriptionService {
             },
         };
     }
+
+    /**
+     * Checks the database status of a specific billing transaction to verify payment.
+     */
+    async checkTransactionStatus(userId: string, referenceCode: string) {
+        const tx = await this.prisma.billingTransaction.findUnique({
+            where: { referenceCode },
+        });
+
+        if (!tx) {
+            throw new BadRequestException('Không tìm thấy thông tin giao dịch');
+        }
+
+        if (tx.userId !== userId) {
+            throw new UnauthorizedException('Không có quyền truy cập thông tin giao dịch này');
+        }
+
+        return {
+            success: true,
+            status: tx.status, // PENDING, SUCCESS, FAILED
+        };
+    }
 }

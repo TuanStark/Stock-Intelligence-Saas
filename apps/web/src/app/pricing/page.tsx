@@ -84,19 +84,51 @@ export default function PricingPage() {
   };
 
   const handleConfirmTransfer = async () => {
+    if (!checkoutTier || !paymentData?.referenceCode) return;
     setSubmittingPayment(true);
     try {
-      // Simulate confirmation (which triggers session update)
-      setPaymentSuccess(true);
-      await updateSession({ tier: checkoutTier });
+      // 1. First, check if payment is already auto-processed via webhook/BullMQ in the database
+      const statusCheck = await authApi.checkTransactionStatus(paymentData.referenceCode);
 
-      setTimeout(() => {
-        setCheckoutTier(null);
-        setPaymentData(null);
-        setPaymentStep('SELECT_PROVIDER');
-        setPaymentSuccess(false);
+      if (statusCheck.success && statusCheck.status === 'SUCCESS') {
+        // Payment verified automatically!
+        setPaymentSuccess(true);
+        await updateSession({ tier: checkoutTier });
+
+        setTimeout(() => {
+          setCheckoutTier(null);
+          setPaymentData(null);
+          setPaymentStep('SELECT_PROVIDER');
+          setPaymentSuccess(false);
+          setSubmittingPayment(false);
+        }, 2500);
+        return;
+      }
+
+      // 2. If not processed automatically yet, try Dev Mode Direct Upgrade (works ONLY in development/sandbox)
+      try {
+        const directUpgradeResult = await authApi.directUpgrade(checkoutTier);
+        if (directUpgradeResult.success) {
+          setPaymentSuccess(true);
+          await updateSession({ tier: checkoutTier });
+
+          setTimeout(() => {
+            setCheckoutTier(null);
+            setPaymentData(null);
+            setPaymentStep('SELECT_PROVIDER');
+            setPaymentSuccess(false);
+            setSubmittingPayment(false);
+          }, 2500);
+        }
+      } catch (directUpgradeError) {
+        // Direct upgrade is disabled in production. Show a user-friendly message.
+        alert(
+          locale === 'vi' 
+            ? 'Hệ thống chưa nhận được khoản thanh toán của bạn. Vui lòng chờ 1-2 phút hoặc đảm bảo bạn đã chuyển khoản chính xác nội dung.' 
+            : 'Payment not received yet. Please wait 1-2 minutes or ensure you transferred with the correct memo.'
+        );
         setSubmittingPayment(false);
-      }, 2500);
+      }
     } catch (err) {
       console.error('Confirm transfer error:', err);
       setSubmittingPayment(false);

@@ -13,4 +13,10 @@ export const authApi = {
   upgradeSubscription: async (tier: string, provider: string = 'PAYOS'): Promise<any> => {
     return apiClient.post('/subscription/upgrade', { tier, provider });
   },
+  directUpgrade: async (tier: string): Promise<any> => {
+    return apiClient.post('/subscription/direct-upgrade', { tier });
+  },
+  checkTransactionStatus: async (referenceCode: string): Promise<any> => {
+    return apiClient.get(`/subscription/check-status/${referenceCode}`);
+  },
 };

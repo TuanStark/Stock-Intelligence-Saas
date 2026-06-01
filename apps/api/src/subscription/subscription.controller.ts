@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Req, UseGuards, HttpCode, HttpStatus, Headers, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Req, UseGuards, HttpCode, HttpStatus, Headers, BadRequestException, ForbiddenException, Param } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -77,5 +77,41 @@ export class SubscriptionController {
         }
 
         return this.subscriptionService.handleSepayWebhook(payload, apiKey);
+    }
+
+    /**
+     * Direct subscription upgrade (manually updates the database subscription for development/bypass flow).
+     * POST /api/v1/subscription/direct-upgrade
+     */
+    @Post('direct-upgrade')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    async directUpgrade(
+        @Req() req: any,
+        @Body('tier') tier: string,
+    ) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new ForbiddenException('Direct upgrades are disabled in production environment');
+        }
+        if (!tier) {
+            throw new BadRequestException('Subscription tier is required');
+        }
+        return this.subscriptionService.upgradeSubscription(req.user.id, tier);
+    }
+
+    /**
+     * Check current status of a specific payment transaction.
+     * GET /api/v1/subscription/check-status/:referenceCode
+     */
+    @Get('check-status/:referenceCode')
+    @UseGuards(JwtAuthGuard)
+    async checkTransactionStatus(
+        @Req() req: any,
+        @Param('referenceCode') referenceCode: string,
+    ) {
+        if (!referenceCode) {
+            throw new BadRequestException('Transaction reference code is required');
+        }
+        return this.subscriptionService.checkTransactionStatus(req.user.id, referenceCode);
     }
 }
