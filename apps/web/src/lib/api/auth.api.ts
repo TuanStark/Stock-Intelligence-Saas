@@ -10,7 +10,7 @@ export const authApi = {
   googleLogin: async (idToken: string): Promise<any> => {
     return apiClient.post('/auth/google', { idToken });
   },
-  upgradeSubscription: async (tier: string): Promise<any> => {
-    return apiClient.post('/subscription/upgrade', { tier });
+  upgradeSubscription: async (tier: string, provider: string = 'PAYOS'): Promise<any> => {
+    return apiClient.post('/subscription/upgrade', { tier, provider });
   },
 };

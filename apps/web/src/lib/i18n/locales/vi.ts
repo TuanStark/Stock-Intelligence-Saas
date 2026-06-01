@@ -132,7 +132,7 @@ export const vi = {
       },
       pro: {
         name: 'PRO NHÀ PHÂN TÍCH CHUYÊN NGHIỆP',
-        price: '49',
+        price: '199.000',
         desc: 'Sở hữu các công cụ phân tích tiên tiến và nhận định Catalyst & Risk độc quyền sinh bởi AI.',
         features: [
           'Dữ liệu giá cổ phiếu thời gian thực 100%',
@@ -144,7 +144,7 @@ export const vi = {
       },
       api: {
         name: 'QUANT NHÀ PHÁT TRIỂN HỆ THỐNG',
-        price: '199',
+        price: '499.000',
         desc: 'Giao diện hiệu năng cao cho việc xây dựng mô hình định lượng và giao dịch thuật toán.',
         features: [
           'Bao gồm toàn bộ quyền lợi của gói PRO ANALYST',

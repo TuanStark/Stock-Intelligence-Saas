@@ -9,7 +9,7 @@ export type Locale = 'en' | 'vi';
 interface I18nContextProps {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (path: string) => string;
+  t: (path: string) => any;
 }
 
 const I18nContext = createContext<I18nContextProps | undefined>(undefined);
@@ -30,7 +30,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     document.cookie = `stock_intel_locale=${newLocale}; path=/; max-age=31536000`; // sync to cookie for server layouts
   };
 
-  const t = (path: string): string => {
+  const t = (path: string): any => {
     const dictionary = locale === 'en' ? en : vi;
     
     // Safety nested path getter
@@ -38,7 +38,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       return obj && (obj as any)[key] !== undefined ? (obj as any)[key] : undefined;
     }, dictionary);
 
-    if (typeof value === 'string') {
+    if (value !== undefined) {
       return value;
     }
 

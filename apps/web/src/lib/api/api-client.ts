@@ -257,8 +257,10 @@ apiClient.interceptors.response.use(
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 trigger: 'update',
-                accessToken,
-                refreshToken: newRefreshToken,
+                session: {
+                  accessToken,
+                  refreshToken: newRefreshToken,
+                },
               }),
             });
 

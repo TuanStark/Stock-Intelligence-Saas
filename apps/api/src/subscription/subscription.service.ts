@@ -73,16 +73,22 @@ export class SubscriptionService {
         let qrUrl = '';
         let transferInstructions = '';
 
+        // Load customizable bank config from env with robust fallbacks
+        const bankId = process.env.PAYMENT_BANK_ID || (provider === 'PAYOS' ? 'vietinbank' : 'mb');
+        const bankAccount = process.env.PAYMENT_BANK_ACCOUNT || (provider === 'PAYOS' ? '1133224455' : '990022884466');
+        const bankName = process.env.PAYMENT_BANK_NAME || (provider === 'PAYOS' ? 'STOCK INTELLIGENCE' : 'STOCK INTELLIGENCE SEPAY');
+        const encodedBankName = encodeURIComponent(bankName);
+
         if (provider === 'PAYOS') {
-            // Simulated PayOS Link & VietQR Generator (resembling VietQR API)
+            // Simulated PayOS Link & VietQR Generator (supports real payment if env keys configured)
             paymentUrl = `https://payos.vn/pay/${referenceCode}`;
-            qrUrl = `https://img.vietqr.io/image/vietinbank-1133224455-compact2.jpg?amount=${amount}&addInfo=${referenceCode}&accountName=STOCK%20INTELLIGENCE`;
-            transferInstructions = `Quét mã VietQR hoặc chuyển khoản Vietinbank STK 1133224455 số tiền ${amount}đ với nội dung chuyển khoản: "${referenceCode}"`;
+            qrUrl = `https://img.vietqr.io/image/${bankId}-${bankAccount}-compact2.jpg?amount=${amount}&addInfo=${referenceCode}&accountName=${encodedBankName}`;
+            transferInstructions = `Quét mã VietQR hoặc chuyển khoản ngân hàng ${bankId.toUpperCase()} STK ${bankAccount} số tiền ${amount}đ với nội dung chuyển khoản chính xác: "${referenceCode}"`;
         } else {
             // SePay Bank Transfer Syntax Direct Generation
             paymentUrl = `https://sepay.vn/pay/STOCKINTEL?amount=${amount}&ref=${referenceCode}`;
-            qrUrl = `https://img.vietqr.io/image/mb-990022884466-compact2.jpg?amount=${amount}&addInfo=${referenceCode}&accountName=STOCK%20INTELLIGENCE%20SEPAY`;
-            transferInstructions = `Vui lòng chuyển khoản đến MB Bank STK 990022884466 số tiền ${amount}đ với nội dung chuyển khoản chính xác: "${referenceCode}"`;
+            qrUrl = `https://img.vietqr.io/image/${bankId}-${bankAccount}-compact2.jpg?amount=${amount}&addInfo=${referenceCode}&accountName=${encodedBankName}`;
+            transferInstructions = `Quét mã VietQR hoặc chuyển khoản ngân hàng ${bankId.toUpperCase()} STK ${bankAccount} số tiền ${amount}đ với nội dung chuyển khoản chính xác: "${referenceCode}"`;
         }
 
         this.logger.log(`Tạo giao dịch thanh toán thành công: ${referenceCode} cho User: ${userId}`);

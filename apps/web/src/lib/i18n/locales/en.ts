@@ -134,7 +134,7 @@ export const en = {
       },
       pro: {
         name: 'PRO ANALYST',
-        price: '49',
+        price: '199,000',
         desc: 'Unleash advanced decision tools and real-time AI catalytic investment thesis generation.',
         features: [
           '100% Real-time stock quotes',
@@ -146,7 +146,7 @@ export const en = {
       },
       api: {
         name: 'QUANT DEVELOPER',
-        price: '199',
+        price: '499,000',
         desc: 'High-performance developers interface for quantitative modeling and programmatic traders.',
         features: [
           'Everything in PRO ANALYST tier',
