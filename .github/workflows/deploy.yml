@@ -1,0 +1,187 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main, dev]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Job 1: Build and Push Docker images in parallel using a matrix
+  build:
+    name: Build & Push (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api
+            dockerfile: infra/docker/Dockerfile.api
+            build-args: ""
+          - service: web
+            dockerfile: infra/docker/Dockerfile.web
+            build-args: ""
+          - service: worker-ingestion
+            dockerfile: infra/docker/Dockerfile.worker
+            build-args: WORKER=ingestion
+          - service: worker-processing
+            dockerfile: infra/docker/Dockerfile.worker
+            build-args: WORKER=processing
+          - service: worker-ai
+            dockerfile: infra/docker/Dockerfile.worker
+            build-args: WORKER=ai
+          - service: worker-payment
+            dockerfile: infra/docker/Dockerfile.worker
+            build-args: WORKER=payment
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Downcase Repo Owner & Setup Env Name
+        id: strings
+        run: |
+          echo "owner_lower=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "env_name=staging" >> $GITHUB_OUTPUT
+          else
+            echo "env_name=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          build-args: ${{ matrix.build-args }}
+          push: true
+          tags: |
+            ghcr.io/${{ steps.strings.outputs.owner_lower }}/stock-intel-${{ matrix.service }}:${{ steps.strings.outputs.env_name }}-${{ github.sha }}
+            ghcr.io/${{ steps.strings.outputs.owner_lower }}/stock-intel-${{ matrix.service }}:${{ steps.strings.outputs.env_name }}-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Job 2: SSH to VPS, run database migrations, and deploy services
+  deploy:
+    name: Deploy to VPS (${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }})
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Env Variables
+        id: env-setup
+        run: |
+          echo "owner_lower=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "env_name=staging" >> $GITHUB_OUTPUT
+          else
+            echo "env_name=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Copy Deployment Configs and Migrations to VPS
+        run: |
+          ENV_NAME="${{ steps.env-setup.outputs.env_name }}"
+          OWNER_LOWER="${{ steps.env-setup.outputs.owner_lower }}"
+
+          # 1. Generate environment-specific .env file
+          if [ "$ENV_NAME" = "staging" ]; then
+            echo "${{ secrets.STAGING_ENV_FILE }}" > .env.deploy
+          else
+            echo "${{ secrets.DEV_ENV_FILE }}" > .env.deploy
+          fi
+
+          # Append dynamic config vars
+          echo "IMAGE_TAG=${ENV_NAME}-${{ github.sha }}" >> .env.deploy
+          echo "REGISTRY=ghcr.io/${OWNER_LOWER}" >> .env.deploy
+          echo "ENV_NAME=${ENV_NAME}" >> .env.deploy
+
+          # Ensure target directory exists on VPS
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p /var/www/stockintel/${ENV_NAME}"
+
+          # Copy .env and docker-compose deployment file to VPS
+          scp -o StrictHostKeyChecking=no .env.deploy ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/stockintel/${ENV_NAME}/.env
+          scp -o StrictHostKeyChecking=no infra/docker/docker-compose.${ENV_NAME}.deploy.yml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/stockintel/${ENV_NAME}/docker-compose.yml
+
+          # Copy prisma migrations directory to VPS
+          scp -r -o StrictHostKeyChecking=no packages/db/prisma ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/stockintel/${ENV_NAME}/prisma
+
+      - name: Execute Remote Deploy on VPS
+        run: |
+          ENV_NAME="${{ steps.env-setup.outputs.env_name }}"
+
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
+            set -e
+            cd /var/www/stockintel/${ENV_NAME}
+            
+            # Log in to GHCR on the VPS
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Pull new images
+            echo "Pulling new images from GHCR..."
+            docker compose pull
+            
+            # Start database & cache dependencies
+            echo "Starting PostgreSQL and Redis..."
+            docker compose up -d postgres redis
+            
+            # Wait for PostgreSQL database port to be fully ready
+            echo "Waiting for PostgreSQL to be healthy..."
+            RETRIES=30
+            until docker compose exec -T postgres pg_isready -U postgres > /dev/null 2>&1; do
+              RETRIES=\$((RETRIES - 1))
+              if [ \$RETRIES -le 0 ]; then
+                echo "PostgreSQL check timed out. Exiting."
+                exit 1
+              fi
+              sleep 1
+            done
+            echo "PostgreSQL is healthy."
+            
+            # Run migrations securely inside the docker network
+            echo "Running database migrations..."
+            docker run --rm \
+              --network ${ENV_NAME}_stockintel_network \
+              -v /var/www/stockintel/${ENV_NAME}/prisma:/prisma \
+              --env-file /var/www/stockintel/${ENV_NAME}/.env \
+              node:22-alpine \
+              npx -y prisma migrate deploy --schema=/prisma/schema.prisma
+              
+            # Launch the rest of the application services
+            echo "Starting all services..."
+            docker compose up -d --remove-orphans
+            
+            # Prune unused images to optimize VPS disk space
+            echo "Pruning unused docker images..."
+            docker image prune -f
+            
+            # Check containers status
+            echo "=== Service Status ==="
+            docker compose ps
+            
+            echo "Deployment to ${ENV_NAME} completed successfully!"
+          EOF

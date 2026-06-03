@@ -1,0 +1,189 @@
+name: staging
+
+services:
+  # ─── PostgreSQL (TimescaleDB) ──────────────────────────────
+  postgres:
+    image: timescale/timescaledb:latest-pg17
+    container_name: staging-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stockintel}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "127.0.0.1:5433:5432" # Secure: Only accessible locally/via SSH tunnel (uses 5433 to avoid conflict with dev)
+    volumes:
+      - staging_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockintel_network
+
+  # ─── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: staging-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "127.0.0.1:6380:6379" # Secure: Only accessible locally/via SSH tunnel (uses 6380 to avoid conflict with dev)
+    volumes:
+      - staging_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockintel_network
+
+  # ─── MinIO (S3-compatible Object Storage) ───────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: staging-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9010:9000" # S3 API mapped to 9010 to avoid conflict
+      - "127.0.0.1:9011:9001" # Web Console mapped to 9011 locally/via SSH tunnel
+    volumes:
+      - staging_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockintel_network
+
+  # ─── NestJS API Service ────────────────────────────────────
+  api:
+    image: ${REGISTRY}/stock-intel-api:${IMAGE_TAG}
+    container_name: staging-api
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "4001:3001" # Mapped to host port 4001 for reverse proxy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+        reservations:
+          memory: 512M
+    networks:
+      - stockintel_network
+
+  # ─── Next.js Web Application ───────────────────────────────
+  web:
+    image: ${REGISTRY}/stock-intel-web:${IMAGE_TAG}
+    container_name: staging-web
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "4000:3000" # Mapped to host port 4000 for reverse proxy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+        reservations:
+          memory: 512M
+    networks:
+      - stockintel_network
+
+  # ─── Worker Ingestion ──────────────────────────────────────
+  worker-ingestion:
+    image: ${REGISTRY}/stock-intel-worker-ingestion:${IMAGE_TAG}
+    container_name: staging-worker-ingestion
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    networks:
+      - stockintel_network
+
+  # ─── Worker Processing ─────────────────────────────────────
+  worker-processing:
+    image: ${REGISTRY}/stock-intel-worker-processing:${IMAGE_TAG}
+    container_name: staging-worker-processing
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+    networks:
+      - stockintel_network
+
+  # ─── Worker AI ─────────────────────────────────────────────
+  worker-ai:
+    image: ${REGISTRY}/stock-intel-worker-ai:${IMAGE_TAG}
+    container_name: staging-worker-ai
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.8"
+          memory: 512M
+    networks:
+      - stockintel_network
+
+  # ─── Worker Payment ────────────────────────────────────────
+  worker-payment:
+    image: ${REGISTRY}/stock-intel-worker-payment:${IMAGE_TAG}
+    container_name: staging-worker-payment
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    networks:
+      - stockintel_network
+
+networks:
+  stockintel_network:
+    driver: bridge
+
+volumes:
+  staging_postgres_data:
+  staging_redis_data:
+  staging_minio_data:

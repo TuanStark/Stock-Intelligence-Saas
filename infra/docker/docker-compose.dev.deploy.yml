@@ -1,0 +1,215 @@
+name: dev
+
+services:
+  # ─── PostgreSQL (TimescaleDB) ──────────────────────────────
+  postgres:
+    image: timescale/timescaledb:latest-pg17
+    container_name: dev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stockintel}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "127.0.0.1:5432:5432" # Secure: Only accessible locally/via SSH tunnel
+    volumes:
+      - dev_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockintel_network
+
+  # ─── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: dev-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "127.0.0.1:6379:6379" # Secure: Only accessible locally/via SSH tunnel
+    volumes:
+      - dev_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockintel_network
+
+  # ─── MinIO (S3-compatible Object Storage) ───────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: dev-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000" # S3 API accessible publicly
+      - "127.0.0.1:9001:9001" # Web Console accessible locally/via SSH tunnel
+    volumes:
+      - dev_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockintel_network
+
+  # ─── Redis Commander (Web UI for Redis) ─────────────────────
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: dev-redis-ui
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "127.0.0.1:8081:8081" # Access via SSH tunnel for security
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel_network
+
+  # ─── Mailpit (Local Email Testing) ──────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: dev-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025" # Access via SSH tunnel
+      - "1025:1025" # SMTP port inside container
+    networks:
+      - stockintel_network
+
+  # ─── NestJS API Service ────────────────────────────────────
+  api:
+    image: ${REGISTRY}/stock-intel-api:${IMAGE_TAG}
+    container_name: dev-api
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks:
+      - stockintel_network
+
+  # ─── Next.js Web Application ───────────────────────────────
+  web:
+    image: ${REGISTRY}/stock-intel-web:${IMAGE_TAG}
+    container_name: dev-web
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "3000:3000"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks:
+      - stockintel_network
+
+  # ─── Worker Ingestion ──────────────────────────────────────
+  worker-ingestion:
+    image: ${REGISTRY}/stock-intel-worker-ingestion:${IMAGE_TAG}
+    container_name: dev-worker-ingestion
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 384M
+    networks:
+      - stockintel_network
+
+  # ─── Worker Processing ─────────────────────────────────────
+  worker-processing:
+    image: ${REGISTRY}/stock-intel-worker-processing:${IMAGE_TAG}
+    container_name: dev-worker-processing
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    networks:
+      - stockintel_network
+
+  # ─── Worker AI ─────────────────────────────────────────────
+  worker-ai:
+    image: ${REGISTRY}/stock-intel-worker-ai:${IMAGE_TAG}
+    container_name: dev-worker-ai
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.4"
+          memory: 384M
+    networks:
+      - stockintel_network
+
+  # ─── Worker Payment ────────────────────────────────────────
+  worker-payment:
+    image: ${REGISTRY}/stock-intel-worker-payment:${IMAGE_TAG}
+    container_name: dev-worker-payment
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 384M
+    networks:
+      - stockintel_network
+
+networks:
+  stockintel_network:
+    driver: bridge
+
+volumes:
+  dev_postgres_data:
+  dev_redis_data:
+  dev_minio_data:
