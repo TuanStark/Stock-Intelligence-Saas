@@ -1,90 +1,114 @@
+import winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
+import * as path from 'path';
+import * as fs from 'fs';
+
 // ─── Structured Logger ────────────────────────────────────
-// Lightweight structured logger for all services.
+// Production-grade logger for all services in Monorepo.
 // Outputs JSON in production, pretty-prints in development.
+// Automatically rotates and compresses (.gz) log files to prevent disk usage overflow.
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-interface LogEntry {
-    level: LogLevel;
-    message: string;
-    service?: string;
-    requestId?: string;
-    traceId?: string;
-    timestamp: string;
-    [key: string]: unknown;
-}
-
-interface LoggerOptions {
+export interface LoggerOptions {
     service: string;
     level?: LogLevel;
+    logDir?: string;
 }
 
-const LOG_LEVELS: Record<LogLevel, number> = {
-    debug: 0,
-    info: 1,
-    warn: 2,
-    error: 3,
-};
-
 export class Logger {
+    private readonly winstonLogger: winston.Logger;
     private readonly service: string;
-    private readonly minLevel: number;
-    private readonly isProd: boolean;
 
     constructor(options: LoggerOptions) {
         this.service = options.service;
-        this.minLevel = LOG_LEVELS[options.level || 'info'];
-        this.isProd = process.env.NODE_ENV === 'production';
+        const level = options.level || 'info';
+        
+        // Đường dẫn thư mục logs: ưu tiên cấu hình, mặc định log ở folder ./logs tại root thư mục chạy
+        const logDir = options.logDir || path.join(process.cwd(), 'logs');
+
+        // Lớp bảo vệ: Tự động khởi tạo thư mục log nếu chưa tồn tại
+        if (!fs.existsSync(logDir)) {
+            fs.mkdirSync(logDir, { recursive: true });
+        }
+
+        const isProd = process.env.NODE_ENV === 'production';
+
+        // 1. Định nghĩa format Log cho Production (dạng JSON có timestamp)
+        const prodFormat = winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.json()
+        );
+
+        // 2. Định nghĩa format Log cho Development (dạng màu sắc trực quan, dễ đọc)
+        const devFormat = winston.format.combine(
+            winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+            winston.format.colorize(),
+            winston.format.printf(({ timestamp, level, message, service, ...meta }) => {
+                const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+                return `[${timestamp}] [${service || 'app'}] ${level}: ${message}${metaStr}`;
+            })
+        );
+
+        const transports: winston.transport[] = [];
+
+        // A. Cấu hình Console Transport (Luôn bật)
+        transports.push(
+            new winston.transports.Console({
+                format: isProd ? prodFormat : devFormat,
+            })
+        );
+
+        // Helper tạo transport ghi log ra file có xoay vòng (Log Rotation) và nén zip
+        const createRotateFileTransport = (filename: string, fileLevel?: string) => {
+            return new DailyRotateFile({
+                dirname: logDir,
+                filename: `${filename}-%DATE%.log`,
+                datePattern: 'YYYY-MM-DD',
+                zippedArchive: true, // BẬT NÉN: Tự động nén thành file .gz sau khi xoay vòng
+                maxSize: '20m',      // GIỚI HẠN DUNG LƯỢNG: Rotate khi log đạt 20MB
+                maxFiles: '14d',     // GIỚI HẠN THỜI GIAN: Lưu giữ tối đa trong 14 ngày
+                level: fileLevel || level,
+                format: prodFormat,  // File logs luôn ghi dạng JSON để phân tích tự động
+            });
+        };
+
+        // B. Cấu hình File Transports (Ghi log ra file trên cả Dev & Prod để dễ tra cứu local)
+        // 1. Ghi toàn bộ logs (application-YYYY-MM-DD.log)
+        transports.push(createRotateFileTransport('application'));
+        
+        // 2. Ghi riêng lỗi nghiêm trọng (error-YYYY-MM-DD.log)
+        transports.push(createRotateFileTransport('error', 'error'));
+
+        this.winstonLogger = winston.createLogger({
+            level,
+            defaultMeta: { service: this.service },
+            transports,
+        });
     }
 
     debug(message: string, meta?: Record<string, unknown>) {
-        this.log('debug', message, meta);
+        this.winstonLogger.debug(message, meta);
     }
 
     info(message: string, meta?: Record<string, unknown>) {
-        this.log('info', message, meta);
+        this.winstonLogger.info(message, meta);
     }
 
     warn(message: string, meta?: Record<string, unknown>) {
-        this.log('warn', message, meta);
+        this.winstonLogger.warn(message, meta);
     }
 
     error(message: string, meta?: Record<string, unknown>) {
-        this.log('error', message, meta);
+        this.winstonLogger.error(message, meta);
     }
 
     child(meta: Record<string, unknown>): ChildLogger {
         return new ChildLogger(this, meta);
     }
-
-    private log(
-        level: LogLevel,
-        message: string,
-        meta?: Record<string, unknown>,
-    ) {
-        if (LOG_LEVELS[level] < this.minLevel) return;
-
-        const entry: LogEntry = {
-            level,
-            message,
-            service: this.service,
-            timestamp: new Date().toISOString(),
-            ...meta,
-        };
-
-        const output = JSON.stringify(entry);
-
-        if (level === 'error') {
-            console.error(output);
-        } else if (level === 'warn') {
-            console.warn(output);
-        } else {
-            console.log(output);
-        }
-    }
 }
 
-class ChildLogger {
+export class ChildLogger {
     constructor(
         private readonly parent: Logger,
         private readonly meta: Record<string, unknown>,
@@ -107,17 +131,6 @@ class ChildLogger {
     }
 }
 
-/**
- * Create a logger instance for a service.
- *
- * ```ts
- * const logger = createLogger({ service: 'api' });
- * logger.info('Server started', { port: 3001 });
- *
- * const reqLogger = logger.child({ requestId: 'abc-123' });
- * reqLogger.info('Processing request');
- * ```
- */
 export function createLogger(options: LoggerOptions): Logger {
     return new Logger(options);
 }
