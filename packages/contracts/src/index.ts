@@ -416,11 +416,36 @@ export class QuotaExceededError extends BaseError {
     }
 }
 
+export class TokenExpiredError extends BaseError {
+    readonly code = 'TOKEN_EXPIRED' as const;
+    readonly statusCode = 401;
+    constructor() {
+        super('Token has expired');
+    }
+}
+
+export class BusinessRuleError extends BaseError {
+    readonly code = 'BUSINESS_RULE_VIOLATION' as const;
+    readonly statusCode = 422;
+    constructor(rule: string, message: string) {
+        super(message, { rule });
+    }
+}
+
 export class UpstreamError extends BaseError {
     readonly code = 'UPSTREAM_UNAVAILABLE' as const;
     readonly statusCode = 503;
     constructor(source: string, cause?: Error) {
         super(`Upstream service unavailable: ${source}`, undefined, cause);
+    }
+}
+
+export class DatabaseError extends BaseError {
+    readonly code = 'DATABASE_ERROR' as const;
+    readonly statusCode = 500;
+    override readonly isOperational = false;
+    constructor(operation: string, cause?: Error) {
+        super(`Database error during: ${operation}`, undefined, cause);
     }
 }
 
