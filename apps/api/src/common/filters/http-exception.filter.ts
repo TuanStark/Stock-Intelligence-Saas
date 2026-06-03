@@ -6,6 +6,7 @@ import {
     HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { BaseError } from '@stock-intel/contracts';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -23,7 +24,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
         let message = 'An unexpected error occurred';
         let details: unknown = undefined;
 
-        if (exception instanceof HttpException) {
+        if (exception instanceof BaseError) {
+            status = exception.statusCode;
+            code = exception.code;
+            message = exception.message;
+            details = exception.details;
+        } else if (exception instanceof HttpException) {
+            // Lớp bảo vệ 1: Bắt các lỗi tự động do NestJS Framework ném ra (Validation, Route 404, Rate Limit, Auth Guard)
             status = exception.getStatus();
             const exResponse = exception.getResponse();
 
@@ -36,11 +43,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
                 details = obj['details'];
             }
 
-            // Map status to code
             code = this.statusToCode(status, code);
         } else if (exception instanceof Error) {
+            // Lớp bảo vệ 2: Bắt lỗi Runtime không mong muốn (DB crash, Null pointer, Network timeout...) và ghi log stack trace để debug
             message = exception.message;
-            // Log unexpected errors
             console.error(
                 JSON.stringify({
                     level: 'error',
