@@ -165,7 +165,7 @@ model RefreshToken {
 model OAuthAccount {
   id             String   @id @default(uuid())
   userId         String   @map("user_id")
-  provider       String   // e.g. "google"
+  provider       String // e.g. "google"
   providerUserId String   @map("provider_user_id")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
@@ -216,16 +216,16 @@ model Instrument {
   exchange Exchange @relation(fields: [exchangeId], references: [id])
   sector   Sector?  @relation(fields: [sectorId], references: [id])
 
-  watchlistItems     WatchlistItem[]
-  portfolioPositions PortfolioPosition[]
-  portfolioTxs       PortfolioTransaction[]
-  newsInstruments    NewsInstrument[]
-  signals            StockSignal[]
-  stockScores        StockScore[]
-  aiSummaries        AiSummary[]
-  alertRules         AlertRule[]
-  quotes             Quote[]
-  candles            Candle[]
+  watchlistItems       WatchlistItem[]
+  portfolioPositions   PortfolioPosition[]
+  portfolioTxs         PortfolioTransaction[]
+  newsInstruments      NewsInstrument[]
+  signals              StockSignal[]
+  stockScores          StockScore[]
+  aiSummaries          AiSummary[]
+  alertRules           AlertRule[]
+  quotes               Quote[]
+  candles              Candle[]
   recommendationScores RecommendationScore[]
 
   companyProfile           CompanyProfile?
@@ -545,13 +545,13 @@ model UserActivity {
 }
 
 model UserInterestProfile {
-  id              String   @id @default(uuid())
-  userId          String   @unique @map("user_id")
+  id               String   @id @default(uuid())
+  userId           String   @unique @map("user_id")
   preferredSectors Json
-  viewedStocks    Json
-  investmentStyle String   @default("NEUTRAL")
-  riskTolerance   Decimal  @default(0.50) @map("risk_tolerance") @db.Decimal(5, 2)
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  viewedStocks     Json
+  investmentStyle  String   @default("NEUTRAL")
+  riskTolerance    Decimal  @default(0.50) @map("risk_tolerance") @db.Decimal(5, 2)
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -614,7 +614,7 @@ model CompanyProfile {
   instrumentId      String   @unique @map("instrument_id")
   description       String   @db.Text
   industry          String
-  management        Json     // Lưu danh sách ban lãnh đạo: Array<{ name: string, position: string }>
+  management        Json // Lưu danh sách ban lãnh đạo: Array<{ name: string, position: string }>
   charterCapital    Decimal  @map("charter_capital") @db.Decimal(24, 8) // Vốn điều lệ
   outstandingShares BigInt   @map("outstanding_shares") // Cổ phiếu lưu hành
   beta              Decimal  @db.Decimal(5, 2)
@@ -702,14 +702,14 @@ model MarketKnowledgeChunk {
   instrumentId String?  @map("instrument_id")
   symbol       String?
   content      String   @db.Text
-  type         String   // "profile_description" | "news" | "technical_signals_summary"
+  type         String // "profile_description" | "news" | "technical_signals_summary"
   metadata     Json?
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   instrument Instrument? @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
 
-  embedding    Float[]
+  embedding Float[]
 
   @@index([symbol])
   @@index([type])
@@ -731,17 +731,17 @@ enum PaymentProvider {
 }
 
 model BillingTransaction {
-  id            String          @id @default(uuid())
-  userId        String          @map("user_id")
-  amount        Decimal         @db.Decimal(24, 8)
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  amount        Decimal          @db.Decimal(24, 8)
   tier          SubscriptionTier
   provider      PaymentProvider
-  referenceCode String          @unique @map("reference_code")
-  providerTxId  String?         @unique @map("provider_tx_id")
-  status        BillingTxStatus @default(PENDING)
+  referenceCode String           @unique @map("reference_code")
+  providerTxId  String?          @unique @map("provider_tx_id")
+  status        BillingTxStatus  @default(PENDING)
   metadata      Json?
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -749,5 +749,3 @@ model BillingTransaction {
   @@index([referenceCode])
   @@map("billing_transactions")
 }
-
-
