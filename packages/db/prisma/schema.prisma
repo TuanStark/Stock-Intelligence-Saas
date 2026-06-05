@@ -746,6 +746,5 @@ model BillingTransaction {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
-  @@index([referenceCode])
   @@map("billing_transactions")
 }

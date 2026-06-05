@@ -30,12 +30,22 @@ export class RedisService implements OnModuleDestroy {
      */
     async invalidateUserCache(userId: string): Promise<void> {
         try {
-            // Find and delete any cached user watchlists, portfolios, or subscription details
+            // Find and delete any cached user watchlists, portfolios, or subscription details using non-blocking SCAN
             const pattern = `si:user:${userId}:*`;
-            const keys = await this.client.keys(pattern);
-            if (keys.length > 0) {
-                await this.client.del(...keys);
-                this.logger.log(`Đã xóa ${keys.length} cache keys cho User ${userId}`);
+            let cursor = '0';
+            let totalDeleted = 0;
+
+            do {
+                const [nextCursor, keys] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+                cursor = nextCursor;
+                if (keys.length > 0) {
+                    await this.client.del(...keys);
+                    totalDeleted += keys.length;
+                }
+            } while (cursor !== '0');
+
+            if (totalDeleted > 0) {
+                this.logger.log(`Đã xóa ${totalDeleted} cache keys cho User ${userId}`);
             }
         } catch (err: any) {
             this.logger.error(`Lỗi khi dọn dẹp cache cho User ${userId}: ${err.message}`);

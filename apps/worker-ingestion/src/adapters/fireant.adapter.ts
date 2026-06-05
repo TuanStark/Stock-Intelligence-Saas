@@ -25,17 +25,25 @@ export class FireAntAdapter implements IMarketDataProvider {
 
       const quote = data[0];
 
+      const price = (quote.price || 0) * 1000;
+      const change = (quote.change || 0) * 1000;
+      const open = (quote.open || 0) * 1000;
+      const high = (quote.high || 0) * 1000;
+      const low = (quote.low || 0) * 1000;
+      const previousClose = (quote.previousClose || 0) * 1000;
+      const volume = quote.volume || 0;
+
       return {
         symbol: symbol,
-        price: quote.price || 0,
-        change: quote.change || 0,
+        price,
+        change,
         changePercent: quote.changePercent || 0,
-        open: quote.open || 0,
-        high: quote.high || 0,
-        low: quote.low || 0,
-        previousClose: quote.previousClose || 0,
-        volume: quote.volume || 0,
-        value: quote.totalValue || 0,
+        open,
+        high,
+        low,
+        previousClose,
+        volume,
+        value: (quote.totalValue || 0) * 1000 || volume * price,
         timestamp: new Date(quote.time || Date.now()),
         asOf: new Date(),
         source: this.name,

@@ -27,8 +27,8 @@ export class RateLimiterGuard extends ThrottlerGuard {
 
             if (user) {
                 const tier = user.tier || 'FREE';
-                if (tier === 'PREMIUM' || tier === 'VIP') {
-                    dynamicLimit = 500; // Premium tiers get 500 requests per minute
+                if (tier === 'PRO' || tier === 'API') {
+                    dynamicLimit = 500; // Pro/API tiers get 500 requests per minute
                 } else {
                     dynamicLimit = 120; // Logged-in FREE tier gets 120 requests per minute
                 }
@@ -39,8 +39,8 @@ export class RateLimiterGuard extends ThrottlerGuard {
             // Apply special strict rate limits on expensive API endpoints
             const handlerName = context.getHandler().name;
             if (handlerName === 'triggerAiSummary') {
-                // Strict limit: 30 requests per minute for Premium/VIP, 5 for Free, 2 for Guest
-                const isPremium = user && (user.tier === 'PREMIUM' || user.tier === 'VIP');
+                // Strict limit: 30 requests per minute for Pro/API, 5 for Free, 2 for Guest
+                const isPremium = user && (user.tier === 'PRO' || user.tier === 'API');
                 dynamicLimit = isPremium ? 30 : (user ? 5 : 2);
             }
 

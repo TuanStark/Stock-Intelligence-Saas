@@ -44,13 +44,23 @@ export class SubscriptionSchedulerService {
             this.logger.log(`[Cron] Tìm thấy ${expiredSubs.length} tài khoản quá hạn gia hạn.`);
 
             for (const sub of expiredSubs) {
-                await this.prisma.$transaction(async (tx) => {
-                    // Hạ cấp gói về FREE và đổi status thành EXPIRED
+                const updated = await this.prisma.$transaction(async (tx) => {
+                    // Chống Race Condition: Query lại subscription xem trong lúc chờ quét có ai nâng cấp/gia hạn không
+                    const currentSub = await tx.subscription.findUnique({
+                        where: { id: sub.id },
+                    });
+
+                    // Nếu subscription không còn tồn tại hoặc status không phải ACTIVE hoặc renewalAt không còn nhỏ hơn now, skip
+                    if (!currentSub || currentSub.status !== 'ACTIVE' || !currentSub.renewalAt || currentSub.renewalAt >= now) {
+                        return false;
+                    }
+
+                    // Hạ cấp gói về FREE và đổi status thành ACTIVE nhưng gói FREE
                     await tx.subscription.update({
                         where: { id: sub.id },
                         data: {
                             tier: 'FREE' as SubscriptionTier,
-                            status: 'ACTIVE', // Ở trạng thái ACTIVE nhưng gói FREE
+                            status: 'ACTIVE',
                             renewalAt: null,
                         },
                     });
@@ -63,11 +73,17 @@ export class SubscriptionSchedulerService {
                             metadata: { reason: 'SUBSCRIPTION_EXPIRED', previousTier: sub.tier },
                         },
                     });
+
+                    return true;
                 });
 
-                // Xóa cache của người dùng để API Gateway áp dụng ngay lập tức
-                await this.redisService.invalidateUserCache(sub.userId);
-                this.logger.log(`[Cron] Đã hạ cấp thành công tài khoản User ${sub.userId} về gói FREE do hết hạn.`);
+                if (updated) {
+                    // Xóa cache của người dùng để API Gateway áp dụng ngay lập tức
+                    await this.redisService.invalidateUserCache(sub.userId);
+                    this.logger.log(`[Cron] Đã hạ cấp thành công tài khoản User ${sub.userId} về gói FREE do hết hạn.`);
+                } else {
+                    this.logger.log(`[Cron] Bỏ qua hạ cấp cho User ${sub.userId} vì gói cước đã được cập nhật/thay đổi.`);
+                }
             }
         } catch (err: any) {
             this.logger.error(`[Cron] Lỗi nghiêm trọng khi quét dọn tài khoản hết hạn: ${err.message}`);
@@ -81,60 +97,42 @@ export class SubscriptionSchedulerService {
      */
     @Cron('0 */15 * * * *')
     async reconcilePendingTransactions() {
-        this.logger.log('[Cron] Khởi chạy tác vụ đối soát đơn hàng PENDING...');
+        this.logger.log('[Cron] Khởi chạy tác vụ dọn dẹp đơn hàng PENDING quá hạn...');
         const twoHoursAgo = new Date();
         twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
 
         try {
-            // Tìm các giao dịch PENDING được tạo trong 2 giờ gần đây
-            const pendingTxs = await this.prisma.billingTransaction.findMany({
+            // Tìm và đóng các giao dịch PENDING đã tạo quá 2 giờ (hết hạn thanh toán)
+            const expiredTxs = await this.prisma.billingTransaction.findMany({
                 where: {
                     status: 'PENDING' as BillingTxStatus,
                     createdAt: {
-                        gte: twoHoursAgo,
+                        lt: twoHoursAgo,
                     },
                 },
             });
 
-            if (pendingTxs.length === 0) {
-                this.logger.log('[Cron] Không có đơn hàng PENDING cần đối soát.');
-                return;
-            }
-
-            this.logger.log(`[Cron] Phát hiện ${pendingTxs.length} đơn hàng PENDING cần đối soát.`);
-
-            for (const tx of pendingTxs) {
-                // Giả lập gọi API bên thứ ba (PayOS / SePay) để kiểm tra giao dịch
-                this.logger.log(`[Cron] Đang gọi đối soát API cho đơn hàng: ${tx.referenceCode} (Cổng: ${tx.provider})`);
-                
-                // MOCK API CHECK: Tỷ lệ 10% các đơn PENDING là đơn thật được chuyển khoản nhưng mất webhook
-                const isPaidOnGateway = Math.random() < 0.1; 
-
-                if (isPaidOnGateway) {
-                    const mockProviderTxId = `FT${Date.now().toString().slice(-6)}`;
-                    this.logger.log(`[Cron] [Phát hiện lệch!] Đơn hàng ${tx.referenceCode} đã thanh toán trên cổng. Đẩy Job xử lý bù.`);
-
-                    // Đẩy bù job xử lý thanh toán vào BullMQ
-                    await this.paymentQueue.add(
-                        'process-payment',
-                        {
-                            provider: tx.provider,
-                            referenceCode: tx.referenceCode,
-                            providerTxId: mockProviderTxId,
-                            amount: tx.amount.toNumber(),
-                            rawPayload: { cronReconciled: true, checkTime: new Date() },
-                        },
-                        {
-                            attempts: 3,
-                            backoff: { type: 'exponential', delay: 5000 },
-                        },
-                    );
-                } else {
-                    this.logger.log(`[Cron] Đơn hàng ${tx.referenceCode} chưa thanh toán trên cổng.`);
+            if (expiredTxs.length > 0) {
+                this.logger.log(`[Cron] Phát hiện ${expiredTxs.length} giao dịch PENDING quá hạn (2 giờ). Cập nhật trạng thái thành EXPIRED.`);
+                for (const tx of expiredTxs) {
+                    await this.prisma.billingTransaction.update({
+                        where: { id: tx.id },
+                        data: {
+                            status: 'EXPIRED' as BillingTxStatus,
+                            metadata: {
+                                ...(tx.metadata as object || {}),
+                                expiredAt: new Date(),
+                                reason: 'PENDING_TIMEOUT_2H'
+                            }
+                        }
+                    });
+                    this.logger.log(`[Cron] Đơn hàng ${tx.referenceCode} đã tự động chuyển sang trạng thái EXPIRED.`);
                 }
+            } else {
+                this.logger.log('[Cron] Không có đơn hàng PENDING nào bị quá hạn.');
             }
         } catch (err: any) {
-            this.logger.error(`[Cron] Lỗi khi thực hiện đối soát tự động: ${err.message}`);
+            this.logger.error(`[Cron] Lỗi khi thực hiện dọn dẹp đơn hàng quá hạn: ${err.message}`);
         }
     }
 }

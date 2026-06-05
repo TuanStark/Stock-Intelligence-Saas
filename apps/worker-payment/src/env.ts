@@ -71,6 +71,16 @@ export const env = {
 const missingVars: string[] = [];
 if (!env.DATABASE_URL) missingVars.push('DATABASE_URL');
 
+// In production, we strictly require secure non-default keys for webhooks
+if (env.NODE_ENV === 'production') {
+    if (!process.env.PAYOS_WEBHOOK_SECRET || env.PAYOS_WEBHOOK_SECRET === 'payos_default_secret_2026') {
+        missingVars.push('PAYOS_WEBHOOK_SECRET (missing or using unsafe default value)');
+    }
+    if (!process.env.SEPAY_WEBHOOK_SECRET || env.SEPAY_WEBHOOK_SECRET === 'sepay_default_secret_2026') {
+        missingVars.push('SEPAY_WEBHOOK_SECRET (missing or using unsafe default value)');
+    }
+}
+
 if (missingVars.length > 0) {
     console.error('\n❌ CRITICAL STARTUP ERROR: Missing required environment variables in Payment Worker:');
     console.error(missingVars.map((v) => `   - ${v}`).join('\n'));

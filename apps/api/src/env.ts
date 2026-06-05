@@ -80,12 +80,34 @@ export const env = {
     
     // Developer toggles
     DISABLE_AI_RATE_LIMIT: process.env.DISABLE_AI_RATE_LIMIT === 'true',
+
+    // Payment & Security Keys
+    PAYOS_WEBHOOK_SECRET: process.env.PAYOS_WEBHOOK_SECRET || 'payos_default_secret_2026',
+    SEPAY_WEBHOOK_SECRET: process.env.SEPAY_WEBHOOK_SECRET || 'sepay_default_secret_2026',
+    API_SIGN_SECRET: process.env.API_SIGN_SECRET || 'stockintel-secret-hmac-key-2026',
+    API_ENCRYPTION_KEY: process.env.API_ENCRYPTION_KEY || 'stockintel-aes-key-must-be-32bytes',
 } as const;
 
 // ─── 3. Fail-Fast Startup Validations ───────────────────────
 const missingVars: string[] = [];
 if (!env.JWT_SECRET) missingVars.push('JWT_SECRET');
 if (!env.DATABASE_URL) missingVars.push('DATABASE_URL');
+
+// In production, we strictly require secure non-default keys for webhooks, signatures & encryption
+if (env.NODE_ENV === 'production') {
+    if (!process.env.PAYOS_WEBHOOK_SECRET || env.PAYOS_WEBHOOK_SECRET === 'payos_default_secret_2026') {
+        missingVars.push('PAYOS_WEBHOOK_SECRET (missing or using unsafe default value)');
+    }
+    if (!process.env.SEPAY_WEBHOOK_SECRET || env.SEPAY_WEBHOOK_SECRET === 'sepay_default_secret_2026') {
+        missingVars.push('SEPAY_WEBHOOK_SECRET (missing or using unsafe default value)');
+    }
+    if (!process.env.API_SIGN_SECRET || env.API_SIGN_SECRET === 'stockintel-secret-hmac-key-2026') {
+        missingVars.push('API_SIGN_SECRET (missing or using unsafe default value)');
+    }
+    if (!process.env.API_ENCRYPTION_KEY || env.API_ENCRYPTION_KEY === 'stockintel-aes-key-must-be-32bytes') {
+        missingVars.push('API_ENCRYPTION_KEY (missing or using unsafe default value)');
+    }
+}
 
 if (missingVars.length > 0) {
     console.error('\n❌ CRITICAL STARTUP ERROR: Missing required environment variables:');

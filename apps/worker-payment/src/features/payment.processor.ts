@@ -63,9 +63,20 @@ export class PaymentProcessor extends WorkerHost {
                     },
                 });
 
-                // 4. Tính toán ngày hết hạn (30 ngày từ thời điểm hiện tại)
-                const renewalAt = new Date();
-                renewalAt.setDate(renewalAt.getDate() + 30);
+                // 4. Tính toán ngày hết hạn (Gia hạn thêm 30 ngày từ ngày hết hạn cũ nếu vẫn còn hạn)
+                const existingSub = await tx.subscription.findUnique({
+                    where: { userId: dbTx.userId },
+                });
+
+                const now = new Date();
+                let baseDate = now;
+                // Nếu subscription hiện tại vẫn còn hạn và cùng tier, gia hạn bảo lưu ngày sử dụng
+                if (existingSub && existingSub.status === 'ACTIVE' && existingSub.renewalAt && existingSub.renewalAt > now && existingSub.tier === dbTx.tier) {
+                    baseDate = new Date(existingSub.renewalAt);
+                }
+
+                const renewalAt = new Date(baseDate);
+                renewalAt.setDate(baseDate.getDate() + 30);
 
                 // 5. Nâng cấp Subscription của User
                 await tx.subscription.upsert({
@@ -80,7 +91,10 @@ export class PaymentProcessor extends WorkerHost {
                         tier: dbTx.tier,
                         status: 'ACTIVE',
                         renewalAt: renewalAt,
-                        createdAt: new Date(), // Reset startedAt
+                        // Chỉ reset createdAt (ngày bắt đầu chu kỳ mới) nếu nâng cấp khác tier hoặc gói cũ đã hết hạn
+                        createdAt: (!existingSub || existingSub.tier !== dbTx.tier || !existingSub.renewalAt || existingSub.renewalAt <= now)
+                            ? new Date()
+                            : existingSub.createdAt,
                     },
                 });
 

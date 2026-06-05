@@ -1,10 +1,11 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { RedisService } from '../../redis/redis.service';
 import * as crypto from 'crypto';
+import { env } from '../../env';
 
 @Injectable()
 export class SignatureGuard implements CanActivate {
-    private readonly secretKey = process.env.API_SIGN_SECRET || 'stockintel-secret-hmac-key-2026';
+    private readonly secretKey = env.API_SIGN_SECRET;
 
     constructor(private readonly redis: RedisService) {}
 

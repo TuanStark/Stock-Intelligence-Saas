@@ -4,6 +4,7 @@ import { SubscriptionTier, PaymentProvider, BillingTxStatus } from '@stock-intel
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import * as crypto from 'crypto';
+import { env } from '../env';
 
 @Injectable()
 export class SubscriptionService {
@@ -113,7 +114,7 @@ export class SubscriptionService {
      * Verifies the cryptographic HMAC-SHA256 signature to prevent fraud.
      */
     async handlePayosWebhook(payload: any, signature: string) {
-        const webhookSecret = process.env.PAYOS_WEBHOOK_SECRET || 'payos_default_secret_2026';
+        const webhookSecret = env.PAYOS_WEBHOOK_SECRET;
 
         // 1. Sort payload.data keys alphabetically and convert to query string for manual signature verification
         const sortedData = Object.keys(payload.data)
@@ -135,7 +136,7 @@ export class SubscriptionService {
         // BYPASS TRONG DEV MODE NẾU CHƯA CẤU HÌNH KEY (ĐỂ THUẬN TIỆN CHO DEV TEST CƠ CHẾ KHÔNG CẦN CHỜ KEY THẬT)
         if (
             webhookSecret === 'payos_default_secret_2026' && 
-            process.env.NODE_ENV === 'development'
+            env.NODE_ENV === 'development'
         ) {
             this.logger.warn(`⚠️ [PayOS Webhook] Phát hiện đang sử dụng Webhook Secret mặc định trong môi trường Development. BỎ QUA xác thực chữ ký để tạo thuận lợi cho việc test!`);
         } else if (signature !== computedSignature) {
@@ -176,7 +177,7 @@ export class SubscriptionService {
      * Handles secure webhook notifications from SePay.
      */
     async handleSepayWebhook(payload: any, apiKeyHeader: string) {
-        const expectedApiKey = process.env.SEPAY_WEBHOOK_SECRET || 'sepay_default_secret_2026';
+        const expectedApiKey = env.SEPAY_WEBHOOK_SECRET;
 
         // 1. Simple but secure API Key verification for webhook
         if (apiKeyHeader !== expectedApiKey) {
