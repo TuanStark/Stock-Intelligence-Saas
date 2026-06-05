@@ -75,9 +75,9 @@ export class SubscriptionService {
         let transferInstructions = '';
 
         // Load customizable bank config from env with robust fallbacks
-        const bankId = process.env.PAYMENT_BANK_ID || (provider === 'PAYOS' ? 'vietinbank' : 'mb');
-        const bankAccount = process.env.PAYMENT_BANK_ACCOUNT || (provider === 'PAYOS' ? '1133224455' : '990022884466');
-        const bankName = process.env.PAYMENT_BANK_NAME || (provider === 'PAYOS' ? 'STOCK INTELLIGENCE' : 'STOCK INTELLIGENCE SEPAY');
+        const bankId = env.PAYMENT_BANK_ID || (provider === 'PAYOS' ? 'vietinbank' : 'mb');
+        const bankAccount = env.PAYMENT_BANK_ACCOUNT || (provider === 'PAYOS' ? '1133224455' : '990022884466');
+        const bankName = env.PAYMENT_BANK_NAME || (provider === 'PAYOS' ? 'STOCK INTELLIGENCE' : 'STOCK INTELLIGENCE SEPAY');
         const encodedBankName = encodeURIComponent(bankName);
 
         if (provider === 'PAYOS') {
