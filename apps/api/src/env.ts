@@ -80,12 +80,50 @@ export const env = {
     
     // Developer toggles
     DISABLE_AI_RATE_LIMIT: process.env.DISABLE_AI_RATE_LIMIT === 'true',
+
+    // Payment & Security Keys
+    PAYOS_WEBHOOK_SECRET: process.env.PAYOS_WEBHOOK_SECRET || 'payos_default_secret_2026',
+    SEPAY_WEBHOOK_SECRET: process.env.SEPAY_WEBHOOK_SECRET || 'sepay_default_secret_2026',
+    API_SIGN_SECRET: process.env.API_SIGN_SECRET || 'stockintel-secret-hmac-key-2026',
+    API_ENCRYPTION_KEY: process.env.API_ENCRYPTION_KEY || 'stockintel-aes-key-must-be-32bytes',
+
+    // Customizable Bank Configuration
+    PAYMENT_BANK_ID: process.env.PAYMENT_BANK_ID || '',
+    PAYMENT_BANK_ACCOUNT: process.env.PAYMENT_BANK_ACCOUNT || '',
+    PAYMENT_BANK_NAME: process.env.PAYMENT_BANK_NAME || '',
 } as const;
 
 // ─── 3. Fail-Fast Startup Validations ───────────────────────
 const missingVars: string[] = [];
 if (!env.JWT_SECRET) missingVars.push('JWT_SECRET');
 if (!env.DATABASE_URL) missingVars.push('DATABASE_URL');
+
+// In production, we strictly require secure non-default keys for webhooks, signatures, encryption & bank details
+if (env.NODE_ENV === 'production') {
+    if (!process.env.PAYOS_WEBHOOK_SECRET || env.PAYOS_WEBHOOK_SECRET === 'payos_default_secret_2026') {
+        missingVars.push('PAYOS_WEBHOOK_SECRET (missing or using unsafe default value)');
+    }
+    if (!process.env.SEPAY_WEBHOOK_SECRET || env.SEPAY_WEBHOOK_SECRET === 'sepay_default_secret_2026') {
+        missingVars.push('SEPAY_WEBHOOK_SECRET (missing or using unsafe default value)');
+    }
+    if (!process.env.API_SIGN_SECRET || env.API_SIGN_SECRET === 'stockintel-secret-hmac-key-2026') {
+        missingVars.push('API_SIGN_SECRET (missing or using unsafe default value)');
+    }
+    if (!process.env.API_ENCRYPTION_KEY || env.API_ENCRYPTION_KEY === 'stockintel-aes-key-must-be-32bytes') {
+        missingVars.push('API_ENCRYPTION_KEY (missing or using unsafe default value)');
+    }
+    
+    // Bank Configuration validation for production
+    if (!env.PAYMENT_BANK_ID) {
+        missingVars.push('PAYMENT_BANK_ID');
+    }
+    if (!env.PAYMENT_BANK_ACCOUNT || env.PAYMENT_BANK_ACCOUNT === '1133224455' || env.PAYMENT_BANK_ACCOUNT === '990022884466') {
+        missingVars.push('PAYMENT_BANK_ACCOUNT (missing or using unsafe default mock account number)');
+    }
+    if (!env.PAYMENT_BANK_NAME) {
+        missingVars.push('PAYMENT_BANK_NAME');
+    }
+}
 
 if (missingVars.length > 0) {
     console.error('\n❌ CRITICAL STARTUP ERROR: Missing required environment variables:');

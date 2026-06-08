@@ -1,6 +1,7 @@
 import * as crypto from 'crypto';
+import { env } from '../../env';
 
-const SECRET_KEY = process.env.API_ENCRYPTION_KEY || 'stockintel-aes-key-must-be-32bytes';
+const SECRET_KEY = env.API_ENCRYPTION_KEY;
 
 export function encryptPayload(data: any): { iv: string; content: string; tag: string } {
     // Generate secure 12-byte initialization vector (standard for GCM)

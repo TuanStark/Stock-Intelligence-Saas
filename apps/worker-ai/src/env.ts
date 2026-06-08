@@ -57,3 +57,14 @@ export const env = {
     LITELLM_API_BASE: process.env.LITELLM_API_BASE || '',
     OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini',
 } as const;
+
+// ─── 3. Fail-Fast Startup Validations ───────────────────────
+const missingVars: string[] = [];
+if (!env.OPENAI_API_KEY) missingVars.push('OPENAI_API_KEY');
+
+if (missingVars.length > 0) {
+    console.error('\n❌ CRITICAL STARTUP ERROR: Missing required environment variables in AI Worker:');
+    console.error(missingVars.map((v) => `   - ${v}`).join('\n'));
+    console.error('\nPlease check your .env file or configuration.\n');
+    process.exit(1);
+}
