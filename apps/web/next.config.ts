@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   transpilePackages: ['@stock-intel/contracts', '@stock-intel/utils'],
   images: {
     remotePatterns: [

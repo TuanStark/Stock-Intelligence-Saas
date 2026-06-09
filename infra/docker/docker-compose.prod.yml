@@ -1,0 +1,176 @@
+services:
+  # ─── PostgreSQL (TimescaleDB) ──────────────────────────────
+  postgres:
+    image: timescale/timescaledb:latest-pg17
+    container_name: stockintel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: stockintel
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockintel
+
+  # ─── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: stockintel-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockintel
+
+  # ─── MinIO (S3-compatible Object Storage) ───────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: stockintel-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockintel
+
+  # ─── NestJS API Server ──────────────────────────────────────
+  api:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.api
+    container_name: stockintel-api
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel
+
+  # ─── Worker Ingestion ───────────────────────────────────────
+  worker-ingestion:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.worker
+      args:
+        - WORKER=ingestion
+    container_name: stockintel-worker-ingestion
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel
+
+  # ─── Worker Processing ──────────────────────────────────────
+  worker-processing:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.worker
+      args:
+        - WORKER=processing
+    container_name: stockintel-worker-processing
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel
+
+  # ─── Next.js Frontend Web ───────────────────────────────────
+  web:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.web
+    container_name: stockintel-web
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - stockintel
+
+  # ─── Nginx Reverse Proxy ────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: stockintel-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+      - api
+    networks:
+      - stockintel
+
+networks:
+  stockintel:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
