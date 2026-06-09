@@ -15,11 +15,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Fetch origin main
-        run: git fetch --no-tags --prune --depth=1 origin main
 
       - uses: pnpm/action-setup@v4
         with:
@@ -32,14 +27,17 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
       - name: Lint
-        run: pnpm turbo lint --filter=...[origin/main]
+        run: pnpm lint
 
       - name: Type Check
-        run: pnpm turbo type-check --filter=...[origin/main]
+        run: pnpm type-check
 
       - name: Unit Tests
-        run: pnpm turbo test --filter=...[origin/main]
+        run: pnpm test
 
       - name: Build Check
-        run: pnpm turbo build --filter=...[origin/main]
+        run: pnpm build
