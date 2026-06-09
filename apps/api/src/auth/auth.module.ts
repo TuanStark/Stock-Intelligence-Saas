@@ -8,17 +8,17 @@ import { JwtStrategy } from './jwt.strategy';
 import { TierGuard } from './guards/tier.guard';
 
 @Module({
-    imports: [
-        PassportModule.register({ defaultStrategy: 'jwt' }),
-        JwtModule.register({
-            secret: env.JWT_SECRET,
-            signOptions: {
-                expiresIn: env.JWT_EXPIRES_IN,
-            } as any,
-        }),
-    ],
-    controllers: [AuthController],
-    providers: [AuthService, JwtStrategy, TierGuard],
-    exports: [AuthService, JwtModule, PassportModule],
+  imports: [
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtModule.register({
+      secret: env.JWT_SECRET,
+      signOptions: {
+        expiresIn: env.JWT_EXPIRES_IN,
+      } as any,
+    }),
+  ],
+  controllers: [AuthController],
+  providers: [AuthService, JwtStrategy, TierGuard],
+  exports: [AuthService, JwtModule, PassportModule],
 })
-export class AuthModule { }
+export class AuthModule {}

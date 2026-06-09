@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, Query, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  NotFoundException,
+} from '@nestjs/common';
 import { PersonalizationService } from './personalization.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityType } from '@stock-intel/db';
@@ -57,15 +65,17 @@ export class PersonalizationController {
     if (providedUserId && providedUserId.length > 5) {
       return providedUserId;
     }
-    
+
     // Fallback Mock System: retrieve the first active database user to protect dev onboarding
     const defaultUser = await this.prisma.user.findFirst({
       where: { status: 'ACTIVE' },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
     });
 
     if (!defaultUser) {
-      throw new NotFoundException('No active users found in database to resolve default preferences. Run database seed!');
+      throw new NotFoundException(
+        'No active users found in database to resolve default preferences. Run database seed!',
+      );
     }
 
     return defaultUser.id;

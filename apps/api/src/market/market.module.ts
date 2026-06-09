@@ -22,4 +22,4 @@ import { FinancialDirectIngestor } from './financial-direct.ingestor';
   providers: [MarketService, MarketGateway, FinancialDirectIngestor],
   exports: [MarketService, MarketGateway, FinancialDirectIngestor],
 })
-export class MarketModule { }
+export class MarketModule {}

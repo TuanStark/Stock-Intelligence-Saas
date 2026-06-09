@@ -4,9 +4,9 @@ import { AlertService } from './alerts.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [AlertController],
-    providers: [AlertService],
-    exports: [AlertService],
+  imports: [PrismaModule],
+  controllers: [AlertController],
+  providers: [AlertService],
+  exports: [AlertService],
 })
 export class AlertModule {}

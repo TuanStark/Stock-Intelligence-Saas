@@ -5,14 +5,14 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { BullModule } from '@nestjs/bullmq';
 
 @Module({
-    imports: [
-        PrismaModule,
-        BullModule.registerQueue({
-            name: 'payment-process',
-        }),
-    ],
-    controllers: [SubscriptionController],
-    providers: [SubscriptionService],
-    exports: [SubscriptionService],
+  imports: [
+    PrismaModule,
+    BullModule.registerQueue({
+      name: 'payment-process',
+    }),
+  ],
+  controllers: [SubscriptionController],
+  providers: [SubscriptionService],
+  exports: [SubscriptionService],
 })
 export class SubscriptionModule {}

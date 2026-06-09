@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Param, Query, NotFoundException, Req, UseGuards, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Query,
+  NotFoundException,
+  Req,
+  UseGuards,
+  Res,
+} from '@nestjs/common';
 import { MarketService } from './market.service';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { RateLimiterGuard } from '../common/guards/rate-limiter.guard';
@@ -8,7 +18,7 @@ import { encryptPayload } from '../common/helpers/crypto.helper';
 @Controller('market')
 @UseGuards(RateLimiterGuard)
 export class MarketController {
-  constructor(private readonly marketService: MarketService) { }
+  constructor(private readonly marketService: MarketService) {}
 
   @Get('overview')
   async getMarketOverview() {

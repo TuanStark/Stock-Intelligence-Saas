@@ -4,9 +4,9 @@ import { WatchlistService } from './watchlist.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [WatchlistController],
-    providers: [WatchlistService],
-    exports: [WatchlistService],
+  imports: [PrismaModule],
+  controllers: [WatchlistController],
+  providers: [WatchlistService],
+  exports: [WatchlistService],
 })
 export class WatchlistModule {}

@@ -1,8 +1,8 @@
 import {
-    Injectable,
-    UnauthorizedException,
-    ConflictException,
-    BadRequestException,
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -14,397 +14,407 @@ import { Constants, CacheKeys } from '@stock-intel/config';
 // ─── Types ─────────────────────────────────────────────────
 
 interface AuthTokens {
-    accessToken: string;
-    refreshToken: string;
-    user: {
-        id: string;
-        email: string;
-        tier: string;
-    };
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    email: string;
+    tier: string;
+  };
 }
 
 interface AccessTokenPayload {
-    sub: string;
-    email: string;
-    tier: string;
+  sub: string;
+  email: string;
+  tier: string;
 }
 
 // ─── Service ───────────────────────────────────────────────
 
 @Injectable()
 export class AuthService {
-    constructor(
-        private readonly prisma: PrismaService,
-        private readonly jwt: JwtService,
-        private readonly redis: RedisService,
-    ) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+    private readonly redis: RedisService,
+  ) {}
 
-    // ─── Register ──────────────────────────────────────────
+  // ─── Register ──────────────────────────────────────────
 
-    async register(email: string, password: string): Promise<AuthTokens> {
-        // Validate
-        if (!email || !password) {
-            throw new BadRequestException('Email and password are required');
-        }
-        if (password.length < Constants.PASSWORD_MIN_LENGTH) {
-            throw new BadRequestException(
-                `Password must be at least ${Constants.PASSWORD_MIN_LENGTH} characters`,
-            );
-        }
-
-        // Check duplicate
-        const existing = await this.prisma.user.findUnique({
-            where: { email: email.toLowerCase().trim() },
-        });
-        if (existing) {
-            throw new ConflictException('Email already registered');
-        }
-
-        // Hash password
-        const passwordHash = await bcrypt.hash(
-            password,
-            Constants.BCRYPT_SALT_ROUNDS,
-        );
-
-        // Create user + subscription in a transaction
-        const user = await this.prisma.$transaction(async (tx: any) => {
-            const newUser = await tx.user.create({
-                data: {
-                    email: email.toLowerCase().trim(),
-                    passwordHash,
-                },
-            });
-
-            await tx.subscription.create({
-                data: {
-                    userId: newUser.id,
-                    tier: 'FREE',
-                    status: 'ACTIVE',
-                },
-            });
-
-            return newUser;
-        });
-
-        // Generate tokens
-        return this.generateAuthTokens(user.id, user.email, 'FREE');
+  async register(email: string, password: string): Promise<AuthTokens> {
+    // Validate
+    if (!email || !password) {
+      throw new BadRequestException('Email and password are required');
+    }
+    if (password.length < Constants.PASSWORD_MIN_LENGTH) {
+      throw new BadRequestException(
+        `Password must be at least ${Constants.PASSWORD_MIN_LENGTH} characters`,
+      );
     }
 
-    // ─── Login ─────────────────────────────────────────────
-
-    async login(email: string, password: string): Promise<AuthTokens> {
-        if (!email || !password) {
-            throw new BadRequestException('Email and password are required');
-        }
-
-        const user = await this.prisma.user.findUnique({
-            where: { email: email.toLowerCase().trim() },
-            include: { subscription: true },
-        });
-
-        if (!user) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
-
-        if (user.status !== 'ACTIVE') {
-            throw new UnauthorizedException('Account is not active');
-        }
-
-        if (!user.passwordHash) {
-            throw new UnauthorizedException('This account is registered via Google. Please log in using Google.');
-        }
-
-        const passwordValid = await bcrypt.compare(password, user.passwordHash);
-        if (!passwordValid) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
-
-        const tier = user.subscription?.tier || 'FREE';
-        return this.generateAuthTokens(user.id, user.email, tier);
+    // Check duplicate
+    const existing = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+    if (existing) {
+      throw new ConflictException('Email already registered');
     }
 
-    // ─── Google Login ──────────────────────────────────────
+    // Hash password
+    const passwordHash = await bcrypt.hash(
+      password,
+      Constants.BCRYPT_SALT_ROUNDS,
+    );
 
-    async loginOrRegisterWithGoogle(idToken: string): Promise<AuthTokens> {
-        if (!idToken) {
-            throw new BadRequestException('Google ID Token is required');
-        }
+    // Create user + subscription in a transaction
+    const user = await this.prisma.$transaction(async (tx: any) => {
+      const newUser = await tx.user.create({
+        data: {
+          email: email.toLowerCase().trim(),
+          passwordHash,
+        },
+      });
 
-        const googleClientId = process.env.GOOGLE_CLIENT_ID;
-        if (!googleClientId) {
-            throw new BadRequestException('Google Client ID is not configured on the server');
-        }
+      await tx.subscription.create({
+        data: {
+          userId: newUser.id,
+          tier: 'FREE',
+          status: 'ACTIVE',
+        },
+      });
 
-        let payload: any;
-        try {
-            const { OAuth2Client } = require('google-auth-library');
-            const client = new OAuth2Client(googleClientId);
-            const ticket = await client.verifyIdToken({
-                idToken,
-                audience: googleClientId,
-            });
-            payload = ticket.getPayload();
-        } catch (error) {
-            throw new UnauthorizedException('Invalid Google ID Token');
-        }
+      return newUser;
+    });
 
-        if (!payload || !payload.email) {
-            throw new BadRequestException('Invalid token payload');
-        }
+    // Generate tokens
+    return this.generateAuthTokens(user.id, user.email, 'FREE');
+  }
 
-        const email = payload.email.toLowerCase().trim();
-        const googleUserId = payload.sub; // Google ID
-        const name = payload.name || null;
-        const avatarUrl = payload.picture || null;
+  // ─── Login ─────────────────────────────────────────────
 
-        // Perform transactional login / register
-        const user = await this.prisma.$transaction(async (tx: any) => {
-            // 1. Check if OAuthAccount already exists
-            const existingOAuthAccount = await tx.oAuthAccount.findUnique({
-                where: {
-                    provider_providerUserId: {
-                        provider: 'google',
-                        providerUserId: googleUserId,
-                    },
-                },
-                include: { user: { include: { subscription: true } } },
-            });
-
-            if (existingOAuthAccount) {
-                const existingUser = existingOAuthAccount.user;
-                if (existingUser.status !== 'ACTIVE') {
-                    throw new UnauthorizedException('Account is suspended or deleted');
-                }
-
-                // Optionally update name/avatar if they changed or were null
-                if ((!existingUser.name && name) || (!existingUser.avatarUrl && avatarUrl)) {
-                    await tx.user.update({
-                        where: { id: existingUser.id },
-                        data: {
-                            name: existingUser.name || name,
-                            avatarUrl: existingUser.avatarUrl || avatarUrl,
-                        },
-                    });
-                }
-
-                return existingUser;
-            }
-
-            // 2. No OAuthAccount found. Check if User with the same email exists
-            const existingUserByEmail = await tx.user.findUnique({
-                where: { email },
-                include: { subscription: true },
-            });
-
-            if (existingUserByEmail) {
-                if (existingUserByEmail.status !== 'ACTIVE') {
-                    throw new UnauthorizedException('Account is suspended or deleted');
-                }
-
-                // Link this OAuthAccount to the existing User
-                await tx.oAuthAccount.create({
-                    data: {
-                        userId: existingUserByEmail.id,
-                        provider: 'google',
-                        providerUserId: googleUserId,
-                    },
-                });
-
-                // Update name/avatar if needed
-                if ((!existingUserByEmail.name && name) || (!existingUserByEmail.avatarUrl && avatarUrl)) {
-                    await tx.user.update({
-                        where: { id: existingUserByEmail.id },
-                        data: {
-                            name: existingUserByEmail.name || name,
-                            avatarUrl: existingUserByEmail.avatarUrl || avatarUrl,
-                        },
-                    });
-                }
-
-                return existingUserByEmail;
-            }
-
-            // 3. Brand new user! Register them
-            const newUser = await tx.user.create({
-                data: {
-                    email,
-                    passwordHash: null,
-                    name,
-                    avatarUrl,
-                    status: 'ACTIVE',
-                },
-            });
-
-            // Create Free subscription
-            await tx.subscription.create({
-                data: {
-                    userId: newUser.id,
-                    tier: 'FREE',
-                    status: 'ACTIVE',
-                },
-            });
-
-            // Link the Google OAuth account
-            await tx.oAuthAccount.create({
-                data: {
-                    userId: newUser.id,
-                    provider: 'google',
-                    providerUserId: googleUserId,
-                },
-            });
-
-            // Return the new user with subscription included
-            return {
-                ...newUser,
-                subscription: { tier: 'FREE' },
-            };
-        });
-
-        const tier = user.subscription?.tier || 'FREE';
-        return this.generateAuthTokens(user.id, user.email, tier);
+  async login(email: string, password: string): Promise<AuthTokens> {
+    if (!email || !password) {
+      throw new BadRequestException('Email and password are required');
     }
 
-    // ─── Refresh ───────────────────────────────────────────
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+      include: { subscription: true },
+    });
 
-    async refresh(
-        refreshToken: string,
-    ): Promise<{ accessToken: string; refreshToken: string }> {
-        // Find the token
-        const tokenHash = this.hashToken(refreshToken);
-        const storedToken = await this.prisma.refreshToken.findUnique({
-            where: { tokenHash },
-            include: { user: { include: { subscription: true } } },
-        });
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-        if (!storedToken) {
-            throw new UnauthorizedException('Invalid refresh token');
+    if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Account is not active');
+    }
+
+    if (!user.passwordHash) {
+      throw new UnauthorizedException(
+        'This account is registered via Google. Please log in using Google.',
+      );
+    }
+
+    const passwordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!passwordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const tier = user.subscription?.tier || 'FREE';
+    return this.generateAuthTokens(user.id, user.email, tier);
+  }
+
+  // ─── Google Login ──────────────────────────────────────
+
+  async loginOrRegisterWithGoogle(idToken: string): Promise<AuthTokens> {
+    if (!idToken) {
+      throw new BadRequestException('Google ID Token is required');
+    }
+
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    if (!googleClientId) {
+      throw new BadRequestException(
+        'Google Client ID is not configured on the server',
+      );
+    }
+
+    let payload: any;
+    try {
+      const { OAuth2Client } = require('google-auth-library');
+      const client = new OAuth2Client(googleClientId);
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: googleClientId,
+      });
+      payload = ticket.getPayload();
+    } catch (error) {
+      throw new UnauthorizedException('Invalid Google ID Token');
+    }
+
+    if (!payload || !payload.email) {
+      throw new BadRequestException('Invalid token payload');
+    }
+
+    const email = payload.email.toLowerCase().trim();
+    const googleUserId = payload.sub; // Google ID
+    const name = payload.name || null;
+    const avatarUrl = payload.picture || null;
+
+    // Perform transactional login / register
+    const user = await this.prisma.$transaction(async (tx: any) => {
+      // 1. Check if OAuthAccount already exists
+      const existingOAuthAccount = await tx.oAuthAccount.findUnique({
+        where: {
+          provider_providerUserId: {
+            provider: 'google',
+            providerUserId: googleUserId,
+          },
+        },
+        include: { user: { include: { subscription: true } } },
+      });
+
+      if (existingOAuthAccount) {
+        const existingUser = existingOAuthAccount.user;
+        if (existingUser.status !== 'ACTIVE') {
+          throw new UnauthorizedException('Account is suspended or deleted');
         }
 
-        // Check if already used (reuse detection)
-        if (storedToken.used) {
-            // Token reuse detected — revoke entire family
-            await this.prisma.refreshToken.deleteMany({
-                where: { familyId: storedToken.familyId },
-            });
-            throw new UnauthorizedException(
-                'Token reuse detected — all sessions revoked',
-            );
-        }
-
-        // Check expiry
-        if (new Date() > storedToken.expiresAt) {
-            await this.prisma.refreshToken.delete({
-                where: { id: storedToken.id },
-            });
-            throw new UnauthorizedException('Refresh token expired');
-        }
-
-        // Mark as used
-        await this.prisma.refreshToken.update({
-            where: { id: storedToken.id },
-            data: { used: true },
-        });
-
-        // Generate new token pair (same family)
-        const tier = storedToken.user.subscription?.tier || 'FREE';
-        const newRefreshToken = uuidv4();
-        const newTokenHash = this.hashToken(newRefreshToken);
-
-        await this.prisma.refreshToken.create({
+        // Optionally update name/avatar if they changed or were null
+        if (
+          (!existingUser.name && name) ||
+          (!existingUser.avatarUrl && avatarUrl)
+        ) {
+          await tx.user.update({
+            where: { id: existingUser.id },
             data: {
-                userId: storedToken.userId,
-                familyId: storedToken.familyId,
-                tokenHash: newTokenHash,
-                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              name: existingUser.name || name,
+              avatarUrl: existingUser.avatarUrl || avatarUrl,
             },
-        });
-
-        const accessToken = this.generateAccessToken(
-            storedToken.userId,
-            storedToken.user.email,
-            tier,
-        );
-
-        return { accessToken, refreshToken: newRefreshToken };
-    }
-
-    // ─── Logout ────────────────────────────────────────────
-
-    async logout(refreshToken: string): Promise<void> {
-        const tokenHash = this.hashToken(refreshToken);
-        const storedToken = await this.prisma.refreshToken.findUnique({
-            where: { tokenHash },
-        });
-
-        if (storedToken) {
-            // Delete entire family to invalidate all related tokens
-            await this.prisma.refreshToken.deleteMany({
-                where: { familyId: storedToken.familyId },
-            });
+          });
         }
-    }
 
-    // ─── Token Validation (used by JWT strategy) ──────────
+        return existingUser;
+      }
 
-    async validateUser(payload: AccessTokenPayload) {
-        // Check blacklist
-        const blacklisted = await this.redis.exists(
-            CacheKeys.tokenBlacklist(payload.sub),
-        );
-        if (blacklisted) return null;
+      // 2. No OAuthAccount found. Check if User with the same email exists
+      const existingUserByEmail = await tx.user.findUnique({
+        where: { email },
+        include: { subscription: true },
+      });
 
-        return {
-            id: payload.sub,
-            email: payload.email,
-            tier: payload.tier,
-        };
-    }
+      if (existingUserByEmail) {
+        if (existingUserByEmail.status !== 'ACTIVE') {
+          throw new UnauthorizedException('Account is suspended or deleted');
+        }
 
-    // ─── Private Helpers ───────────────────────────────────
+        // Link this OAuthAccount to the existing User
+        await tx.oAuthAccount.create({
+          data: {
+            userId: existingUserByEmail.id,
+            provider: 'google',
+            providerUserId: googleUserId,
+          },
+        });
 
-    private async generateAuthTokens(
-        userId: string,
-        email: string,
-        tier: string,
-    ): Promise<AuthTokens> {
-        const accessToken = this.generateAccessToken(userId, email, tier);
-
-        // Create refresh token
-        const refreshToken = uuidv4();
-        const tokenHash = this.hashToken(refreshToken);
-        const familyId = uuidv4();
-
-        await this.prisma.refreshToken.create({
+        // Update name/avatar if needed
+        if (
+          (!existingUserByEmail.name && name) ||
+          (!existingUserByEmail.avatarUrl && avatarUrl)
+        ) {
+          await tx.user.update({
+            where: { id: existingUserByEmail.id },
             data: {
-                userId,
-                familyId,
-                tokenHash,
-                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              name: existingUserByEmail.name || name,
+              avatarUrl: existingUserByEmail.avatarUrl || avatarUrl,
             },
-        });
+          });
+        }
 
-        return {
-            accessToken,
-            refreshToken,
-            user: { id: userId, email, tier },
-        };
+        return existingUserByEmail;
+      }
+
+      // 3. Brand new user! Register them
+      const newUser = await tx.user.create({
+        data: {
+          email,
+          passwordHash: null,
+          name,
+          avatarUrl,
+          status: 'ACTIVE',
+        },
+      });
+
+      // Create Free subscription
+      await tx.subscription.create({
+        data: {
+          userId: newUser.id,
+          tier: 'FREE',
+          status: 'ACTIVE',
+        },
+      });
+
+      // Link the Google OAuth account
+      await tx.oAuthAccount.create({
+        data: {
+          userId: newUser.id,
+          provider: 'google',
+          providerUserId: googleUserId,
+        },
+      });
+
+      // Return the new user with subscription included
+      return {
+        ...newUser,
+        subscription: { tier: 'FREE' },
+      };
+    });
+
+    const tier = user.subscription?.tier || 'FREE';
+    return this.generateAuthTokens(user.id, user.email, tier);
+  }
+
+  // ─── Refresh ───────────────────────────────────────────
+
+  async refresh(
+    refreshToken: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    // Find the token
+    const tokenHash = this.hashToken(refreshToken);
+    const storedToken = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+      include: { user: { include: { subscription: true } } },
+    });
+
+    if (!storedToken) {
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
-    private generateAccessToken(
-        userId: string,
-        email: string,
-        tier: string,
-    ): string {
-        return this.jwt.sign({
-            sub: userId,
-            email,
-            tier,
-        });
+    // Check if already used (reuse detection)
+    if (storedToken.used) {
+      // Token reuse detected — revoke entire family
+      await this.prisma.refreshToken.deleteMany({
+        where: { familyId: storedToken.familyId },
+      });
+      throw new UnauthorizedException(
+        'Token reuse detected — all sessions revoked',
+      );
     }
 
-    private hashToken(token: string): string {
-        // Use Node.js built-in crypto for synchronous hashing
-        const crypto = require('crypto');
-        return crypto.createHash('sha256').update(token).digest('hex');
+    // Check expiry
+    if (new Date() > storedToken.expiresAt) {
+      await this.prisma.refreshToken.delete({
+        where: { id: storedToken.id },
+      });
+      throw new UnauthorizedException('Refresh token expired');
     }
+
+    // Mark as used
+    await this.prisma.refreshToken.update({
+      where: { id: storedToken.id },
+      data: { used: true },
+    });
+
+    // Generate new token pair (same family)
+    const tier = storedToken.user.subscription?.tier || 'FREE';
+    const newRefreshToken = uuidv4();
+    const newTokenHash = this.hashToken(newRefreshToken);
+
+    await this.prisma.refreshToken.create({
+      data: {
+        userId: storedToken.userId,
+        familyId: storedToken.familyId,
+        tokenHash: newTokenHash,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const accessToken = this.generateAccessToken(
+      storedToken.userId,
+      storedToken.user.email,
+      tier,
+    );
+
+    return { accessToken, refreshToken: newRefreshToken };
+  }
+
+  // ─── Logout ────────────────────────────────────────────
+
+  async logout(refreshToken: string): Promise<void> {
+    const tokenHash = this.hashToken(refreshToken);
+    const storedToken = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+    });
+
+    if (storedToken) {
+      // Delete entire family to invalidate all related tokens
+      await this.prisma.refreshToken.deleteMany({
+        where: { familyId: storedToken.familyId },
+      });
+    }
+  }
+
+  // ─── Token Validation (used by JWT strategy) ──────────
+
+  async validateUser(payload: AccessTokenPayload) {
+    // Check blacklist
+    const blacklisted = await this.redis.exists(
+      CacheKeys.tokenBlacklist(payload.sub),
+    );
+    if (blacklisted) return null;
+
+    return {
+      id: payload.sub,
+      email: payload.email,
+      tier: payload.tier,
+    };
+  }
+
+  // ─── Private Helpers ───────────────────────────────────
+
+  private async generateAuthTokens(
+    userId: string,
+    email: string,
+    tier: string,
+  ): Promise<AuthTokens> {
+    const accessToken = this.generateAccessToken(userId, email, tier);
+
+    // Create refresh token
+    const refreshToken = uuidv4();
+    const tokenHash = this.hashToken(refreshToken);
+    const familyId = uuidv4();
+
+    await this.prisma.refreshToken.create({
+      data: {
+        userId,
+        familyId,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      user: { id: userId, email, tier },
+    };
+  }
+
+  private generateAccessToken(
+    userId: string,
+    email: string,
+    tier: string,
+  ): string {
+    return this.jwt.sign({
+      sub: userId,
+      email,
+      tier,
+    });
+  }
+
+  private hashToken(token: string): string {
+    // Use Node.js built-in crypto for synchronous hashing
+    const crypto = require('crypto');
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
 }

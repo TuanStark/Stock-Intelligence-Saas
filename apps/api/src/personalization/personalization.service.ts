@@ -25,19 +25,20 @@ export class PersonalizationService {
    * Tracks user interaction events asynchronously via BullMQ activity-tracking queue
    */
   async trackActivity(payload: TrackPayload) {
-    this.logger.log(`Enqueuing activity track event: ${payload.activityType} for user ${payload.userId}`);
-    
+    this.logger.log(
+      `Enqueuing activity track event: ${payload.activityType} for user ${payload.userId}`,
+    );
+
     try {
-      await this.trackingQueue.add(
-        'track-event',
-        payload,
-        {
-          removeOnComplete: 100,
-          removeOnFail: 500,
-          attempts: 3,
-        }
-      );
-      return { success: true, message: 'Hoạt động đã được tiếp nhận và xử lý ngầm.' };
+      await this.trackingQueue.add('track-event', payload, {
+        removeOnComplete: 100,
+        removeOnFail: 500,
+        attempts: 3,
+      });
+      return {
+        success: true,
+        message: 'Hoạt động đã được tiếp nhận và xử lý ngầm.',
+      };
     } catch (err: any) {
       this.logger.error(`Failed to enqueue activity track event:`, err);
       // Fail-safe: fallback to sync writing if queue experiences issues to protect data logging
@@ -51,9 +52,15 @@ export class PersonalizationService {
             metadata: payload.metadata,
           },
         });
-        return { success: true, message: 'Hoạt động được lưu đồng bộ (hàng đợi bận).' };
+        return {
+          success: true,
+          message: 'Hoạt động được lưu đồng bộ (hàng đợi bận).',
+        };
       } catch (dbErr) {
-        return { success: false, message: 'Không thể ghi nhận hoạt động vào cơ sở dữ liệu.' };
+        return {
+          success: false,
+          message: 'Không thể ghi nhận hoạt động vào cơ sở dữ liệu.',
+        };
       }
     }
   }
@@ -70,25 +77,29 @@ export class PersonalizationService {
         instrument: {
           include: {
             quotes: { orderBy: { asOf: 'desc' }, take: 1 },
-            signals: { orderBy: { detectedAt: 'desc' }, take: 1 }
-          }
-        }
-      }
+            signals: { orderBy: { detectedAt: 'desc' }, take: 1 },
+          },
+        },
+      },
     });
 
     if (scores.length > 0) {
       return {
         success: true,
         source: 'personalized',
-        data: scores.map(s => ({
+        data: scores.map((s) => ({
           symbol: s.symbol,
           name: s.instrument.name,
           score: Number(s.score),
           reasons: s.reasons,
-          price: s.instrument.quotes[0] ? Number(s.instrument.quotes[0].price) : null,
-          changePercent: s.instrument.quotes[0] ? Number(s.instrument.quotes[0].changePercent) : null,
-          latestSignal: s.instrument.signals[0] || null
-        }))
+          price: s.instrument.quotes[0]
+            ? Number(s.instrument.quotes[0].price)
+            : null,
+          changePercent: s.instrument.quotes[0]
+            ? Number(s.instrument.quotes[0].changePercent)
+            : null,
+          latestSignal: s.instrument.signals[0] || null,
+        })),
       };
     }
 
@@ -97,22 +108,24 @@ export class PersonalizationService {
       take: 5,
       include: {
         quotes: { orderBy: { asOf: 'desc' }, take: 1 },
-        signals: { orderBy: { detectedAt: 'desc' }, take: 1 }
-      }
+        signals: { orderBy: { detectedAt: 'desc' }, take: 1 },
+      },
     });
 
     return {
       success: true,
       source: 'fallback_global',
-      data: topInstruments.map(inst => ({
+      data: topInstruments.map((inst) => ({
         symbol: inst.symbol,
         name: inst.name,
-        score: 50.00,
+        score: 50.0,
         reasons: ['POPULAR_MEMBER'],
         price: inst.quotes[0] ? Number(inst.quotes[0].price) : null,
-        changePercent: inst.quotes[0] ? Number(inst.quotes[0].changePercent) : null,
-        latestSignal: inst.signals[0] || null
-      }))
+        changePercent: inst.quotes[0]
+          ? Number(inst.quotes[0].changePercent)
+          : null,
+        latestSignal: inst.signals[0] || null,
+      })),
     };
   }
 
@@ -127,11 +140,13 @@ export class PersonalizationService {
       // 1. Resolve default active user
       const defaultUser = await this.prisma.user.findFirst({
         where: { status: 'ACTIVE' },
-        orderBy: { createdAt: 'asc' }
+        orderBy: { createdAt: 'asc' },
       });
 
       if (!defaultUser) {
-        throw new NotFoundException('No active user found. Seed database first!');
+        throw new NotFoundException(
+          'No active user found. Seed database first!',
+        );
       }
 
       // 2. Resolve or Bootstrap default portfolio
@@ -143,18 +158,22 @@ export class PersonalizationService {
               instrument: {
                 include: {
                   sector: true,
-                  quotes: { orderBy: { asOf: 'desc' }, take: 1 }
-                }
-              }
-            }
-          }
-        }
+                  quotes: { orderBy: { asOf: 'desc' }, take: 1 },
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!portfolio) {
         // Find HPG & FPT instruments seeded in database
-        const fpt = await this.prisma.instrument.findFirst({ where: { symbol: 'FPT' } });
-        const hpg = await this.prisma.instrument.findFirst({ where: { symbol: 'HPG' } });
+        const fpt = await this.prisma.instrument.findFirst({
+          where: { symbol: 'FPT' },
+        });
+        const hpg = await this.prisma.instrument.findFirst({
+          where: { symbol: 'HPG' },
+        });
 
         if (fpt && hpg) {
           portfolio = await this.prisma.portfolio.create({
@@ -165,9 +184,9 @@ export class PersonalizationService {
               positions: {
                 create: [
                   { instrumentId: fpt.id, quantity: 1500, averageCost: 75000 },
-                  { instrumentId: hpg.id, quantity: 4500, averageCost: 24000 }
-                ]
-              }
+                  { instrumentId: hpg.id, quantity: 4500, averageCost: 24000 },
+                ],
+              },
             },
             include: {
               positions: {
@@ -175,12 +194,12 @@ export class PersonalizationService {
                   instrument: {
                     include: {
                       sector: true,
-                      quotes: { orderBy: { asOf: 'desc' }, take: 1 }
-                    }
-                  }
-                }
-              }
-            }
+                      quotes: { orderBy: { asOf: 'desc' }, take: 1 },
+                    },
+                  },
+                },
+              },
+            },
           });
         }
       }
@@ -196,12 +215,12 @@ export class PersonalizationService {
               instrument: {
                 include: {
                   sector: true,
-                  quotes: { orderBy: { asOf: 'desc' }, take: 1 }
-                }
-              }
-            }
-          }
-        }
+                  quotes: { orderBy: { asOf: 'desc' }, take: 1 },
+                },
+              },
+            },
+          },
+        },
       });
     }
 
@@ -217,44 +236,49 @@ export class PersonalizationService {
           hhi: 0,
           concentrationRating: 'EMPTY',
           allocation: [],
-          thesis: 'Hãy nạp các giao dịch mua/bán vào danh mục để kích hoạt phân tích đa dạng hóa danh mục!'
-        }
+          thesis:
+            'Hãy nạp các giao dịch mua/bán vào danh mục để kích hoạt phân tích đa dạng hóa danh mục!',
+        },
       };
     }
 
     // 1. Calculate Total Value of Portfolio Positions
     let totalPortfolioValue = 0;
-    const positionValues = portfolio.positions.map(pos => {
-      const price = pos.instrument.quotes[0] ? Number(pos.instrument.quotes[0].price) : Number(pos.averageCost);
+    const positionValues = portfolio.positions.map((pos) => {
+      const price = pos.instrument.quotes[0]
+        ? Number(pos.instrument.quotes[0].price)
+        : Number(pos.averageCost);
       const value = Number(pos.quantity) * price;
       totalPortfolioValue += value;
       return {
         symbol: pos.instrument.symbol,
         sectorName: pos.instrument.sector?.name || 'Chưa phân loại',
-        value
+        value,
       };
     });
 
     // 2. Compute Herfindahl-Hirschman Index (HHI) for Stock Concentration
     // Equation: HHI = Sum(s_i ^ 2), where s_i is percentage of total portfolio value
     let hhi = 0;
-    positionValues.forEach(pos => {
+    positionValues.forEach((pos) => {
       const percentage = (pos.value / totalPortfolioValue) * 100;
       hhi += percentage * percentage;
     });
 
     // 3. Compute Sector Exposure Allocations
     const sectorMap = new Map<string, number>();
-    positionValues.forEach(pos => {
+    positionValues.forEach((pos) => {
       const currentVal = sectorMap.get(pos.sectorName) || 0;
       sectorMap.set(pos.sectorName, currentVal + pos.value);
     });
 
-    const allocation = Array.from(sectorMap.entries()).map(([sectorName, val]) => ({
-      sector: sectorName,
-      value: val,
-      percentage: Number(((val / totalPortfolioValue) * 100).toFixed(2))
-    })).sort((a, b) => b.percentage - a.percentage);
+    const allocation = Array.from(sectorMap.entries())
+      .map(([sectorName, val]) => ({
+        sector: sectorName,
+        value: val,
+        percentage: Number(((val / totalPortfolioValue) * 100).toFixed(2)),
+      }))
+      .sort((a, b) => b.percentage - a.percentage);
 
     // 4. Determine Concentration Risk Rating
     let rating = 'DIVERSIFIED'; // HHI < 1500
@@ -279,17 +303,21 @@ export class PersonalizationService {
     }
 
     // Capture Snapshot record in the background asynchronously for analytics history
-    this.prisma.portfolioSnapshot.create({
-      data: {
-        portfolioId: portfolio.id,
-        totalValue: totalPortfolioValue,
-        cashBalance: 0,
-        unrealizedPnl: 0,
-        realizedPnl: 0,
-        volatility: 0.15, // placeholder risk stdDev
-        allocation: allocation as any,
-      }
-    }).catch(err => this.logger.error('Failed to save portfolio snapshot:', err));
+    this.prisma.portfolioSnapshot
+      .create({
+        data: {
+          portfolioId: portfolio.id,
+          totalValue: totalPortfolioValue,
+          cashBalance: 0,
+          unrealizedPnl: 0,
+          realizedPnl: 0,
+          volatility: 0.15, // placeholder risk stdDev
+          allocation: allocation as any,
+        },
+      })
+      .catch((err) =>
+        this.logger.error('Failed to save portfolio snapshot:', err),
+      );
 
     return {
       success: true,
@@ -300,8 +328,8 @@ export class PersonalizationService {
         concentrationRating: rating,
         concentrationLabel: ratingText,
         allocation,
-        thesis
-      }
+        thesis,
+      },
     };
   }
 }

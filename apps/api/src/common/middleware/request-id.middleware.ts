@@ -4,16 +4,15 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class RequestIdMiddleware implements NestMiddleware {
-    use(req: Request, res: Response, next: NextFunction) {
-        const requestId =
-            (req.headers['x-request-id'] as string) || uuidv4();
+  use(req: Request, res: Response, next: NextFunction) {
+    const requestId = (req.headers['x-request-id'] as string) || uuidv4();
 
-        // Set on request for downstream access
-        req.headers['x-request-id'] = requestId;
+    // Set on request for downstream access
+    req.headers['x-request-id'] = requestId;
 
-        // Set on response for client correlation
-        res.setHeader('X-Request-Id', requestId);
+    // Set on response for client correlation
+    res.setHeader('X-Request-Id', requestId);
 
-        next();
-    }
+    next();
+  }
 }
