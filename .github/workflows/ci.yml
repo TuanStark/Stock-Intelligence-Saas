@@ -1,0 +1,45 @@
+name: CI Check
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch origin main
+        run: git fetch --no-tags --prune --depth=1 origin main
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.2.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm turbo lint --filter=...[origin/main]
+
+      - name: Type Check
+        run: pnpm turbo type-check --filter=...[origin/main]
+
+      - name: Unit Tests
+        run: pnpm turbo test --filter=...[origin/main]
+
+      - name: Build Check
+        run: pnpm turbo build --filter=...[origin/main]

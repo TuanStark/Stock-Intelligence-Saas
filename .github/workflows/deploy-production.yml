@@ -1,0 +1,148 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io/${{ github.repository }}
+  DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.2.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run All Tests
+        run: pnpm turbo test
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push API Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/Dockerfile.api
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/stock-intel-api:${{ github.sha }}
+            ${{ env.REGISTRY }}/stock-intel-api:latest
+            ${{ env.DOCKERHUB_REPO }}/stock-intel-api:${{ github.sha }}
+            ${{ env.DOCKERHUB_REPO }}/stock-intel-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Web Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/Dockerfile.web
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/stock-intel-web:${{ github.sha }}
+            ${{ env.REGISTRY }}/stock-intel-web:latest
+            ${{ env.DOCKERHUB_REPO }}/stock-intel-web:${{ github.sha }}
+            ${{ env.DOCKERHUB_REPO }}/stock-intel-web:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Worker Ingestion Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/Dockerfile.worker
+          build-args: WORKER=ingestion
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/stock-intel-worker-ingestion:${{ github.sha }}
+            ${{ env.REGISTRY }}/stock-intel-worker-ingestion:latest
+            ${{ env.DOCKERHUB_REPO }}/stock-intel-worker-ingestion:${{ github.sha }}
+            ${{ env.DOCKERHUB_REPO }}/stock-intel-worker-ingestion:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Worker Processing Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/Dockerfile.worker
+          build-args: WORKER=processing
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/stock-intel-worker-processing:${{ github.sha }}
+            ${{ env.REGISTRY }}/stock-intel-worker-processing:latest
+            ${{ env.DOCKERHUB_REPO }}/stock-intel-worker-processing:${{ github.sha }}
+            ${{ env.DOCKERHUB_REPO }}/stock-intel-worker-processing:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # deploy-production:
+  #   needs: build-and-push
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 20
+  #   environment:
+  #     name: production
+  #     url: https://stockintel.com
+
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - uses: pnpm/action-setup@v4
+  #       with:
+  #         version: 11.2.2
+
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #         cache: pnpm
+
+  #     - run: pnpm install --frozen-lockfile
+
+  #     - name: Run Database Migrations
+  #       env:
+  #         DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+  #       run: |
+  #         pnpm --filter @stock-intel/db exec prisma migrate deploy
+
+  #     - name: Deploy to Server via SSH
+  #       uses: appleboy/ssh-action@v1.0.0
+  #       with:
+  #         host: ${{ secrets.PRODUCTION_SSH_HOST }}
+  #         username: ${{ secrets.PRODUCTION_SSH_USER }}
+  #         key: ${{ secrets.PRODUCTION_SSH_KEY }}
+  #         script: |
+  #           cd /app/stock-intelligence
+  #           # Pull latest built production images
+  #           docker compose -f infra/docker/docker-compose.prod.yml pull
+  #           # Gracefully restart application containers without service downtime
+  #           docker compose -f infra/docker/docker-compose.prod.yml up -d
