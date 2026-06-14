@@ -110,19 +110,28 @@ jobs:
 
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
           host: ${{ secrets.PRODUCTION_SSH_HOST }}
           username: ${{ secrets.PRODUCTION_SSH_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
           script: |
             pwd
             whoami
             ls -la
             cd /app/stock-intelligence/production
             
-            # Export production variables
+            # Export production variables (Docker Hub Registry Prefix)
             export IMAGE_TAG=${{ github.sha }}
-            export REGISTRY_PREFIX=${{ env.REGISTRY }}/${{ env.REPO_LOWER }}
+            export REGISTRY_PREFIX=${{ env.DOCKERHUB_USERNAME }}
+            
+            # Log in to Docker Hub on the server (if credentials are provided)
+            if [ ! -z "$DOCKERHUB_USERNAME" ] && [ ! -z "$DOCKERHUB_TOKEN" ]; then
+              echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            fi
             
             # Pull latest built production images
             docker compose -f docker-compose.yml pull
