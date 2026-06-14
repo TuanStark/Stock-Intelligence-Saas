@@ -6,146 +6,219 @@ on:
       - main
 
 env:
-  REGISTRY: ghcr.io/${{ github.repository }}
-  DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_USERNAME }}
+  REGISTRY: ghcr.io
 
 jobs:
   build-and-push:
+    name: Build & Push Matrix
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api
+            file: infra/docker/Dockerfile.api
+            context: .
+            build-args: ""
+          - service: web
+            file: infra/docker/Dockerfile.web
+            context: .
+            build-args: ""
+          - service: worker-ingestion
+            file: infra/docker/Dockerfile.worker
+            context: .
+            build-args: "WORKER=ingestion"
+          - service: worker-processing
+            file: infra/docker/Dockerfile.worker
+            context: .
+            build-args: "WORKER=processing"
+          - service: worker-ai
+            file: infra/docker/Dockerfile.worker
+            context: .
+            build-args: "WORKER=ai"
+          - service: worker-payment
+            file: infra/docker/Dockerfile.worker
+            context: .
+            build-args: "WORKER=payment"
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.2.2
+      - name: Lowercase Repository Name for Docker
+        run: |
+          echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma Client
-        run: pnpm db:generate
-
-      - name: Run All Tests
-        run: pnpm turbo test
-
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
+
+      - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Log in to Docker Hub
+      - name: Log in to Docker Hub (Optional)
+        if: ${{ secrets.DOCKERHUB_USERNAME != '' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push API Image
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: infra/docker/Dockerfile.api
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          build-args: ${{ matrix.build-args }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/stock-intel-api:${{ github.sha }}
-            ${{ env.REGISTRY }}/stock-intel-api:latest
-            ${{ env.DOCKERHUB_REPO }}/stock-intel-api:${{ github.sha }}
-            ${{ env.DOCKERHUB_REPO }}/stock-intel-api:latest
+            ${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/stock-intel-${{ matrix.service }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/stock-intel-${{ matrix.service }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME != '' && format('{0}/stock-intel-{1}:{2}', secrets.DOCKERHUB_USERNAME, matrix.service, github.sha) || '' }}
+            ${{ secrets.DOCKERHUB_USERNAME != '' && format('{0}/stock-intel-{1}:latest', secrets.DOCKERHUB_USERNAME, matrix.service) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and Push Web Image
-        uses: docker/build-push-action@v5
+  deploy-production:
+    name: Deploy to Production
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://stockintel.com # Replace with your production domain
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Lowercase Repository Name for Docker
+        run: |
+          echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
         with:
-          context: .
-          file: infra/docker/Dockerfile.web
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/stock-intel-web:${{ github.sha }}
-            ${{ env.REGISTRY }}/stock-intel-web:latest
-            ${{ env.DOCKERHUB_REPO }}/stock-intel-web:${{ github.sha }}
-            ${{ env.DOCKERHUB_REPO }}/stock-intel-web:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          version: 11.2.2
 
-      - name: Build and Push Worker Ingestion Image
-        uses: docker/build-push-action@v5
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          context: .
-          file: infra/docker/Dockerfile.worker
-          build-args: WORKER=ingestion
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/stock-intel-worker-ingestion:${{ github.sha }}
-            ${{ env.REGISTRY }}/stock-intel-worker-ingestion:latest
-            ${{ env.DOCKERHUB_REPO }}/stock-intel-worker-ingestion:${{ github.sha }}
-            ${{ env.DOCKERHUB_REPO }}/stock-intel-worker-ingestion:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          node-version: 22
+          cache: pnpm
 
-      - name: Build and Push Worker Processing Image
-        uses: docker/build-push-action@v5
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Database Migrations
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          pnpm --filter @stock-intel/db exec prisma migrate deploy
+
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.0
         with:
-          context: .
-          file: infra/docker/Dockerfile.worker
-          build-args: WORKER=processing
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/stock-intel-worker-processing:${{ github.sha }}
-            ${{ env.REGISTRY }}/stock-intel-worker-processing:latest
-            ${{ env.DOCKERHUB_REPO }}/stock-intel-worker-processing:${{ github.sha }}
-            ${{ env.DOCKERHUB_REPO }}/stock-intel-worker-processing:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          host: ${{ secrets.PRODUCTION_SSH_HOST }}
+          username: ${{ secrets.PRODUCTION_SSH_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /app/stock-intelligence
+            
+            # Export production variables
+            export IMAGE_TAG=${{ github.sha }}
+            export REGISTRY_PREFIX=${{ env.REGISTRY }}/${{ env.REPO_LOWER }}
+            
+            # Pull latest built production images
+            docker compose -f infra/docker/docker-compose.prod.yml pull
+            
+            # Recreate container services gracefully
+            docker compose -f infra/docker/docker-compose.prod.yml up -d --remove-orphans
+            
+            # Verification loop
+            echo "Waiting for services to initialize..."
+            sleep 10
+            
+            services=(stockintel-api stockintel-web stockintel-worker-ingestion stockintel-worker-processing stockintel-worker-ai stockintel-worker-payment)
+            failed=0
+            for service in "${services[@]}"; do
+              running=$(docker inspect --format='{{.State.Running}}' $service 2>/dev/null || echo "false")
+              if [ "$running" != "true" ]; then
+                echo "❌ Service $service is NOT running!"
+                failed=1
+              else
+                health=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}healthy{{end}}' $service 2>/dev/null || echo "healthy")
+                if [ "$health" = "unhealthy" ]; then
+                  echo "❌ Service $service is running but UNHEALTHY!"
+                  failed=1
+                else
+                  echo "✅ Service $service is running and healthy."
+                fi
+              fi
+            done
+            
+            if [ $failed -eq 1 ]; then
+              echo "❌ Production health check failed!"
+              exit 1
+            fi
+            echo "🚀 All services verified healthy!"
 
-  # deploy-production:
-  #   needs: build-and-push
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 20
-  #   environment:
-  #     name: production
-  #     url: https://stockintel.com
+      - name: Send Success Notification
+        if: success() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          payload=$(jq -n \
+            --arg title "🚀 Stock Intelligence SaaS Deployed Successfully!" \
+            --arg color "#2eb886" \
+            --arg commit "${{ github.event.head_commit.message }}" \
+            --arg author "${{ github.actor }}" \
+            --arg sha "sha-${{ github.sha }}" \
+            --arg env "Production" \
+            --arg repo "${{ github.repository }}" \
+            '{
+              attachments: [{
+                color: $color,
+                title: $title,
+                fields: [
+                  { title: "Commit Message", value: $commit, short: false },
+                  { title: "Author", value: $author, short: true },
+                  { title: "Version", value: $sha, short: true },
+                  { title: "Environment", value: $env, short: true },
+                  { title: "Repository", value: $repo, short: true }
+                ]
+              }]
+            }')
+          curl -H "Content-Type: application/json" -X POST -d "$payload" $SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - uses: pnpm/action-setup@v4
-  #       with:
-  #         version: 11.2.2
-
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 22
-  #         cache: pnpm
-
-  #     - run: pnpm install --frozen-lockfile
-
-  #     - name: Run Database Migrations
-  #       env:
-  #         DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-  #       run: |
-  #         pnpm --filter @stock-intel/db exec prisma migrate deploy
-
-  #     - name: Deploy to Server via SSH
-  #       uses: appleboy/ssh-action@v1.0.0
-  #       with:
-  #         host: ${{ secrets.PRODUCTION_SSH_HOST }}
-  #         username: ${{ secrets.PRODUCTION_SSH_USER }}
-  #         key: ${{ secrets.PRODUCTION_SSH_KEY }}
-  #         script: |
-  #           cd /app/stock-intelligence
-  #           # Pull latest built production images
-  #           docker compose -f infra/docker/docker-compose.prod.yml pull
-  #           # Gracefully restart application containers without service downtime
-  #           docker compose -f infra/docker/docker-compose.prod.yml up -d
+      - name: Send Failure Notification
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          payload=$(jq -n \
+            --arg title "❌ Production Deployment Failed!" \
+            --arg color "#a30200" \
+            --arg commit "${{ github.event.head_commit.message }}" \
+            --arg author "${{ github.actor }}" \
+            --arg env "Production" \
+            --arg run_url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{
+              attachments: [{
+                color: $color,
+                title: $title,
+                fields: [
+                  { title: "Commit Message", value: $commit, short: false },
+                  { title: "Author", value: $author, short: true },
+                  { title: "Environment", value: $env, short: true },
+                  { title: "Check Run", value: $run_url, short: false }
+                ]
+              }]
+            }')
+          curl -H "Content-Type: application/json" -X POST -d "$payload" $SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

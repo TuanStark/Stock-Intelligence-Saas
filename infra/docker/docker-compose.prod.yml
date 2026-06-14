@@ -62,9 +62,7 @@ services:
 
   # ─── NestJS API Server ──────────────────────────────────────
   api:
-    build:
-      context: ../../
-      dockerfile: infra/docker/Dockerfile.api
+    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-api:${IMAGE_TAG:-latest}
     container_name: stockintel-api
     restart: unless-stopped
     env_file:
@@ -86,11 +84,7 @@ services:
 
   # ─── Worker Ingestion ───────────────────────────────────────
   worker-ingestion:
-    build:
-      context: ../../
-      dockerfile: infra/docker/Dockerfile.worker
-      args:
-        - WORKER=ingestion
+    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-worker-ingestion:${IMAGE_TAG:-latest}
     container_name: stockintel-worker-ingestion
     restart: unless-stopped
     env_file:
@@ -110,11 +104,7 @@ services:
 
   # ─── Worker Processing ──────────────────────────────────────
   worker-processing:
-    build:
-      context: ../../
-      dockerfile: infra/docker/Dockerfile.worker
-      args:
-        - WORKER=processing
+    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-worker-processing:${IMAGE_TAG:-latest}
     container_name: stockintel-worker-processing
     restart: unless-stopped
     env_file:
@@ -132,11 +122,54 @@ services:
     networks:
       - stockintel
 
+  # ─── Worker AI ──────────────────────────────────────────────
+  worker-ai:
+    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-worker-ai:${IMAGE_TAG:-latest}
+    container_name: stockintel-worker-ai
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LITELLM_API_BASE=${LITELLM_API_BASE}
+      - OPENAI_MODEL=${OPENAI_MODEL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel
+
+  # ─── Worker Payment ─────────────────────────────────────────
+  worker-payment:
+    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-worker-payment:${IMAGE_TAG:-latest}
+    container_name: stockintel-worker-payment
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PAYOS_WEBHOOK_SECRET=${PAYOS_WEBHOOK_SECRET}
+      - SEPAY_WEBHOOK_SECRET=${SEPAY_WEBHOOK_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel
+
   # ─── Next.js Frontend Web ───────────────────────────────────
   web:
-    build:
-      context: ../../
-      dockerfile: infra/docker/Dockerfile.web
+    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-web:${IMAGE_TAG:-latest}
     container_name: stockintel-web
     restart: unless-stopped
     env_file:
