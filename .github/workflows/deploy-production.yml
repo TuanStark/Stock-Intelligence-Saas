@@ -7,10 +7,8 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 env:
-  REGISTRY: ghcr.io
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
@@ -52,25 +50,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Lowercase Repository Name for Docker
-        run: |
-          echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Log in to Docker Hub (Optional)
-        if: ${{ env.DOCKERHUB_USERNAME != '' }}
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -84,10 +70,8 @@ jobs:
           build-args: ${{ matrix.build-args }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/stock-intel-${{ matrix.service }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.REPO_LOWER }}/stock-intel-${{ matrix.service }}:latest
-            ${{ env.DOCKERHUB_USERNAME != '' && format('{0}/stock-intel-{1}:{2}', env.DOCKERHUB_USERNAME, matrix.service, github.sha) || '' }}
-            ${{ env.DOCKERHUB_USERNAME != '' && format('{0}/stock-intel-{1}:latest', env.DOCKERHUB_USERNAME, matrix.service) || '' }}
+            ${{ env.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:${{ github.sha }}
+            ${{ env.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

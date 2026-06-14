@@ -62,7 +62,7 @@ services:
 
   # ─── NestJS API Server ──────────────────────────────────────
   api:
-    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-api:${IMAGE_TAG:-latest}
+    image: ${REGISTRY_PREFIX:-tuanstark}/stock-intel-api:${IMAGE_TAG:-latest}
     container_name: stockintel-api
     restart: unless-stopped
     env_file:
@@ -84,7 +84,7 @@ services:
 
   # ─── Worker Ingestion ───────────────────────────────────────
   worker-ingestion:
-    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-worker-ingestion:${IMAGE_TAG:-latest}
+    image: ${REGISTRY_PREFIX:-tuanstark}/stock-intel-worker-ingestion:${IMAGE_TAG:-latest}
     container_name: stockintel-worker-ingestion
     restart: unless-stopped
     env_file:
@@ -104,7 +104,7 @@ services:
 
   # ─── Worker Processing ──────────────────────────────────────
   worker-processing:
-    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-worker-processing:${IMAGE_TAG:-latest}
+    image: ${REGISTRY_PREFIX:-tuanstark}/stock-intel-worker-processing:${IMAGE_TAG:-latest}
     container_name: stockintel-worker-processing
     restart: unless-stopped
     env_file:
@@ -124,7 +124,7 @@ services:
 
   # ─── Worker AI ──────────────────────────────────────────────
   worker-ai:
-    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-worker-ai:${IMAGE_TAG:-latest}
+    image: ${REGISTRY_PREFIX:-tuanstark}/stock-intel-worker-ai:${IMAGE_TAG:-latest}
     container_name: stockintel-worker-ai
     restart: unless-stopped
     env_file:
@@ -147,7 +147,7 @@ services:
 
   # ─── Worker Payment ─────────────────────────────────────────
   worker-payment:
-    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-worker-payment:${IMAGE_TAG:-latest}
+    image: ${REGISTRY_PREFIX:-tuanstark}/stock-intel-worker-payment:${IMAGE_TAG:-latest}
     container_name: stockintel-worker-payment
     restart: unless-stopped
     env_file:
@@ -169,7 +169,7 @@ services:
 
   # ─── Next.js Frontend Web ───────────────────────────────────
   web:
-    image: ${REGISTRY_PREFIX:-ghcr.io/tuanstark/stock-intelligence-saas}/stock-intel-web:${IMAGE_TAG:-latest}
+    image: ${REGISTRY_PREFIX:-tuanstark}/stock-intel-web:${IMAGE_TAG:-latest}
     container_name: stockintel-web
     restart: unless-stopped
     env_file:
