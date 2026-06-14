@@ -118,7 +118,7 @@ jobs:
             fi
             
             # Pull latest built production images
-            docker compose -f docker-compose.yml pull
+            docker compose -f docker-compose.yml pull api web worker-ingestion worker-processing worker-ai worker-payment
             
             # Run database migrations using the newly pulled api image
             docker compose -f docker-compose.yml run --rm api npx prisma migrate deploy --schema=./packages/db/prisma/schema.prisma
