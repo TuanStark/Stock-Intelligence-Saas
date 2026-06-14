@@ -10,7 +10,7 @@ COPY apps/worker-${WORKER}/ apps/worker-${WORKER}/
 
 RUN pnpm install --frozen-lockfile
 RUN DATABASE_URL=postgresql://mock:mock@localhost:5432/mock_db pnpm db:generate
-RUN pnpm exec turbo build --filter=@stock-intel/worker-${WORKER}
+RUN pnpm --filter @stock-intel/worker-${WORKER}... build
 
 # ─── Production stage ────────────────────────────────────
 FROM node:22-alpine AS runner
