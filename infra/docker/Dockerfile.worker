@@ -4,7 +4,7 @@ ARG WORKER=ingestion
 RUN corepack enable pnpm
 
 WORKDIR /app
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
 COPY packages/ packages/
 COPY apps/worker-${WORKER}/ apps/worker-${WORKER}/
 
