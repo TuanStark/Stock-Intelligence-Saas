@@ -1,8 +1,11 @@
 # ─── Build stage ─────────────────────────────────────────
 FROM node:22-alpine AS builder
+RUN apk add --no-cache openssl
 RUN corepack enable pnpm
 
 WORKDIR /app
+RUN echo "node-linker=hoisted" > .npmrc
+
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
 COPY packages/config/package.json ./packages/config/
 COPY packages/contracts/package.json ./packages/contracts/
@@ -10,10 +13,11 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/utils/package.json ./packages/utils/
 COPY apps/web/package.json ./apps/web/
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 COPY packages/ packages/
 COPY apps/web/ apps/web/
+
 RUN DATABASE_URL=postgresql://mock:mock@localhost:5432/mock_db pnpm db:generate
 RUN pnpm --filter @stock-intel/web... build
 
@@ -22,6 +26,7 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+RUN apk add --no-cache openssl
 
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
