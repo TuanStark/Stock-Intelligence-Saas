@@ -125,13 +125,13 @@ jobs:
             export REGISTRY_PREFIX=${{ env.REGISTRY }}/${{ env.REPO_LOWER }}
             
             # Pull latest built production images
-            docker compose -f infra/docker/docker-compose.prod.yml pull
+            docker compose -f infra/docker/docker-compose.yml pull
             
             # Run database migrations using the newly pulled api image
-            docker compose -f infra/docker/docker-compose.prod.yml run --rm api npx prisma migrate deploy --schema=./packages/db/prisma/schema.prisma
+            docker compose -f infra/docker/docker-compose.yml run --rm api npx prisma migrate deploy --schema=./packages/db/prisma/schema.prisma
             
             # Recreate container services gracefully
-            docker compose -f infra/docker/docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f infra/docker/docker-compose.yml up -d --remove-orphans
             
             # Verification loop
             echo "Waiting for services to initialize..."
