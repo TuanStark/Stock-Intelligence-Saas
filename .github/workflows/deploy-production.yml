@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   REGISTRY: ghcr.io
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -134,7 +138,7 @@ jobs:
             pwd
             whoami
             ls -la
-            cd /app/stock-intelligence
+            cd /app/stock-intelligence/production
             
             # Export production variables
             export IMAGE_TAG=${{ github.sha }}
