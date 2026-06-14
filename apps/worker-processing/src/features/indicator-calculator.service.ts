@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { RSI, MACD, SMA, EMA, BollingerBands } from 'technicalindicators';
+import { Injectable, Logger } from "@nestjs/common";
+import { RSI, MACD, SMA, EMA, BollingerBands } from "technicalindicators";
 
 @Injectable()
 export class IndicatorCalculatorService {
@@ -8,7 +8,9 @@ export class IndicatorCalculatorService {
   // Tính toán chỉ số sức mạnh tương đối RSI.
   calculateRSI(closes: number[], period = 14): number[] {
     if (closes.length < period) {
-      this.logger.warn(`Not enough data to calculate RSI (needs at least ${period} closes, got ${closes.length})`);
+      this.logger.warn(
+        `Not enough data to calculate RSI (needs at least ${period} closes, got ${closes.length})`,
+      );
       return [];
     }
     return RSI.calculate({ values: closes, period });
@@ -18,7 +20,9 @@ export class IndicatorCalculatorService {
   calculateMACD(closes: number[], fast = 12, slow = 26, signal = 9): any[] {
     const minCloses = slow + signal;
     if (closes.length < minCloses) {
-      this.logger.warn(`Not enough data to calculate MACD (needs at least ${minCloses} closes, got ${closes.length})`);
+      this.logger.warn(
+        `Not enough data to calculate MACD (needs at least ${minCloses} closes, got ${closes.length})`,
+      );
       return [];
     }
     return MACD.calculate({
@@ -27,7 +31,7 @@ export class IndicatorCalculatorService {
       slowPeriod: slow,
       signalPeriod: signal,
       SimpleMAOscillator: false,
-      SimpleMASignal: false
+      SimpleMASignal: false,
     });
   }
 

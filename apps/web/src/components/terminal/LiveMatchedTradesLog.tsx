@@ -1,14 +1,17 @@
-import React from 'react';
-import { Activity } from 'lucide-react';
-import { TradeLog } from '@/lib/hooks/useStockWebSocket';
-import { formatCurrency } from '@/lib/helpers/price.helper';
+import React from "react";
+import { Activity } from "lucide-react";
+import { TradeLog } from "@/lib/hooks/useStockWebSocket";
+import { formatCurrency } from "@/lib/helpers/price.helper";
 
 interface LiveMatchedTradesLogProps {
   trades: TradeLog[];
   tc: number;
 }
 
-export const LiveMatchedTradesLog: React.FC<LiveMatchedTradesLogProps> = ({ trades, tc }) => {
+export const LiveMatchedTradesLog: React.FC<LiveMatchedTradesLogProps> = ({
+  trades,
+  tc,
+}) => {
   const totalVolume = trades.reduce((acc, t) => acc + t.volume, 0) || 45300;
   const buyPercent = 55; // Standard buy baseline split
 
@@ -18,9 +21,12 @@ export const LiveMatchedTradesLog: React.FC<LiveMatchedTradesLogProps> = ({ trad
         <h3 className="font-outfit text-sm font-bold flex items-center gap-2 text-[#00c58e] uppercase tracking-wider m-0">
           <Activity size={16} /> Nhật ký Khớp lệnh Live
         </h3>
-        
+
         <div className="flex gap-2 text-[9px] font-bold text-[#7b8a9b] font-mono">
-          <span>KL: <span className="text-white">{formatCurrency(totalVolume)}</span></span>
+          <span>
+            KL:{" "}
+            <span className="text-white">{formatCurrency(totalVolume)}</span>
+          </span>
           <span className="text-up">M: {buyPercent}%</span>
           <span className="text-down">B: {100 - buyPercent}%</span>
         </div>
@@ -36,33 +42,53 @@ export const LiveMatchedTradesLog: React.FC<LiveMatchedTradesLogProps> = ({ trad
               <th className="text-right pr-2 font-semibold">KL</th>
             </tr>
           </thead>
-          
+
           <tbody>
             {trades.length === 0 ? (
               <tr>
-                <td colSpan={4} className="text-center p-8 text-text-muted font-bold text-xs italic">
+                <td
+                  colSpan={4}
+                  className="text-center p-8 text-text-muted font-bold text-xs italic"
+                >
                   Không có dữ liệu
                 </td>
               </tr>
             ) : (
               trades.map((t, idx) => {
                 const diff = Number(t.price) - tc;
-                const priceColor = t.price > tc ? 'text-up' : t.price < tc ? 'text-down' : 'text-ref';
-                const sideColor = t.type === 'BUY' ? 'text-up' : 'text-down';
+                const priceColor =
+                  t.price > tc
+                    ? "text-up"
+                    : t.price < tc
+                      ? "text-down"
+                      : "text-ref";
+                const sideColor = t.type === "BUY" ? "text-up" : "text-down";
 
                 return (
-                  <tr key={idx} className="h-6 border-b border-white/5 hover:bg-white/2 transition-colors">
-                    <td className="pl-2 text-text-muted font-mono text-[10.5px]">{t.time}</td>
-                    
-                    <td className={`${priceColor} font-extrabold text-right font-mono`}>
+                  <tr
+                    key={idx}
+                    className="h-6 border-b border-white/5 hover:bg-white/2 transition-colors"
+                  >
+                    <td className="pl-2 text-text-muted font-mono text-[10.5px]">
+                      {t.time}
+                    </td>
+
+                    <td
+                      className={`${priceColor} font-extrabold text-right font-mono`}
+                    >
                       {formatCurrency(t.price)}
                     </td>
-                    
-                    <td className={`${diff >= 0 ? 'text-up' : 'text-down'} text-right font-semibold font-mono text-[9px]`}>
-                      {diff >= 0 ? '+' : ''}{formatCurrency(diff)}
+
+                    <td
+                      className={`${diff >= 0 ? "text-up" : "text-down"} text-right font-semibold font-mono text-[9px]`}
+                    >
+                      {diff >= 0 ? "+" : ""}
+                      {formatCurrency(diff)}
                     </td>
-                    
-                    <td className={`text-right pr-2 font-semibold font-mono ${sideColor}`}>
+
+                    <td
+                      className={`text-right pr-2 font-semibold font-mono ${sideColor}`}
+                    >
                       {formatCurrency(t.volume)}
                     </td>
                   </tr>

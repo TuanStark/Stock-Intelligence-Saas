@@ -1,40 +1,41 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useSession } from 'next-auth/react';
-import { useTranslation } from '@/lib/i18n/i18n-context';
-import {
-  Search,
-  ChevronRight,
-  Loader2,
-  Menu,
-  X,
-} from 'lucide-react';
-import Link from 'next/link';
-import { io } from 'socket.io-client';
+import React, { useState, useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
+import { useTranslation } from "@/lib/i18n/i18n-context";
+import { Search, ChevronRight, Loader2, Menu, X } from "lucide-react";
+import Link from "next/link";
+import { io } from "socket.io-client";
 
 // Centralized Axios API Helpers
-import { marketApi } from '@/lib/api/market.api';
-import { watchlistApi } from '@/lib/api/watchlist.api';
-import { alertApi } from '@/lib/api/alert.api';
-import { personalizationApi } from '@/lib/api/personalization.api';
-import { TickerDetailModal } from '@/components/TickerDetailModal';
-import { Sidebar } from '@/components/Sidebar';
-import { TradingBoard } from '@/components/dashboard/TradingBoard';
-import { WatchlistTab } from '@/components/dashboard/WatchlistTab';
-import { SignalsTab } from '@/components/dashboard/SignalsTab';
-import { AlertsTab } from '@/components/dashboard/AlertsTab';
-import { PersonalizationTab } from '@/components/dashboard/PersonalizationTab';
-import { AlertEvent, AlertRule, Mover, SearchResult, Signal } from '@/lib/types/global.type';
-
+import { marketApi } from "@/lib/api/market.api";
+import { watchlistApi } from "@/lib/api/watchlist.api";
+import { alertApi } from "@/lib/api/alert.api";
+import { personalizationApi } from "@/lib/api/personalization.api";
+import { TickerDetailModal } from "@/components/TickerDetailModal";
+import { Sidebar } from "@/components/Sidebar";
+import { TradingBoard } from "@/components/dashboard/TradingBoard";
+import { WatchlistTab } from "@/components/dashboard/WatchlistTab";
+import { SignalsTab } from "@/components/dashboard/SignalsTab";
+import { AlertsTab } from "@/components/dashboard/AlertsTab";
+import { PersonalizationTab } from "@/components/dashboard/PersonalizationTab";
+import {
+  AlertEvent,
+  AlertRule,
+  Mover,
+  SearchResult,
+  Signal,
+} from "@/lib/types/global.type";
 
 export default function Dashboard() {
   const { data: session } = useSession();
   const { t, locale, setLocale } = useTranslation();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'watchlist' | 'signals' | 'alerts' | 'personalization'>('dashboard');
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "watchlist" | "signals" | "alerts" | "personalization"
+  >("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [loadingSearch, setLoadingSearch] = useState(false);
@@ -43,36 +44,38 @@ export default function Dashboard() {
   const [topMovers, setTopMovers] = useState<Mover[]>([]);
   const [recentSignals, setRecentSignals] = useState<Signal[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
 
   // i18n & User State
   const user = session?.user;
   const token = (session as any)?.accessToken;
-  const userTier = (user as any)?.tier || 'FREE';
+  const userTier = (user as any)?.tier || "FREE";
 
   // Watchlist State
   const [watchlistItems, setWatchlistItems] = useState<any[]>([]);
   const [loadingWatchlist, setLoadingWatchlist] = useState(false);
-  const [watchlistInput, setWatchlistInput] = useState('');
+  const [watchlistInput, setWatchlistInput] = useState("");
 
   // Alerts State
   const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
   const [alertEvents, setAlertEvents] = useState<AlertEvent[]>([]);
   const [loadingAlerts, setLoadingAlerts] = useState(false);
-  const [alertSymbol, setAlertSymbol] = useState('');
-  const [alertType, setAlertType] = useState('PRICE_ABOVE');
-  const [alertThreshold, setAlertThreshold] = useState('');
+  const [alertSymbol, setAlertSymbol] = useState("");
+  const [alertType, setAlertType] = useState("PRICE_ABOVE");
+  const [alertThreshold, setAlertThreshold] = useState("");
 
   // All Signals Tab State
   const [allSignals, setAllSignals] = useState<Signal[]>([]);
   const [loadingAllSignals, setLoadingAllSignals] = useState(false);
-  const [signalTypeFilter, setSignalTypeFilter] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
+  const [signalTypeFilter, setSignalTypeFilter] = useState<
+    "ALL" | "BUY" | "SELL"
+  >("ALL");
 
   // Personalization MVP States
   const [personalizedFeed, setPersonalizedFeed] = useState<any[]>([]);
   const [portfolioIntel, setPortfolioIntel] = useState<any>(null);
   const [loadingPersonalization, setLoadingPersonalization] = useState(false);
-  const [personalizationError, setPersonalizationError] = useState('');
+  const [personalizationError, setPersonalizationError] = useState("");
 
   // Manual trigger states for AI analysis animation
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -81,17 +84,45 @@ export default function Dashboard() {
   // iBoard Details Modal States
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [flashingSymbols, setFlashingSymbols] = useState<Record<string, 'up' | 'down'>>({});
+  const [flashingSymbols, setFlashingSymbols] = useState<
+    Record<string, "up" | "down">
+  >({});
 
   // SSI iBoard Enhanced States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-  const [boardMarketTab, setBoardMarketTab] = useState<'VN30' | 'HOSE' | 'HNX' | 'UPCOM' | 'WATCHLIST'>('VN30');
+  const [boardMarketTab, setBoardMarketTab] = useState<
+    "VN30" | "HOSE" | "HNX" | "UPCOM" | "WATCHLIST"
+  >("VN30");
   const [boardQuotes, setBoardQuotes] = useState<Record<string, Mover>>({});
   const [indices, setIndices] = useState({
-    vnIndex: { val: 1250.32, change: 15.22, pct: 0.0123, vol: '642.5M', valTraded: '15,230 tỷ' },
-    vn30: { val: 1265.45, change: 18.40, pct: 0.0147, vol: '185.3M', valTraded: '6,850 tỷ' },
-    hnxIndex: { val: 235.15, change: -0.45, pct: -0.0019, vol: '85.2M', valTraded: '1,420 tỷ' },
-    upcomIndex: { val: 92.40, change: 0.12, pct: 0.0013, vol: '45.8M', valTraded: '650 tỷ' },
+    vnIndex: {
+      val: 1250.32,
+      change: 15.22,
+      pct: 0.0123,
+      vol: "642.5M",
+      valTraded: "15,230 tỷ",
+    },
+    vn30: {
+      val: 1265.45,
+      change: 18.4,
+      pct: 0.0147,
+      vol: "185.3M",
+      valTraded: "6,850 tỷ",
+    },
+    hnxIndex: {
+      val: 235.15,
+      change: -0.45,
+      pct: -0.0019,
+      vol: "85.2M",
+      valTraded: "1,420 tỷ",
+    },
+    upcomIndex: {
+      val: 92.4,
+      change: 0.12,
+      pct: 0.0013,
+      vol: "45.8M",
+      valTraded: "650 tỷ",
+    },
   });
 
   const handleAIScan = async () => {
@@ -113,15 +144,21 @@ export default function Dashboard() {
       if (feedRes.success) {
         setPersonalizedFeed(feedRes.data || []);
       }
-      const intelRes = await personalizationApi.getPortfolioIntelligence('default');
+      const intelRes =
+        await personalizationApi.getPortfolioIntelligence("default");
       if (intelRes.success) {
         setPortfolioIntel(intelRes.data);
       }
 
       // Track AI trigger behavior
-      await personalizationApi.trackActivity('INTERACT_AI', undefined, undefined, { type: 'MANUAL_AI_SCAN' });
+      await personalizationApi.trackActivity(
+        "INTERACT_AI",
+        undefined,
+        undefined,
+        { type: "MANUAL_AI_SCAN" },
+      );
     } catch (err) {
-      console.error('Lỗi quét AI:', err);
+      console.error("Lỗi quét AI:", err);
     } finally {
       setAnalysisStep(5);
       setTimeout(() => {
@@ -133,15 +170,15 @@ export default function Dashboard() {
 
   const handleSelectRecommended = async (symbol: string) => {
     try {
-      await personalizationApi.trackActivity('INTERACT_AI', symbol);
+      await personalizationApi.trackActivity("INTERACT_AI", symbol);
     } catch (e) {
-      console.error('Lỗi lưu tương tác AI:', e);
+      console.error("Lỗi lưu tương tác AI:", e);
     }
   };
 
   // Sync Sidebar Collapsed Mode automatically on Dashboard
   useEffect(() => {
-    if (activeTab === 'dashboard') {
+    if (activeTab === "dashboard") {
       setIsSidebarCollapsed(true);
     } else {
       setIsSidebarCollapsed(false);
@@ -150,7 +187,7 @@ export default function Dashboard() {
 
   // Indices fluctuation simulation
   useEffect(() => {
-    if (activeTab !== 'dashboard') return;
+    if (activeTab !== "dashboard") return;
     const idxInterval = setInterval(() => {
       setIndices((prev) => {
         const fluctuate = (item: any) => {
@@ -178,24 +215,27 @@ export default function Dashboard() {
 
   // Fetch Personalization Data (Recommended Feed & Portfolio HHI Intelligence)
   useEffect(() => {
-    if (activeTab !== 'personalization') return;
+    if (activeTab !== "personalization") return;
 
     const fetchPersonalization = async () => {
       setLoadingPersonalization(true);
-      setPersonalizationError('');
+      setPersonalizationError("");
       try {
         const feedRes = await personalizationApi.getFeed();
         if (feedRes.success) {
           setPersonalizedFeed(feedRes.data || []);
         }
 
-        const intelRes = await personalizationApi.getPortfolioIntelligence('default');
+        const intelRes =
+          await personalizationApi.getPortfolioIntelligence("default");
         if (intelRes.success) {
           setPortfolioIntel(intelRes.data);
         }
       } catch (err: any) {
-        console.error('Personalization fetch error:', err);
-        setPersonalizationError('Không thể nạp thông tin phân tích cá nhân hóa.');
+        console.error("Personalization fetch error:", err);
+        setPersonalizationError(
+          "Không thể nạp thông tin phân tích cá nhân hóa.",
+        );
       } finally {
         setLoadingPersonalization(false);
       }
@@ -209,7 +249,7 @@ export default function Dashboard() {
   // 1. Fetch Market Overview
   const loadOverview = async () => {
     try {
-      setErrorMsg('');
+      setErrorMsg("");
       const resData = await marketApi.getOverview();
 
       if (resData.success && resData.data) {
@@ -229,33 +269,47 @@ export default function Dashboard() {
         const initialQuotes: Record<string, Mover> = {};
 
         // Seed HOSE/VN30 baseline
-        movers.forEach(m => {
+        movers.forEach((m) => {
           initialQuotes[m.symbol] = m;
         });
 
         // Seed HNX baseline
         const hnxTickers = [
-          { s: 'SHS', n: 'Sài Gòn - Hà Nội Securities', p: 18500 },
-          { s: 'PVS', n: 'Dầu khí PVS', p: 38000 },
-          { s: 'IDC', n: 'IDICO', p: 55000 },
-          { s: 'CEO', n: 'CEO Group', p: 16000 }
+          { s: "SHS", n: "Sài Gòn - Hà Nội Securities", p: 18500 },
+          { s: "PVS", n: "Dầu khí PVS", p: 38000 },
+          { s: "IDC", n: "IDICO", p: 55000 },
+          { s: "CEO", n: "CEO Group", p: 16000 },
         ];
-        hnxTickers.forEach(t => {
+        hnxTickers.forEach((t) => {
           if (!initialQuotes[t.s]) {
-            initialQuotes[t.s] = { symbol: t.s, name: t.n, price: t.p, change: 100, changePercent: 0.0054, latestSignal: null };
+            initialQuotes[t.s] = {
+              symbol: t.s,
+              name: t.n,
+              price: t.p,
+              change: 100,
+              changePercent: 0.0054,
+              latestSignal: null,
+            };
           }
         });
 
         // Seed UPCOM baseline
         const upcomTickers = [
-          { s: 'ACV', n: 'Cảng hàng không', p: 110000 },
-          { s: 'BSR', n: 'Lọc hóa dầu Bình Sơn', p: 22000 },
-          { s: 'VEA', n: 'Máy động lực', p: 45000 },
-          { s: 'VGI', n: 'Viettel Global', p: 78000 }
+          { s: "ACV", n: "Cảng hàng không", p: 110000 },
+          { s: "BSR", n: "Lọc hóa dầu Bình Sơn", p: 22000 },
+          { s: "VEA", n: "Máy động lực", p: 45000 },
+          { s: "VGI", n: "Viettel Global", p: 78000 },
         ];
-        upcomTickers.forEach(t => {
+        upcomTickers.forEach((t) => {
           if (!initialQuotes[t.s]) {
-            initialQuotes[t.s] = { symbol: t.s, name: t.n, price: t.p, change: -200, changePercent: -0.0025, latestSignal: null };
+            initialQuotes[t.s] = {
+              symbol: t.s,
+              name: t.n,
+              price: t.p,
+              change: -200,
+              changePercent: -0.0025,
+              latestSignal: null,
+            };
           }
         });
 
@@ -273,11 +327,13 @@ export default function Dashboard() {
         }
         setRecentSignals(uniqueSignals);
       } else {
-        setErrorMsg('Failed to load market overview.');
+        setErrorMsg("Failed to load market overview.");
       }
     } catch (err: any) {
-      console.error('Error fetching overview:', err);
-      setErrorMsg('Cannot connect to backend server. Make sure API is running on localhost:3001.');
+      console.error("Error fetching overview:", err);
+      setErrorMsg(
+        "Cannot connect to backend server. Make sure API is running on localhost:3001.",
+      );
     } finally {
       setLoadingData(false);
     }
@@ -291,18 +347,21 @@ export default function Dashboard() {
 
   // 1.5 Real-time dynamic WebSocket price stream updates
   useEffect(() => {
-    const socket = io('http://localhost:3001', {
-      transports: ['websocket', 'polling'],
+    const socket = io("http://localhost:3001", {
+      transports: ["websocket", "polling"],
     });
 
-    socket.on('connect', () => {
-      console.log('🔌 Dashboard connected to real-time WebSockets');
+    socket.on("connect", () => {
+      console.log("🔌 Dashboard connected to real-time WebSockets");
     });
 
-    socket.on('global_market_tick', (tick) => {
+    socket.on("global_market_tick", (tick) => {
       // Trigger real-time flashing highlights
       const isUp = tick.changePercent >= 0;
-      setFlashingSymbols((prev) => ({ ...prev, [tick.symbol]: isUp ? 'up' : 'down' }));
+      setFlashingSymbols((prev) => ({
+        ...prev,
+        [tick.symbol]: isUp ? "up" : "down",
+      }));
       setTimeout(() => {
         setFlashingSymbols((prev) => {
           const copy = { ...prev };
@@ -313,7 +372,14 @@ export default function Dashboard() {
 
       // Update Board Quotes
       setBoardQuotes((prev) => {
-        const existing = prev[tick.symbol] || { symbol: tick.symbol, name: tick.symbol, price: tick.price, change: tick.change, changePercent: tick.changePercent, latestSignal: null };
+        const existing = prev[tick.symbol] || {
+          symbol: tick.symbol,
+          name: tick.symbol,
+          price: tick.price,
+          change: tick.change,
+          changePercent: tick.changePercent,
+          latestSignal: null,
+        };
         return {
           ...prev,
           [tick.symbol]: {
@@ -321,7 +387,7 @@ export default function Dashboard() {
             price: tick.price,
             change: tick.change,
             changePercent: tick.changePercent,
-          }
+          },
         };
       });
 
@@ -351,7 +417,7 @@ export default function Dashboard() {
                 price: tick.price,
                 change: tick.change,
                 changePercent: tick.changePercent,
-              }
+              },
             };
           }
           return item;
@@ -360,14 +426,14 @@ export default function Dashboard() {
     });
 
     return () => {
-      console.log('🔌 Disconnecting dashboard WebSocket');
+      console.log("🔌 Disconnecting dashboard WebSocket");
       socket.disconnect();
     };
   }, []);
 
   // 2. Fetch Watchlist
   useEffect(() => {
-    if (activeTab !== 'watchlist') return;
+    if (activeTab !== "watchlist") return;
 
     const fetchWatchlist = async () => {
       setLoadingWatchlist(true);
@@ -389,12 +455,14 @@ export default function Dashboard() {
             setWatchlistItems(uniqueItems);
           }
         } catch (err) {
-          console.error('Watchlist fetch error:', err);
+          console.error("Watchlist fetch error:", err);
         }
       } else {
         // Guest flow: pull from Local Storage using apiClient detail getter
         try {
-          const localList: string[] = JSON.parse(localStorage.getItem('stock_intel_guest_watchlist') || '[]');
+          const localList: string[] = JSON.parse(
+            localStorage.getItem("stock_intel_guest_watchlist") || "[]",
+          );
           const uniqueSymbols = Array.from(new Set(localList)); // deduplicate guest watchlist symbols
 
           if (uniqueSymbols.length > 0) {
@@ -411,14 +479,24 @@ export default function Dashboard() {
                       price: q ? Number(q.price) : 0,
                       change: q ? Number(q.change) : 0,
                       changePercent: q ? Number(q.changePercent) : 0,
-                      latestSignal: quoteData.data.signals[0] || null
-                    }
+                      latestSignal: quoteData.data.signals[0] || null,
+                    },
                   };
                 }
               } catch (e) {
                 console.error(e);
               }
-              return { id: sym, instrument: { symbol: sym, name: sym, price: 0, change: 0, changePercent: 0, latestSignal: null } };
+              return {
+                id: sym,
+                instrument: {
+                  symbol: sym,
+                  name: sym,
+                  price: 0,
+                  change: 0,
+                  changePercent: 0,
+                  latestSignal: null,
+                },
+              };
             });
             const results = await Promise.all(quotesPromises);
             setWatchlistItems(results);
@@ -437,7 +515,7 @@ export default function Dashboard() {
 
   // 3. Fetch Alerts
   useEffect(() => {
-    if (activeTab !== 'alerts' || !session || !token) return;
+    if (activeTab !== "alerts" || !session || !token) return;
 
     const fetchAlerts = async () => {
       setLoadingAlerts(true);
@@ -448,7 +526,7 @@ export default function Dashboard() {
           setAlertEvents(result.data.events || []);
         }
       } catch (err) {
-        console.error('Alerts fetch error:', err);
+        console.error("Alerts fetch error:", err);
       } finally {
         setLoadingAlerts(false);
       }
@@ -459,7 +537,7 @@ export default function Dashboard() {
 
   // 4. Fetch All AI signals
   useEffect(() => {
-    if (activeTab !== 'signals') return;
+    if (activeTab !== "signals") return;
 
     const fetchAllSignals = async () => {
       setLoadingAllSignals(true);
@@ -469,7 +547,7 @@ export default function Dashboard() {
           setAllSignals(result.data);
         }
       } catch (err) {
-        console.error('Signals fetch error:', err);
+        console.error("Signals fetch error:", err);
       } finally {
         setLoadingAllSignals(false);
       }
@@ -498,7 +576,7 @@ export default function Dashboard() {
         setSearchResults(resData.data);
       }
     } catch (err) {
-      console.error('Search error:', err);
+      console.error("Search error:", err);
     } finally {
       setLoadingSearch(false);
     }
@@ -506,7 +584,7 @@ export default function Dashboard() {
 
   const handleSelectStock = (symbol: string) => {
     setShowAutocomplete(false);
-    setSearchQuery('');
+    setSearchQuery("");
   };
 
   // Add Watchlist Action
@@ -519,22 +597,27 @@ export default function Dashboard() {
       try {
         const result = await watchlistApi.addItem(sym);
         if (result.success) {
-          setWatchlistInput('');
-          setActiveTab('dashboard');
-          setTimeout(() => setActiveTab('watchlist'), 50);
+          setWatchlistInput("");
+          setActiveTab("dashboard");
+          setTimeout(() => setActiveTab("watchlist"), 50);
         }
       } catch (err) {
         console.error(err);
       }
     } else {
-      const currentList = JSON.parse(localStorage.getItem('stock_intel_guest_watchlist') || '[]');
+      const currentList = JSON.parse(
+        localStorage.getItem("stock_intel_guest_watchlist") || "[]",
+      );
       if (!currentList.includes(sym)) {
         currentList.push(sym);
-        localStorage.setItem('stock_intel_guest_watchlist', JSON.stringify(currentList));
+        localStorage.setItem(
+          "stock_intel_guest_watchlist",
+          JSON.stringify(currentList),
+        );
       }
-      setWatchlistInput('');
-      setActiveTab('dashboard');
-      setTimeout(() => setActiveTab('watchlist'), 50);
+      setWatchlistInput("");
+      setActiveTab("dashboard");
+      setTimeout(() => setActiveTab("watchlist"), 50);
     }
   };
 
@@ -543,15 +626,24 @@ export default function Dashboard() {
     if (session && token) {
       try {
         await watchlistApi.removeItem(symbol);
-        setWatchlistItems(watchlistItems.filter(item => item.instrument.symbol !== symbol));
+        setWatchlistItems(
+          watchlistItems.filter((item) => item.instrument.symbol !== symbol),
+        );
       } catch (err) {
         console.error(err);
       }
     } else {
-      const currentList = JSON.parse(localStorage.getItem('stock_intel_guest_watchlist') || '[]');
+      const currentList = JSON.parse(
+        localStorage.getItem("stock_intel_guest_watchlist") || "[]",
+      );
       const filtered = currentList.filter((s: string) => s !== symbol);
-      localStorage.setItem('stock_intel_guest_watchlist', JSON.stringify(filtered));
-      setWatchlistItems(watchlistItems.filter(item => item.instrument.symbol !== symbol));
+      localStorage.setItem(
+        "stock_intel_guest_watchlist",
+        JSON.stringify(filtered),
+      );
+      setWatchlistItems(
+        watchlistItems.filter((item) => item.instrument.symbol !== symbol),
+      );
     }
   };
 
@@ -564,13 +656,13 @@ export default function Dashboard() {
       const result = await alertApi.createAlert(
         alertSymbol.toUpperCase().trim(),
         alertType,
-        parseFloat(alertThreshold)
+        parseFloat(alertThreshold),
       );
       if (result.success) {
-        setAlertSymbol('');
-        setAlertThreshold('');
-        setActiveTab('dashboard');
-        setTimeout(() => setActiveTab('alerts'), 50);
+        setAlertSymbol("");
+        setAlertThreshold("");
+        setActiveTab("dashboard");
+        setTimeout(() => setActiveTab("alerts"), 50);
       }
     } catch (err) {
       console.error(err);
@@ -581,7 +673,7 @@ export default function Dashboard() {
   const handleDeleteAlert = async (ruleId: string) => {
     try {
       await alertApi.deleteAlert(ruleId);
-      setAlertRules(alertRules.filter(r => r.id !== ruleId));
+      setAlertRules(alertRules.filter((r) => r.id !== ruleId));
     } catch (err) {
       console.error(err);
     }
@@ -603,10 +695,15 @@ export default function Dashboard() {
         console.error(err);
       }
     } else {
-      const currentList = JSON.parse(localStorage.getItem('stock_intel_guest_watchlist') || '[]');
+      const currentList = JSON.parse(
+        localStorage.getItem("stock_intel_guest_watchlist") || "[]",
+      );
       if (!currentList.includes(sym)) {
         currentList.push(sym);
-        localStorage.setItem('stock_intel_guest_watchlist', JSON.stringify(currentList));
+        localStorage.setItem(
+          "stock_intel_guest_watchlist",
+          JSON.stringify(currentList),
+        );
       }
       // Re-hydrate local watchlist
       const quoteData = await marketApi.getDetail(sym);
@@ -620,10 +717,13 @@ export default function Dashboard() {
             price: q ? Number(q.price) : 0,
             change: q ? Number(q.change) : 0,
             changePercent: q ? Number(q.changePercent) : 0,
-            latestSignal: quoteData.data.signals[0] || null
-          }
+            latestSignal: quoteData.data.signals[0] || null,
+          },
         };
-        setWatchlistItems(prev => [...prev.filter(item => item.instrument.symbol !== sym), newItem]);
+        setWatchlistItems((prev) => [
+          ...prev.filter((item) => item.instrument.symbol !== sym),
+          newItem,
+        ]);
       }
     }
   };
@@ -631,31 +731,51 @@ export default function Dashboard() {
   // Filter stock lists based on active category
   const getFilteredMoverList = (): Mover[] => {
     let activeSymbols: string[] = [];
-    if (boardMarketTab === 'VN30') {
-      activeSymbols = ['FPT', 'HPG', 'TCB', 'VCB', 'VHM', 'VIC'];
-    } else if (boardMarketTab === 'HOSE') {
-      activeSymbols = ['VCB', 'BID', 'CTG', 'TCB', 'MBB', 'VPB', 'ACB', 'VHM', 'VIC', 'VRE', 'FPT', 'HPG'];
-    } else if (boardMarketTab === 'HNX') {
-      activeSymbols = ['SHS', 'PVS', 'IDC', 'CEO'];
-    } else if (boardMarketTab === 'UPCOM') {
-      activeSymbols = ['ACV', 'BSR', 'VEA', 'VGI'];
-    } else if (boardMarketTab === 'WATCHLIST') {
-      return watchlistItems.map(item => ({
+    if (boardMarketTab === "VN30") {
+      activeSymbols = ["FPT", "HPG", "TCB", "VCB", "VHM", "VIC"];
+    } else if (boardMarketTab === "HOSE") {
+      activeSymbols = [
+        "VCB",
+        "BID",
+        "CTG",
+        "TCB",
+        "MBB",
+        "VPB",
+        "ACB",
+        "VHM",
+        "VIC",
+        "VRE",
+        "FPT",
+        "HPG",
+      ];
+    } else if (boardMarketTab === "HNX") {
+      activeSymbols = ["SHS", "PVS", "IDC", "CEO"];
+    } else if (boardMarketTab === "UPCOM") {
+      activeSymbols = ["ACV", "BSR", "VEA", "VGI"];
+    } else if (boardMarketTab === "WATCHLIST") {
+      return watchlistItems.map((item) => ({
         symbol: item.instrument.symbol,
         name: item.instrument.name,
         price: item.instrument.price,
         change: item.instrument.change,
         changePercent: item.instrument.changePercent,
-        latestSignal: item.instrument.latestSignal
+        latestSignal: item.instrument.latestSignal,
       }));
     }
 
-    return activeSymbols.map(sym => {
+    return activeSymbols.map((sym) => {
       if (boardQuotes[sym]) {
         return boardQuotes[sym];
       }
       // Fallback baseline
-      return { symbol: sym, name: sym, price: 25000, change: 0, changePercent: 0, latestSignal: null };
+      return {
+        symbol: sym,
+        name: sym,
+        price: 25000,
+        change: 0,
+        changePercent: 0,
+        latestSignal: null,
+      };
     });
   };
 
@@ -663,13 +783,13 @@ export default function Dashboard() {
   const renderSparkline = (change: number) => {
     const isUp = change >= 0;
     const points = isUp
-      ? '0,18 10,14 20,20 30,12 40,8 50,11 60,4 70,2'
-      : '0,2 10,8 20,4 30,14 40,11 50,18 60,15 70,22';
+      ? "0,18 10,14 20,20 30,12 40,8 50,11 60,4 70,2"
+      : "0,2 10,8 20,4 30,14 40,11 50,18 60,15 70,22";
     return (
       <svg className="w-10 h-5" viewBox="0 0 70 24">
         <polyline
           fill="none"
-          stroke={isUp ? '#00e676' : '#ff1744'}
+          stroke={isUp ? "#00e676" : "#ff1744"}
           strokeWidth="1.5"
           points={points}
         />
@@ -692,11 +812,11 @@ export default function Dashboard() {
       />
 
       {/* ─── MAIN CONTENT CONTAINER ─── */}
-      <main className={`sidebar-transition pr-6 py-6 min-h-screen flex flex-col w-full ${isSidebarCollapsed
-        ? 'pl-6 md:pl-[100px]'
-        : 'pl-6 md:pl-[300px]'
-        }`}>
-
+      <main
+        className={`sidebar-transition pr-6 py-6 min-h-screen flex flex-col w-full ${
+          isSidebarCollapsed ? "pl-6 md:pl-[100px]" : "pl-6 md:pl-[300px]"
+        }`}
+      >
         {/* ─── TOP HEADER BAR with SEARCH ─── */}
         <header className="flex items-center justify-between gap-4 pb-4 border-b border-board-border">
           <div className="flex items-center gap-3 flex-grow">
@@ -723,12 +843,14 @@ export default function Dashboard() {
                 <Search size={16} className="text-text-muted" />
                 <input
                   type="text"
-                  placeholder={t('common.searchPlaceholder')}
+                  placeholder={t("common.searchPlaceholder")}
                   value={searchQuery}
                   onChange={handleSearchChange}
                   className="bg-transparent border-none outline-none text-text-primary text-sm w-full"
                 />
-                {loadingSearch && <Loader2 size={14} className="animate-spin text-text-muted" />}
+                {loadingSearch && (
+                  <Loader2 size={14} className="animate-spin text-text-muted" />
+                )}
               </div>
 
               {/* Search Autocomplete Panel */}
@@ -736,17 +858,26 @@ export default function Dashboard() {
                 <div className="glass-panel absolute top-full left-0 right-0 mt-2 max-h-[300px] overflow-y-auto p-2 rounded-lg z-50 border border-board-border-active shadow-2xl bg-surface/90 backdrop-blur-md">
                   {searchResults.length === 0 ? (
                     <div className="p-4 text-center text-text-muted text-sm">
-                      {loadingSearch ? 'Searching database...' : 'No symbols found'}
+                      {loadingSearch
+                        ? "Searching database..."
+                        : "No symbols found"}
                     </div>
                   ) : (
                     searchResults.map((item) => (
-                      <Link key={item.id} href={`/instruments/${item.symbol}`} className="no-underline" onClick={() => setShowAutocomplete(false)}>
-                        <button
-                          className="flex items-center justify-between w-full py-2 px-4 rounded-md text-text-primary hover:bg-surface-hover transition-colors text-left"
-                        >
+                      <Link
+                        key={item.id}
+                        href={`/instruments/${item.symbol}`}
+                        className="no-underline"
+                        onClick={() => setShowAutocomplete(false)}
+                      >
+                        <button className="flex items-center justify-between w-full py-2 px-4 rounded-md text-text-primary hover:bg-surface-hover transition-colors text-left">
                           <div>
-                            <span className="font-extrabold text-accent mr-2">{item.symbol}</span>
-                            <span className="text-xs text-text-secondary">{item.name}</span>
+                            <span className="font-extrabold text-accent mr-2">
+                              {item.symbol}
+                            </span>
+                            <span className="text-xs text-text-secondary">
+                              {item.name}
+                            </span>
                           </div>
                           <ChevronRight size={14} className="text-text-muted" />
                         </button>
@@ -759,26 +890,39 @@ export default function Dashboard() {
           </div>
 
           <div className="hidden lg:flex items-center gap-2 py-1 px-3 bg-white/2 border border-white/5 rounded text-xs text-text-muted">
-            <span className="font-semibold text-text-secondary">Trạng thái cổng luồng:</span>
+            <span className="font-semibold text-text-secondary">
+              Trạng thái cổng luồng:
+            </span>
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
             <span className="text-emerald-500 font-bold">CONNECTED</span>
           </div>
         </header>
 
         {/* ─── SSI iBOARD INDICES TICKER STRIP ─── */}
-        {activeTab === 'dashboard' && (
+        {activeTab === "dashboard" && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 py-4 border-b border-board-border bg-[#080b11]/30 rounded-lg mb-4">
             {/* Index 1: VN-INDEX */}
             <div className="flex items-center justify-between px-4 border-r border-board-border/60">
               <div>
-                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">VN-INDEX</span>
-                <span className={`text-base font-extrabold tracking-tight ${indices.vnIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
+                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">
+                  VN-INDEX
+                </span>
+                <span
+                  className={`text-base font-extrabold tracking-tight ${indices.vnIndex.change >= 0 ? "text-up" : "text-down"}`}
+                >
                   {indices.vnIndex.val.toLocaleString()}
                 </span>
-                <span className={`block text-[9px] font-bold ${indices.vnIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
-                  {indices.vnIndex.change >= 0 ? '+' : ''}{indices.vnIndex.change.toLocaleString()} ({indices.vnIndex.change >= 0 ? '+' : ''}{(indices.vnIndex.pct * 100).toFixed(2)}%)
+                <span
+                  className={`block text-[9px] font-bold ${indices.vnIndex.change >= 0 ? "text-up" : "text-down"}`}
+                >
+                  {indices.vnIndex.change >= 0 ? "+" : ""}
+                  {indices.vnIndex.change.toLocaleString()} (
+                  {indices.vnIndex.change >= 0 ? "+" : ""}
+                  {(indices.vnIndex.pct * 100).toFixed(2)}%)
                 </span>
-                <span className="block text-[8px] text-text-muted">KL: {indices.vnIndex.vol} | GT: {indices.vnIndex.valTraded}</span>
+                <span className="block text-[8px] text-text-muted">
+                  KL: {indices.vnIndex.vol} | GT: {indices.vnIndex.valTraded}
+                </span>
               </div>
               <div className="shrink-0 pl-2">
                 {renderSparkline(indices.vnIndex.change)}
@@ -788,14 +932,25 @@ export default function Dashboard() {
             {/* Index 2: VN30 */}
             <div className="flex items-center justify-between px-4 border-r border-board-border/60">
               <div>
-                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">VN30</span>
-                <span className={`text-base font-extrabold tracking-tight ${indices.vn30.change >= 0 ? 'text-up' : 'text-down'}`}>
+                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">
+                  VN30
+                </span>
+                <span
+                  className={`text-base font-extrabold tracking-tight ${indices.vn30.change >= 0 ? "text-up" : "text-down"}`}
+                >
                   {indices.vn30.val.toLocaleString()}
                 </span>
-                <span className={`block text-[9px] font-bold ${indices.vn30.change >= 0 ? 'text-up' : 'text-down'}`}>
-                  {indices.vn30.change >= 0 ? '+' : ''}{indices.vn30.change.toLocaleString()} ({indices.vn30.change >= 0 ? '+' : ''}{(indices.vn30.pct * 100).toFixed(2)}%)
+                <span
+                  className={`block text-[9px] font-bold ${indices.vn30.change >= 0 ? "text-up" : "text-down"}`}
+                >
+                  {indices.vn30.change >= 0 ? "+" : ""}
+                  {indices.vn30.change.toLocaleString()} (
+                  {indices.vn30.change >= 0 ? "+" : ""}
+                  {(indices.vn30.pct * 100).toFixed(2)}%)
                 </span>
-                <span className="block text-[8px] text-text-muted">KL: {indices.vn30.vol} | GT: {indices.vn30.valTraded}</span>
+                <span className="block text-[8px] text-text-muted">
+                  KL: {indices.vn30.vol} | GT: {indices.vn30.valTraded}
+                </span>
               </div>
               <div className="shrink-0 pl-2">
                 {renderSparkline(indices.vn30.change)}
@@ -805,14 +960,25 @@ export default function Dashboard() {
             {/* Index 3: HNX-INDEX */}
             <div className="flex items-center justify-between px-4 border-r border-board-border/60">
               <div>
-                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">HNX-INDEX</span>
-                <span className={`text-base font-extrabold tracking-tight ${indices.hnxIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
+                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">
+                  HNX-INDEX
+                </span>
+                <span
+                  className={`text-base font-extrabold tracking-tight ${indices.hnxIndex.change >= 0 ? "text-up" : "text-down"}`}
+                >
                   {indices.hnxIndex.val.toLocaleString()}
                 </span>
-                <span className={`block text-[9px] font-bold ${indices.hnxIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
-                  {indices.hnxIndex.change >= 0 ? '+' : ''}{indices.hnxIndex.change.toLocaleString()} ({indices.hnxIndex.change >= 0 ? '+' : ''}{(indices.hnxIndex.pct * 100).toFixed(2)}%)
+                <span
+                  className={`block text-[9px] font-bold ${indices.hnxIndex.change >= 0 ? "text-up" : "text-down"}`}
+                >
+                  {indices.hnxIndex.change >= 0 ? "+" : ""}
+                  {indices.hnxIndex.change.toLocaleString()} (
+                  {indices.hnxIndex.change >= 0 ? "+" : ""}
+                  {(indices.hnxIndex.pct * 100).toFixed(2)}%)
                 </span>
-                <span className="block text-[8px] text-text-muted">KL: {indices.hnxIndex.vol} | GT: {indices.hnxIndex.valTraded}</span>
+                <span className="block text-[8px] text-text-muted">
+                  KL: {indices.hnxIndex.vol} | GT: {indices.hnxIndex.valTraded}
+                </span>
               </div>
               <div className="shrink-0 pl-2">
                 {renderSparkline(indices.hnxIndex.change)}
@@ -822,14 +988,26 @@ export default function Dashboard() {
             {/* Index 4: UPCOM-INDEX */}
             <div className="flex items-center justify-between px-4">
               <div>
-                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">UPCOM-INDEX</span>
-                <span className={`text-base font-extrabold tracking-tight ${indices.upcomIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
+                <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">
+                  UPCOM-INDEX
+                </span>
+                <span
+                  className={`text-base font-extrabold tracking-tight ${indices.upcomIndex.change >= 0 ? "text-up" : "text-down"}`}
+                >
                   {indices.upcomIndex.val.toLocaleString()}
                 </span>
-                <span className={`block text-[9px] font-bold ${indices.upcomIndex.change >= 0 ? 'text-up' : 'text-down'}`}>
-                  {indices.upcomIndex.change >= 0 ? '+' : ''}{indices.upcomIndex.change.toLocaleString()} ({indices.upcomIndex.change >= 0 ? '+' : ''}{(indices.upcomIndex.pct * 100).toFixed(2)}%)
+                <span
+                  className={`block text-[9px] font-bold ${indices.upcomIndex.change >= 0 ? "text-up" : "text-down"}`}
+                >
+                  {indices.upcomIndex.change >= 0 ? "+" : ""}
+                  {indices.upcomIndex.change.toLocaleString()} (
+                  {indices.upcomIndex.change >= 0 ? "+" : ""}
+                  {(indices.upcomIndex.pct * 100).toFixed(2)}%)
                 </span>
-                <span className="block text-[8px] text-text-muted">KL: {indices.upcomIndex.vol} | GT: {indices.upcomIndex.valTraded}</span>
+                <span className="block text-[8px] text-text-muted">
+                  KL: {indices.upcomIndex.vol} | GT:{" "}
+                  {indices.upcomIndex.valTraded}
+                </span>
               </div>
               <div className="shrink-0 pl-2">
                 {renderSparkline(indices.upcomIndex.change)}
@@ -840,9 +1018,8 @@ export default function Dashboard() {
 
         {/* ─── DYNAMIC SUBVIEW ─── */}
         <div className="mt-6 flex-1 flex flex-col">
-
           {/* TAB 1: DASHBOARD OVERVIEW */}
-          {activeTab === 'dashboard' && (
+          {activeTab === "dashboard" && (
             <TradingBoard
               loadingData={loadingData}
               boardMarketTab={boardMarketTab}
@@ -862,7 +1039,7 @@ export default function Dashboard() {
           )}
 
           {/* TAB 2: WATCHLIST TAB */}
-          {activeTab === 'watchlist' && (
+          {activeTab === "watchlist" && (
             <WatchlistTab
               loadingWatchlist={loadingWatchlist}
               watchlistItems={watchlistItems}
@@ -876,7 +1053,7 @@ export default function Dashboard() {
           )}
 
           {/* TAB 3: AI SIGNALS TAB */}
-          {activeTab === 'signals' && (
+          {activeTab === "signals" && (
             <SignalsTab
               loadingAllSignals={loadingAllSignals}
               allSignals={allSignals}
@@ -886,7 +1063,7 @@ export default function Dashboard() {
           )}
 
           {/* TAB 4: ALERTS TAB */}
-          {activeTab === 'alerts' && (
+          {activeTab === "alerts" && (
             <AlertsTab
               session={session}
               alertSymbol={alertSymbol}
@@ -904,7 +1081,7 @@ export default function Dashboard() {
           )}
 
           {/* TAB 5: PERSONALIZATION & AI ADVISORY */}
-          {activeTab === 'personalization' && (
+          {activeTab === "personalization" && (
             <PersonalizationTab
               portfolioIntel={portfolioIntel}
               personalizedFeed={personalizedFeed}
@@ -916,13 +1093,12 @@ export default function Dashboard() {
               handleSelectRecommended={handleSelectRecommended}
             />
           )}
-
         </div>
       </main>
 
       {/* SSI iBoard High-Fidelity Details Workspace Modal */}
       <TickerDetailModal
-        symbol={selectedSymbol || ''}
+        symbol={selectedSymbol || ""}
         isOpen={isModalOpen && !!selectedSymbol}
         onClose={() => {
           setIsModalOpen(false);
@@ -932,5 +1108,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-

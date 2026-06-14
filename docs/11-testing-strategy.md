@@ -33,11 +33,11 @@
          └───────────────┘
 ```
 
-| Layer | Tool | Target | Coverage |
-|---|---|---|---|
-| Unit | Vitest | Services, utils, pure logic | ≥ 80% |
-| Integration | Supertest + Testcontainers | API endpoints, DB queries | ≥ 60% |
-| E2E | Playwright | Critical user flows | Top 10 flows |
+| Layer       | Tool                       | Target                      | Coverage     |
+| ----------- | -------------------------- | --------------------------- | ------------ |
+| Unit        | Vitest                     | Services, utils, pure logic | ≥ 80%        |
+| Integration | Supertest + Testcontainers | API endpoints, DB queries   | ≥ 60%        |
+| E2E         | Playwright                 | Critical user flows         | Top 10 flows |
 
 ---
 
@@ -48,6 +48,7 @@
 **Scope:** Single function / class, no external dependencies.
 
 **What to unit test:**
+
 - Business logic (signal computation, scoring, PnL calculation)
 - Data transformations (adapter → canonical schema)
 - Validation rules (Zod schemas)
@@ -55,6 +56,7 @@
 - Error handling paths
 
 **What NOT to unit test:**
+
 - Database queries (use integration tests)
 - HTTP endpoints (use integration tests)
 - Third-party library internals
@@ -63,30 +65,30 @@
 
 ```typescript
 // intelligence/engines/signal.engine.spec.ts
-describe('SignalEngine', () => {
-  describe('detectRSISignal', () => {
-    it('should detect overbought when RSI > 70', () => {
-      const signal = detectRSISignal({ rsi: 75, symbol: 'FPT' });
-      
+describe("SignalEngine", () => {
+  describe("detectRSISignal", () => {
+    it("should detect overbought when RSI > 70", () => {
+      const signal = detectRSISignal({ rsi: 75, symbol: "FPT" });
+
       expect(signal).toEqual({
-        type: 'RSI_OVERBOUGHT',
-        strength: 'HIGH',
-        score: '75',
+        type: "RSI_OVERBOUGHT",
+        strength: "HIGH",
+        score: "75",
       });
     });
 
-    it('should detect oversold when RSI < 30', () => {
-      const signal = detectRSISignal({ rsi: 22, symbol: 'VCB' });
-      
+    it("should detect oversold when RSI < 30", () => {
+      const signal = detectRSISignal({ rsi: 22, symbol: "VCB" });
+
       expect(signal).toEqual({
-        type: 'RSI_OVERSOLD',
-        strength: 'HIGH',
-        score: '22',
+        type: "RSI_OVERSOLD",
+        strength: "HIGH",
+        score: "22",
       });
     });
 
-    it('should return null when RSI is neutral', () => {
-      const signal = detectRSISignal({ rsi: 50, symbol: 'HPG' });
+    it("should return null when RSI is neutral", () => {
+      const signal = detectRSISignal({ rsi: 50, symbol: "HPG" });
       expect(signal).toBeNull();
     });
   });
@@ -102,6 +104,7 @@ describe('SignalEngine', () => {
 **Infrastructure:** Testcontainers (PostgreSQL, Redis containers per test suite).
 
 **What to integration test:**
+
 - API endpoint request → response
 - Database CRUD operations
 - Cache read/write behavior
@@ -112,7 +115,7 @@ describe('SignalEngine', () => {
 
 ```typescript
 // market-data/market-data.integration.spec.ts
-describe('MarketData API', () => {
+describe("MarketData API", () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
@@ -135,16 +138,16 @@ describe('MarketData API', () => {
     await prisma.cleanDatabase(); // Truncate tables
   });
 
-  describe('GET /api/v1/public/instruments/:symbol/candles', () => {
-    it('should return candles for valid symbol', async () => {
+  describe("GET /api/v1/public/instruments/:symbol/candles", () => {
+    it("should return candles for valid symbol", async () => {
       // Arrange: seed instrument + candles
-      await prisma.instrument.create({ data: seedInstrument('FPT') });
-      await prisma.candle.createMany({ data: seedCandles('FPT', 10) });
+      await prisma.instrument.create({ data: seedInstrument("FPT") });
+      await prisma.candle.createMany({ data: seedCandles("FPT", 10) });
 
       // Act
       const response = await request(app.getHttpServer())
-        .get('/api/v1/public/instruments/FPT/candles')
-        .query({ timeframe: '1d', limit: 10 });
+        .get("/api/v1/public/instruments/FPT/candles")
+        .query({ timeframe: "1d", limit: 10 });
 
       // Assert
       expect(response.status).toBe(200);
@@ -158,12 +161,13 @@ describe('MarketData API', () => {
       });
     });
 
-    it('should return 404 for unknown symbol', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/api/v1/public/instruments/UNKNOWN/candles');
+    it("should return 404 for unknown symbol", async () => {
+      const response = await request(app.getHttpServer()).get(
+        "/api/v1/public/instruments/UNKNOWN/candles",
+      );
 
       expect(response.status).toBe(404);
-      expect(response.body.error.code).toBe('NOT_FOUND');
+      expect(response.body.error.code).toBe("NOT_FOUND");
     });
   });
 });
@@ -179,33 +183,33 @@ describe('MarketData API', () => {
 
 **Critical Flows to Test:**
 
-| # | Flow | Priority |
-|---|---|---|
-| 1 | Register → Login → See dashboard | 🔴 Critical |
-| 2 | Search stock → View detail → See chart | 🔴 Critical |
-| 3 | Add to watchlist → See in watchlist | 🔴 Critical |
-| 4 | Create portfolio → Add position | 🟡 High |
-| 5 | Set alert → Trigger → See notification | 🟡 High |
-| 6 | View market overview → Navigate top movers | 🟡 High |
-| 7 | Upgrade to PRO → Access premium features | 🟡 High |
-| 8 | Generate API key → Make API call | 🟠 Medium |
-| 9 | View AI summary (premium) | 🟠 Medium |
-| 10 | Logout → Verify session cleared | 🟠 Medium |
+| #   | Flow                                       | Priority    |
+| --- | ------------------------------------------ | ----------- |
+| 1   | Register → Login → See dashboard           | 🔴 Critical |
+| 2   | Search stock → View detail → See chart     | 🔴 Critical |
+| 3   | Add to watchlist → See in watchlist        | 🔴 Critical |
+| 4   | Create portfolio → Add position            | 🟡 High     |
+| 5   | Set alert → Trigger → See notification     | 🟡 High     |
+| 6   | View market overview → Navigate top movers | 🟡 High     |
+| 7   | Upgrade to PRO → Access premium features   | 🟡 High     |
+| 8   | Generate API key → Make API call           | 🟠 Medium   |
+| 9   | View AI summary (premium)                  | 🟠 Medium   |
+| 10  | Logout → Verify session cleared            | 🟠 Medium   |
 
 ### Example
 
 ```typescript
 // e2e/stock-detail.spec.ts
-test('user can search and view stock detail', async ({ page }) => {
-  await page.goto('/');
-  
+test("user can search and view stock detail", async ({ page }) => {
+  await page.goto("/");
+
   // Search for stock
-  await page.fill('[data-testid="search-input"]', 'FPT');
+  await page.fill('[data-testid="search-input"]', "FPT");
   await page.click('[data-testid="search-result-FPT"]');
-  
+
   // Verify stock detail page
   await expect(page).toHaveURL(/\/stock\/FPT/);
-  await expect(page.locator('[data-testid="stock-name"]')).toContainText('FPT');
+  await expect(page.locator('[data-testid="stock-name"]')).toContainText("FPT");
   await expect(page.locator('[data-testid="stock-price"]')).toBeVisible();
   await expect(page.locator('[data-testid="stock-chart"]')).toBeVisible();
 });
@@ -217,22 +221,22 @@ test('user can search and view stock detail', async ({ page }) => {
 
 ## What to Mock
 
-| Dependency | Mock Strategy |
-|---|---|
+| Dependency                            | Mock Strategy                   |
+| ------------------------------------- | ------------------------------- |
 | External APIs (market data providers) | Adapter mocks with fixture data |
-| AI providers (OpenAI, Gemini) | Fixed response mocks |
-| Email service | Spy / stub |
-| Current time | `vi.useFakeTimers()` |
-| Random values | Seeded random / fixed values |
+| AI providers (OpenAI, Gemini)         | Fixed response mocks            |
+| Email service                         | Spy / stub                      |
+| Current time                          | `vi.useFakeTimers()`            |
+| Random values                         | Seeded random / fixed values    |
 
 ## What NOT to Mock
 
-| Dependency | Reason |
-|---|---|
-| Database | Use Testcontainers (real PostgreSQL) |
-| Redis | Use Testcontainers (real Redis) |
+| Dependency     | Reason                                 |
+| -------------- | -------------------------------------- |
+| Database       | Use Testcontainers (real PostgreSQL)   |
+| Redis          | Use Testcontainers (real Redis)        |
 | Zod validation | Real validation = what production does |
-| Business logic | That's what you're testing |
+| Business logic | That's what you're testing             |
 
 ## Fixture Pattern
 
@@ -243,14 +247,14 @@ export function createInstrumentFixture(
 ): Instrument {
   return {
     instrumentId: randomUUID(),
-    symbol: 'FPT',
-    exchange: 'HOSE',
-    market: 'VN',
-    name: 'CTCP FPT',
-    sector: 'Technology',
-    industry: 'IT Services',
-    currency: 'VND',
-    status: 'ACTIVE',
+    symbol: "FPT",
+    exchange: "HOSE",
+    market: "VN",
+    name: "CTCP FPT",
+    sector: "Technology",
+    industry: "IT Services",
+    currency: "VND",
+    status: "ACTIVE",
     tradable: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -269,24 +273,24 @@ export function createInstrumentFixture(
 
 ```typescript
 // Producer side
-describe('MarketDataService events', () => {
-  it('should publish quote.updated in correct shape', () => {
+describe("MarketDataService events", () => {
+  it("should publish quote.updated in correct shape", () => {
     const event = service.createQuoteUpdatedEvent(quoteData);
-    
+
     // Validate against shared schema
     const result = DomainEventSchema.safeParse(event);
     expect(result.success).toBe(true);
-    
+
     const payloadResult = QuoteSchema.safeParse(event.payload);
     expect(payloadResult.success).toBe(true);
   });
 });
 
 // Consumer side
-describe('IntelligenceService', () => {
-  it('should handle quote.updated event', () => {
+describe("IntelligenceService", () => {
+  it("should handle quote.updated event", () => {
     const event = createQuoteUpdatedEvent(fixtureQuote);
-    
+
     // Should not throw
     expect(() => service.handleQuoteUpdated(event)).not.toThrow();
   });
@@ -301,24 +305,23 @@ describe('IntelligenceService', () => {
 
 ```typescript
 // test/setup/testcontainers.ts
-import { PostgreSqlContainer, RedisContainer } from '@testcontainers/modules';
+import { PostgreSqlContainer, RedisContainer } from "@testcontainers/modules";
 
 let pgContainer: StartedPostgreSqlContainer;
 let redisContainer: StartedRedisContainer;
 
 beforeAll(async () => {
-  pgContainer = await new PostgreSqlContainer('postgres:17')
-    .withDatabase('test_db')
+  pgContainer = await new PostgreSqlContainer("postgres:17")
+    .withDatabase("test_db")
     .start();
 
-  redisContainer = await new RedisContainer('redis:7')
-    .start();
+  redisContainer = await new RedisContainer("redis:7").start();
 
   process.env.DATABASE_URL = pgContainer.getConnectionUri();
   process.env.REDIS_URL = redisContainer.getConnectionUrl();
 
   // Run migrations
-  await execSync('npx prisma migrate deploy');
+  await execSync("npx prisma migrate deploy");
 }, 60_000);
 
 afterAll(async () => {
@@ -331,14 +334,14 @@ afterAll(async () => {
 
 # 7. Coverage Targets
 
-| Package | Unit | Integration | Overall |
-|---|---|---|---|
-| `packages/contracts` | 95% | — | 95% |
-| `packages/utils` | 95% | — | 95% |
-| `apps/api` (services) | 80% | 60% | 75% |
-| `apps/api` (controllers) | — | 80% | 80% |
-| `apps/worker-*` | 70% | 50% | 65% |
-| `apps/web` | 60% | — | 60% |
+| Package                  | Unit | Integration | Overall |
+| ------------------------ | ---- | ----------- | ------- |
+| `packages/contracts`     | 95%  | —           | 95%     |
+| `packages/utils`         | 95%  | —           | 95%     |
+| `apps/api` (services)    | 80%  | 60%         | 75%     |
+| `apps/api` (controllers) | —    | 80%         | 80%     |
+| `apps/worker-*`          | 70%  | 50%         | 65%     |
+| `apps/web`               | 60%  | —           | 60%     |
 
 > CI blocks merge if coverage drops below target.
 
@@ -355,6 +358,7 @@ describe('[Module/Class]', () => {
 ```
 
 Examples:
+
 - `should return signal when RSI exceeds 70`
 - `should throw NotFoundError when instrument does not exist`
 - `should invalidate cache when quote is updated`

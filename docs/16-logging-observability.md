@@ -19,11 +19,11 @@
 
 # 2. Three Pillars of Observability
 
-| Pillar | Tool | Purpose |
-|---|---|---|
-| **Logs** | Loki + Structured Logger | What happened (events) |
-| **Metrics** | Prometheus + Grafana | How much / how fast (aggregates) |
-| **Traces** | OpenTelemetry + Tempo/Jaeger | Where time was spent (flow) |
+| Pillar      | Tool                         | Purpose                          |
+| ----------- | ---------------------------- | -------------------------------- |
+| **Logs**    | Loki + Structured Logger     | What happened (events)           |
+| **Metrics** | Prometheus + Grafana         | How much / how fast (aggregates) |
+| **Traces**  | OpenTelemetry + Tempo/Jaeger | Where time was spent (flow)      |
 
 ---
 
@@ -50,12 +50,12 @@
 
 ## Log Levels
 
-| Level | Usage | Example |
-|---|---|---|
-| `error` | System failures, unhandled exceptions | DB connection lost |
-| `warn` | Recoverable issues, degradation | Cache miss fallback to DB |
-| `info` | Business events, request lifecycle | User registered, quote fetched |
-| `debug` | Development details | Cache key checked, query params |
+| Level   | Usage                                 | Example                         |
+| ------- | ------------------------------------- | ------------------------------- |
+| `error` | System failures, unhandled exceptions | DB connection lost              |
+| `warn`  | Recoverable issues, degradation       | Cache miss fallback to DB       |
+| `info`  | Business events, request lifecycle    | User registered, quote fetched  |
+| `debug` | Development details                   | Cache key checked, query params |
 
 ### Rules
 
@@ -67,11 +67,11 @@
 
 ```typescript
 // packages/utils/src/logger.ts
-import { pino } from 'pino';
+import { pino } from "pino";
 
 export function createLogger(service: string) {
   return pino({
-    level: process.env.LOG_LEVEL || 'info',
+    level: process.env.LOG_LEVEL || "info",
     formatters: {
       level: (label) => ({ level: label }),
     },
@@ -81,8 +81,8 @@ export function createLogger(service: string) {
     },
     timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
     redact: {
-      paths: ['password', 'token', 'apiKey', 'passwordHash', 'authorization'],
-      censor: '[REDACTED]',
+      paths: ["password", "token", "apiKey", "passwordHash", "authorization"],
+      censor: "[REDACTED]",
     },
   });
 }
@@ -109,11 +109,11 @@ Client ──► API Gateway ──► Auth Service ──► Market Data ──
 @Injectable()
 export class CorrelationMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
-    const requestId = req.headers['x-request-id'] as string || randomUUID();
-    
-    req['requestId'] = requestId;
-    res.setHeader('X-Request-Id', requestId);
-    
+    const requestId = (req.headers["x-request-id"] as string) || randomUUID();
+
+    req["requestId"] = requestId;
+    res.setHeader("X-Request-Id", requestId);
+
     // Attach to async context for logger
     AsyncLocalStorage.run({ requestId }, () => next());
   }
@@ -126,38 +126,38 @@ export class CorrelationMiddleware implements NestMiddleware {
 
 ## Business Metrics
 
-| Metric | Type | Description |
-|---|---|---|
-| `user.registrations.total` | Counter | Total registrations |
-| `user.dau` | Gauge | Daily active users |
-| `subscription.upgrades.total` | Counter | Tier upgrades |
-| `api.requests.total` | Counter | Total API requests (by endpoint) |
-| `api.response.latency` | Histogram | Response latency (by endpoint) |
-| `api.errors.total` | Counter | Errors (by code) |
+| Metric                        | Type      | Description                      |
+| ----------------------------- | --------- | -------------------------------- |
+| `user.registrations.total`    | Counter   | Total registrations              |
+| `user.dau`                    | Gauge     | Daily active users               |
+| `subscription.upgrades.total` | Counter   | Tier upgrades                    |
+| `api.requests.total`          | Counter   | Total API requests (by endpoint) |
+| `api.response.latency`        | Histogram | Response latency (by endpoint)   |
+| `api.errors.total`            | Counter   | Errors (by code)                 |
 
 ## Infrastructure Metrics
 
-| Metric | Type | Description |
-|---|---|---|
-| `cache.hit.ratio` | Gauge | Cache hit rate |
-| `cache.latency` | Histogram | Redis operation latency |
-| `db.query.latency` | Histogram | Database query latency |
-| `db.connections.active` | Gauge | Active DB connections |
-| `queue.depth` | Gauge | BullMQ pending jobs |
-| `queue.processing.duration` | Histogram | Job processing time |
-| `queue.dlq.depth` | Gauge | Dead letter queue size |
+| Metric                      | Type      | Description             |
+| --------------------------- | --------- | ----------------------- |
+| `cache.hit.ratio`           | Gauge     | Cache hit rate          |
+| `cache.latency`             | Histogram | Redis operation latency |
+| `db.query.latency`          | Histogram | Database query latency  |
+| `db.connections.active`     | Gauge     | Active DB connections   |
+| `queue.depth`               | Gauge     | BullMQ pending jobs     |
+| `queue.processing.duration` | Histogram | Job processing time     |
+| `queue.dlq.depth`           | Gauge     | Dead letter queue size  |
 
 ## Data Pipeline Metrics
 
-| Metric | Type | Description |
-|---|---|---|
-| `ingestion.success.total` | Counter | Successful ingestions |
-| `ingestion.failure.total` | Counter | Failed ingestions |
-| `ingestion.latency` | Histogram | Ingestion lag |
-| `source.health` | Gauge | Provider health (1/0) |
-| `ai.requests.total` | Counter | AI API calls |
-| `ai.cost.total` | Counter | AI cost (in cents) |
-| `ai.latency` | Histogram | AI generation time |
+| Metric                    | Type      | Description           |
+| ------------------------- | --------- | --------------------- |
+| `ingestion.success.total` | Counter   | Successful ingestions |
+| `ingestion.failure.total` | Counter   | Failed ingestions     |
+| `ingestion.latency`       | Histogram | Ingestion lag         |
+| `source.health`           | Gauge     | Provider health (1/0) |
+| `ai.requests.total`       | Counter   | AI API calls          |
+| `ai.cost.total`           | Counter   | AI cost (in cents)    |
+| `ai.latency`              | Histogram | AI generation time    |
 
 ---
 
@@ -165,24 +165,24 @@ export class CorrelationMiddleware implements NestMiddleware {
 
 ## What to Trace
 
-| Span | Attributes |
-|---|---|
-| HTTP Request | method, url, status, latency |
-| Database Query | operation, table, latency |
-| Cache Operation | operation, key, hit/miss, latency |
-| External API Call | provider, endpoint, status, latency |
-| Queue Job | queue, jobType, status, duration |
-| AI Generation | model, prompt_tokens, completion_tokens, latency |
+| Span              | Attributes                                       |
+| ----------------- | ------------------------------------------------ |
+| HTTP Request      | method, url, status, latency                     |
+| Database Query    | operation, table, latency                        |
+| Cache Operation   | operation, key, hit/miss, latency                |
+| External API Call | provider, endpoint, status, latency              |
+| Queue Job         | queue, jobType, status, duration                 |
+| AI Generation     | model, prompt_tokens, completion_tokens, latency |
 
 ## NestJS Integration
 
 ```typescript
 // apps/api/src/main.ts
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 
 const sdk = new NodeSDK({
-  serviceName: 'stock-intel-api',
+  serviceName: "stock-intel-api",
   traceExporter: new OTLPTraceExporter({
     url: process.env.OTEL_EXPORTER_ENDPOINT,
   }),
@@ -235,27 +235,27 @@ sdk.start();
 
 # 8. Alerting Rules
 
-| Alert | Condition | Severity | Action |
-|---|---|---|---|
-| API error rate spike | > 5% errors in 5 min | 🔴 Critical | Page on-call |
-| P95 latency high | > 1s for 5 min | 🟡 Warning | Investigate |
-| DB connection pool full | > 90% used | 🔴 Critical | Scale + investigate |
-| Redis memory high | > 80% maxmemory | 🟡 Warning | Review eviction |
-| Queue DLQ growing | > 10 items | 🟡 Warning | Review failed jobs |
-| Ingestion failure | > 3 consecutive failures | 🔴 Critical | Check source |
-| AI cost spike | > $10/hour | 🟡 Warning | Review usage |
-| Pod crash loop | > 3 restarts in 10 min | 🔴 Critical | Page on-call |
-| Source provider down | Health check failing | 🟡 Warning | Activate fallback |
-| Data staleness | Quote > 5 min old during market hours | 🟡 Warning | Check ingestion |
+| Alert                   | Condition                             | Severity    | Action              |
+| ----------------------- | ------------------------------------- | ----------- | ------------------- |
+| API error rate spike    | > 5% errors in 5 min                  | 🔴 Critical | Page on-call        |
+| P95 latency high        | > 1s for 5 min                        | 🟡 Warning  | Investigate         |
+| DB connection pool full | > 90% used                            | 🔴 Critical | Scale + investigate |
+| Redis memory high       | > 80% maxmemory                       | 🟡 Warning  | Review eviction     |
+| Queue DLQ growing       | > 10 items                            | 🟡 Warning  | Review failed jobs  |
+| Ingestion failure       | > 3 consecutive failures              | 🔴 Critical | Check source        |
+| AI cost spike           | > $10/hour                            | 🟡 Warning  | Review usage        |
+| Pod crash loop          | > 3 restarts in 10 min                | 🔴 Critical | Page on-call        |
+| Source provider down    | Health check failing                  | 🟡 Warning  | Activate fallback   |
+| Data staleness          | Quote > 5 min old during market hours | 🟡 Warning  | Check ingestion     |
 
 ---
 
 # 9. Log Retention
 
-| Environment | Retention | Storage |
-|---|---|---|
-| Production | 30 days | Loki |
-| Staging | 7 days | Loki |
+| Environment | Retention    | Storage |
+| ----------- | ------------ | ------- |
+| Production  | 30 days      | Loki    |
+| Staging     | 7 days       | Loki    |
 | Development | Session only | Console |
 
 ## Cost Optimization

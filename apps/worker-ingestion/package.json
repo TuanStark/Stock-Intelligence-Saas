@@ -1,37 +1,37 @@
 {
-    "name": "@stock-intel/worker-ingestion",
-    "version": "0.1.0",
-    "private": true,
-    "scripts": {
-        "dev": "nest start --watch",
-        "build": "nest build",
-        "start": "nest start",
-        "start:prod": "node dist/main",
-        "lint": "eslint \"{src,test}/**/*.ts\" --fix",
-        "test": "jest"
-    },
-    "dependencies": {
-        "@nestjs/bullmq": "^11.0.0",
-        "@nestjs/common": "^11.0.1",
-        "@nestjs/core": "^11.0.1",
-        "@nestjs/schedule": "^6.1.3",
-        "@stock-intel/contracts": "workspace:^",
-        "@stock-intel/db": "workspace:^",
-        "axios": "^1.15.2",
-        "bullmq": "^5.0.0",
-        "ioredis": "^5.4.1",
-        "reflect-metadata": "^0.2.2",
-        "rxjs": "^7.8.1",
-        "technicalindicators": "^3.1.0",
-        "yahoo-finance2": "^3.14.0"
-    },
-    "devDependencies": {
-        "@nestjs/cli": "^11.0.0",
-        "@nestjs/schematics": "^11.0.0",
-        "@nestjs/testing": "^11.0.1",
-        "@types/node": "^24.0.0",
-        "jest": "^30.0.0",
-        "ts-jest": "^29.2.5",
-        "typescript": "^5.7.3"
-    }
+  "name": "@stock-intel/worker-ingestion",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "nest start",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,test}/**/*.ts\" --fix",
+    "test": "jest --passWithNoTests"
+  },
+  "dependencies": {
+    "@nestjs/bullmq": "^11.0.0",
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/schedule": "^6.1.3",
+    "@stock-intel/contracts": "workspace:^",
+    "@stock-intel/db": "workspace:^",
+    "axios": "^1.15.2",
+    "bullmq": "^5.0.0",
+    "ioredis": "^5.4.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "technicalindicators": "^3.1.0",
+    "yahoo-finance2": "^3.14.0"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.1",
+    "@types/node": "^24.0.0",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.3"
+  }
 }

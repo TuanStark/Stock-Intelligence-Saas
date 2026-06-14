@@ -1,7 +1,7 @@
-export { PrismaClient } from '@prisma/client';
-export * from '@prisma/client';
+export { PrismaClient } from "@prisma/client";
+export * from "@prisma/client";
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 let prismaInstance: PrismaClient | null = null;
 
@@ -11,15 +11,15 @@ let prismaInstance: PrismaClient | null = null;
  * exhausting the database connection pool.
  */
 export function createPrismaClient(): PrismaClient {
-    if (!prismaInstance) {
-        prismaInstance = new PrismaClient({
-            log:
-                process.env.NODE_ENV === 'development'
-                    ? ['query', 'warn', 'error']
-                    : ['warn', 'error'],
-        });
-    }
-    return prismaInstance;
+  if (!prismaInstance) {
+    prismaInstance = new PrismaClient({
+      log:
+        process.env.NODE_ENV === "development"
+          ? ["query", "warn", "error"]
+          : ["warn", "error"],
+    });
+  }
+  return prismaInstance;
 }
 
 /**
@@ -27,8 +27,8 @@ export function createPrismaClient(): PrismaClient {
  * Call this during graceful shutdown.
  */
 export async function disconnectPrisma(): Promise<void> {
-    if (prismaInstance) {
-        await prismaInstance.$disconnect();
-        prismaInstance = null;
-    }
+  if (prismaInstance) {
+    await prismaInstance.$disconnect();
+    prismaInstance = null;
+  }
 }

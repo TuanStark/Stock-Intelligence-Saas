@@ -40,14 +40,17 @@ If a feature does not improve one of these, it is not core.
 # 3. Feature Spec — Market Overview
 
 ## Objective
+
 Help users identify what matters in the market within the first 5 seconds.
 
 ## User Stories
+
 - As a user, I want to quickly understand what is moving today.
 - As a user, I want to know which stocks deserve attention now.
 - As a user, I want to scan the market without reading raw tables.
 
 ## Functional Scope
+
 - market pulse summary
 - top movers
 - unusual volume
@@ -56,18 +59,21 @@ Help users identify what matters in the market within the first 5 seconds.
 - market sentiment snapshot
 
 ## Acceptance Criteria
+
 - user can identify at least one actionable stock in < 10s
 - screen loads under target latency
 - all data blocks prioritized by relevance, not chronology
 - each stock row explains “why attention”
 
 ## Edge Cases
+
 - no strong movers
 - delayed data
 - stale rankings
 - empty market session
 
 ## Success Metrics
+
 - time to first stock click
 - stock click-through rate
 - market → stock conversion
@@ -77,13 +83,16 @@ Help users identify what matters in the market within the first 5 seconds.
 # 4. Feature Spec — Instrument Search
 
 ## Objective
+
 Help users navigate to the correct asset in the shortest possible time.
 
 ## User Stories
+
 - As a user, I want to instantly find a stock by symbol or company name.
 - As a user, I want search to be faster than navigation.
 
 ## Functional Scope
+
 - symbol search
 - fuzzy name search
 - keyboard-first navigation
@@ -91,18 +100,21 @@ Help users navigate to the correct asset in the shortest possible time.
 - quick jump
 
 ## Acceptance Criteria
+
 - search results appear near-instant
 - top result is usually correct
 - keyboard navigation works
 - user reaches stock page in ≤ 2 interactions
 
 ## Edge Cases
+
 - typo search
 - duplicate names
 - ambiguous symbols
 - no result
 
 ## Success Metrics
+
 - search success rate
 - search → stock open rate
 - search latency
@@ -112,13 +124,16 @@ Help users navigate to the correct asset in the shortest possible time.
 # 5. Feature Spec — Stock Detail
 
 ## Objective
+
 Help users validate whether a stock is worth action.
 
 ## User Stories
+
 - As a user, I want to know if this stock is worth buying, watching, or ignoring.
 - As a user, I want a fast explanation before reading raw data.
 
 ## Functional Scope
+
 - stock thesis summary
 - signal strength
 - trend / momentum
@@ -129,18 +144,21 @@ Help users validate whether a stock is worth action.
 - primary actions
 
 ## Acceptance Criteria
+
 - screen answers “so what?” above the fold
 - signal and risk visible before chart
 - user can take action without scrolling deeply
 - primary CTA always visible
 
 ## Edge Cases
+
 - no signals
 - conflicting indicators
 - no recent news
 - low liquidity assets
 
 ## Success Metrics
+
 - stock → watchlist add rate
 - stock → portfolio add rate
 - stock dwell time
@@ -151,13 +169,16 @@ Help users validate whether a stock is worth action.
 # 6. Feature Spec — Watchlist
 
 ## Objective
+
 Preserve user intent and track future candidates.
 
 ## User Stories
+
 - As a user, I want to save stocks I may act on later.
 - As a user, I want saved stocks ranked by urgency.
 
 ## Functional Scope
+
 - add/remove watchlist
 - watchlist signals
 - urgency sorting
@@ -165,18 +186,21 @@ Preserve user intent and track future candidates.
 - watchlist actions
 
 ## Acceptance Criteria
+
 - add/remove is instant
 - list persists
 - items auto-sort by relevance
 - users can act from watchlist directly
 
 ## Edge Cases
+
 - too many saved names
 - duplicate add
 - stale watchlist
 - no signal changes
 
 ## Success Metrics
+
 - watchlist add rate
 - watchlist revisit rate
 - watchlist → stock return rate
@@ -186,13 +210,16 @@ Preserve user intent and track future candidates.
 # 7. Feature Spec — Portfolio
 
 ## Objective
+
 Help users monitor risk and position health.
 
 ## User Stories
+
 - As a user, I want to know what in my portfolio needs attention.
 - As a user, I want to understand PnL and risk quickly.
 
 ## Functional Scope
+
 - holdings
 - transactions
 - PnL
@@ -201,18 +228,21 @@ Help users monitor risk and position health.
 - action-needed positions
 
 ## Acceptance Criteria
+
 - portfolio health visible above fold
 - action-needed shown before holdings table
 - users can identify top risk quickly
 - PnL updates correctly
 
 ## Edge Cases
+
 - missing prices
 - stale holdings
 - invalid transactions
 - empty portfolio
 
 ## Success Metrics
+
 - portfolio revisit rate
 - position click-through
 - alert creation from portfolio
@@ -222,13 +252,16 @@ Help users monitor risk and position health.
 # 8. Feature Spec — Signals
 
 ## Objective
+
 Turn raw data into actionable stock intelligence.
 
 ## User Stories
+
 - As a user, I want clear signals instead of interpreting raw indicators myself.
 - As a user, I want to know signal strength and confidence.
 
 ## Functional Scope
+
 - stock score
 - signal badges
 - signal reasoning
@@ -236,18 +269,21 @@ Turn raw data into actionable stock intelligence.
 - confidence labels
 
 ## Acceptance Criteria
+
 - signals are explainable
 - confidence is visible
 - rankings prioritize relevance
 - signals update predictably
 
 ## Edge Cases
+
 - conflicting signals
 - weak confidence
 - stale signals
 - noisy assets
 
 ## Success Metrics
+
 - signal click-through
 - signal → action rate
 - ranking engagement
@@ -257,13 +293,16 @@ Turn raw data into actionable stock intelligence.
 # 9. Feature Spec — Alerts
 
 ## Objective
+
 Bring users back when action is needed.
 
 ## User Stories
+
 - As a user, I want to be notified only when something important happens.
 - As a user, I want alerts to tell me why it matters.
 
 ## Functional Scope
+
 - alert rules
 - signal alerts
 - price alerts
@@ -271,18 +310,21 @@ Bring users back when action is needed.
 - alert history
 
 ## Acceptance Criteria
+
 - alerts explain why triggered
 - alerts link to action
 - users can configure quickly
 - no spam behavior
 
 ## Edge Cases
+
 - duplicate alerts
 - stale alert state
 - too many triggers
 - delayed notification
 
 ## Success Metrics
+
 - alert creation rate
 - alert open rate
 - alert → re-entry rate
@@ -292,13 +334,16 @@ Bring users back when action is needed.
 # 10. Feature Spec — AI Summary
 
 ## Objective
+
 Reduce analysis time by compressing stock context.
 
 ## User Stories
+
 - As a user, I want a fast summary of what matters before digging deeper.
 - As a user, I want AI to reduce reading effort, not create more noise.
 
 ## Functional Scope
+
 - stock AI summary
 - signal explanation
 - concise reasoning
@@ -306,18 +351,21 @@ Reduce analysis time by compressing stock context.
 - summary refresh
 
 ## Acceptance Criteria
+
 - summaries are concise
 - summaries explain relevance
 - summaries load async
 - summaries never block page load
 
 ## Edge Cases
+
 - AI timeout
 - bad summary
 - stale summary
 - missing source context
 
 ## Success Metrics
+
 - AI summary read rate
 - AI expansion rate
 - reduced stock dwell time
@@ -328,13 +376,16 @@ Reduce analysis time by compressing stock context.
 # 11. Feature Spec — Billing / Plans
 
 ## Objective
+
 Convert users at the moment they feel decision disadvantage.
 
 ## User Stories
+
 - As a user, I want to understand what I unlock by upgrading.
 - As a user, I should only hit paywall when value is clear.
 
 ## Functional Scope
+
 - pricing page
 - plan comparison
 - paywall gating
@@ -342,18 +393,21 @@ Convert users at the moment they feel decision disadvantage.
 - quota visibility
 
 ## Acceptance Criteria
+
 - paywall appears at value boundary
 - upgrade explains advantage
 - plan limits are visible
 - billing flow is clear
 
 ## Edge Cases
+
 - failed payment
 - expired subscription
 - quota mismatch
 - downgrade behavior
 
 ## Success Metrics
+
 - free → paid conversion
 - paywall CTR
 - upgrade completion rate
@@ -379,6 +433,7 @@ Not when “UI exists” or “API returns data”.
 PRD is the contract between product, design, engineering, and QA.
 
 It ensures:
+
 - features have real purpose
 - scope stays controlled
 - implementation stays aligned

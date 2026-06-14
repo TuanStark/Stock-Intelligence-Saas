@@ -118,16 +118,16 @@ Phase 2 — Drop column in next migration
 
 # 4. Dangerous Operations Checklist
 
-| Operation | Risk Level | Pre-check | Safe Pattern |
-|---|---|---|---|
-| ADD column (nullable) | 🟢 Low | None | Direct |
-| ADD column (NOT NULL) | 🟡 Medium | Backfill plan | 2-phase |
-| ADD index | 🟡 Medium | Table size | CONCURRENTLY |
-| RENAME column | 🔴 High | All consumers | 3-phase |
-| DROP column | 🔴 High | No consumers | 2-phase |
-| CHANGE column type | 🔴 High | Data compatibility | Add new → migrate → drop |
-| DROP table | 🔴 Critical | Backup | Archive first |
-| TRUNCATE | 🔴 Critical | Backup | Never in production |
+| Operation             | Risk Level  | Pre-check          | Safe Pattern             |
+| --------------------- | ----------- | ------------------ | ------------------------ |
+| ADD column (nullable) | 🟢 Low      | None               | Direct                   |
+| ADD column (NOT NULL) | 🟡 Medium   | Backfill plan      | 2-phase                  |
+| ADD index             | 🟡 Medium   | Table size         | CONCURRENTLY             |
+| RENAME column         | 🔴 High     | All consumers      | 3-phase                  |
+| DROP column           | 🔴 High     | No consumers       | 2-phase                  |
+| CHANGE column type    | 🔴 High     | Data compatibility | Add new → migrate → drop |
+| DROP table            | 🔴 Critical | Backup             | Archive first            |
+| TRUNCATE              | 🔴 Critical | Backup             | Never in production      |
 
 ---
 
@@ -141,19 +141,25 @@ async function main() {
 
   // Seed exchanges (idempotent - upsert)
   await prisma.exchange.upsert({
-    where: { code: 'HOSE' },
+    where: { code: "HOSE" },
     update: {},
-    create: { code: 'HOSE', name: 'Ho Chi Minh Stock Exchange', market: 'VN' },
+    create: { code: "HOSE", name: "Ho Chi Minh Stock Exchange", market: "VN" },
   });
 
   await prisma.exchange.upsert({
-    where: { code: 'HNX' },
+    where: { code: "HNX" },
     update: {},
-    create: { code: 'HNX', name: 'Hanoi Stock Exchange', market: 'VN' },
+    create: { code: "HNX", name: "Hanoi Stock Exchange", market: "VN" },
   });
 
   // Seed sectors
-  const sectors = ['Technology', 'Finance', 'Real Estate', 'Energy', 'Consumer'];
+  const sectors = [
+    "Technology",
+    "Finance",
+    "Real Estate",
+    "Energy",
+    "Consumer",
+  ];
   for (const name of sectors) {
     await prisma.sector.upsert({
       where: { name },
@@ -163,14 +169,14 @@ async function main() {
   }
 
   // Seed admin user (dev only)
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== "production") {
     await prisma.user.upsert({
-      where: { email: 'admin@stockintel.dev' },
+      where: { email: "admin@stockintel.dev" },
       update: {},
       create: {
-        email: 'admin@stockintel.dev',
-        passwordHash: await hash('admin123', 12),
-        status: 'ACTIVE',
+        email: "admin@stockintel.dev",
+        passwordHash: await hash("admin123", 12),
+        status: "ACTIVE",
       },
     });
   }
@@ -205,7 +211,7 @@ CREATE TABLE candles (
   value NUMERIC(24,8),
   timestamp TIMESTAMPTZ NOT NULL,
   source VARCHAR(100) NOT NULL,
-  
+
   PRIMARY KEY (instrument_id, timeframe, timestamp)
 );
 
@@ -235,20 +241,20 @@ SELECT add_retention_policy('candles', INTERVAL '5 years');
 
 ```typescript
 // Trước deploy
-describe('Migration Safety', () => {
-  it('should apply pending migrations without error', async () => {
+describe("Migration Safety", () => {
+  it("should apply pending migrations without error", async () => {
     // Fresh DB + all migrations
-    await execSync('prisma migrate deploy');
+    await execSync("prisma migrate deploy");
   });
 
-  it('should seed without error', async () => {
-    await execSync('prisma db seed');
+  it("should seed without error", async () => {
+    await execSync("prisma db seed");
   });
 
-  it('should be idempotent', async () => {
+  it("should be idempotent", async () => {
     // Run seed twice — should not throw
-    await execSync('prisma db seed');
-    await execSync('prisma db seed');
+    await execSync("prisma db seed");
+    await execSync("prisma db seed");
   });
 });
 ```
@@ -257,11 +263,11 @@ describe('Migration Safety', () => {
 
 # 8. Backup Strategy
 
-| Environment | Backup Frequency | Retention | Method |
-|---|---|---|---|
-| Production | Every 6 hours | 30 days | Automated PG dump + WAL |
-| Staging | Daily | 7 days | Automated PG dump |
-| Development | None | — | Recreate from migrations |
+| Environment | Backup Frequency | Retention | Method                   |
+| ----------- | ---------------- | --------- | ------------------------ |
+| Production  | Every 6 hours    | 30 days   | Automated PG dump + WAL  |
+| Staging     | Daily            | 7 days    | Automated PG dump        |
+| Development | None             | —         | Recreate from migrations |
 
 ### Pre-Migration Backup
 

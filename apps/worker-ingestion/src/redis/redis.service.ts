@@ -1,6 +1,6 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import Redis from 'ioredis';
-import { env } from '../env';
+import { Injectable, OnModuleDestroy } from "@nestjs/common";
+import Redis from "ioredis";
+import { env } from "../env";
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
@@ -35,7 +35,9 @@ export class RedisService implements OnModuleDestroy {
       previousClose: quoteData.previousClose.toString(),
       volume: quoteData.volume.toString(),
       value: (quoteData.value || 0).toString(),
-      timestamp: quoteData.timestamp.toISOString ? quoteData.timestamp.toISOString() : new Date(quoteData.timestamp).toISOString(),
+      timestamp: quoteData.timestamp.toISOString
+        ? quoteData.timestamp.toISOString()
+        : new Date(quoteData.timestamp).toISOString(),
       asOf: new Date().toISOString(),
       source: quoteData.source,
     });
@@ -47,12 +49,20 @@ export class RedisService implements OnModuleDestroy {
   }
 
   async addTickToStream(symbol: string, tickData: any): Promise<void> {
-    const streamKey = 'market:ticks:stream';
-    await this.client.xadd(streamKey, '*', 
-      'symbol', symbol.toUpperCase(),
-      'price', tickData.price.toString(),
-      'volume', tickData.volume.toString(),
-      'time', tickData.time.toISOString ? tickData.time.toISOString() : new Date(tickData.time).toISOString()
+    const streamKey = "market:ticks:stream";
+    await this.client.xadd(
+      streamKey,
+      "*",
+      "symbol",
+      symbol.toUpperCase(),
+      "price",
+      tickData.price.toString(),
+      "volume",
+      tickData.volume.toString(),
+      "time",
+      tickData.time.toISOString
+        ? tickData.time.toISOString()
+        : new Date(tickData.time).toISOString(),
     );
   }
 

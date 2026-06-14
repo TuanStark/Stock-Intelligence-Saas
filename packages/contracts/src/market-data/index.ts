@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // ==========================================
 // INTERNAL NORMALIZED CONTRACTS
@@ -31,7 +31,7 @@ export const NormalizedCandleSchema = z.object({
   low: z.number(),
   close: z.number(),
   volume: z.number(),
-  resolution: z.enum(['1D', '1W', '1M', '15m', '1h']),
+  resolution: z.enum(["1D", "1W", "1M", "15m", "1h"]),
 });
 
 export type NormalizedCandle = z.infer<typeof NormalizedCandleSchema>;

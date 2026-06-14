@@ -1,13 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AiSentiment, AiSummary } from '@stock-intel/db';
-import { AiSummaryResponse, ContextData } from './types/ai-summary.types';
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../../prisma/prisma.service";
+import { AiSentiment, AiSummary } from "@stock-intel/db";
+import { AiSummaryResponse, ContextData } from "./types/ai-summary.types";
 
 @Injectable()
 export class AiSummaryRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findValidCache(instrumentId: string, cacheHours: number): Promise<AiSummary | null> {
+  async findValidCache(
+    instrumentId: string,
+    cacheHours: number,
+  ): Promise<AiSummary | null> {
     const expiry = new Date(Date.now() - cacheHours * 60 * 60 * 1000);
 
     return this.prisma.aiSummary.findFirst({
@@ -15,7 +18,7 @@ export class AiSummaryRepository {
         instrumentId,
         generatedAt: { gte: expiry },
       },
-      orderBy: { generatedAt: 'desc' },
+      orderBy: { generatedAt: "desc" },
     });
   }
 
@@ -54,16 +57,16 @@ export class AiSummaryRepository {
     ] = await Promise.all([
       this.prisma.quote.findFirst({
         where: { instrumentId },
-        orderBy: { asOf: 'desc' },
+        orderBy: { asOf: "desc" },
       }),
       this.prisma.stockSignal.findMany({
         where: { instrumentId },
-        orderBy: { detectedAt: 'desc' },
+        orderBy: { detectedAt: "desc" },
         take: 3,
       }),
       this.prisma.newsArticle.findMany({
         where: { newsInstruments: { some: { instrumentId } } },
-        orderBy: { publishedAt: 'desc' },
+        orderBy: { publishedAt: "desc" },
         take: 3,
       }),
       this.prisma.companyProfile.findUnique({
@@ -71,17 +74,17 @@ export class AiSummaryRepository {
       }),
       this.prisma.companyShareholder.findMany({
         where: { instrumentId },
-        orderBy: { percentage: 'desc' },
+        orderBy: { percentage: "desc" },
         take: 5,
       }),
       this.prisma.companyDividend.findMany({
         where: { instrumentId },
-        orderBy: { exDate: 'desc' },
+        orderBy: { exDate: "desc" },
         take: 5,
       }),
       this.prisma.companyFinancialQuarter.findMany({
         where: { instrumentId },
-        orderBy: { quarter: 'desc' },
+        orderBy: { quarter: "desc" },
         take: 4,
       }),
     ]);
@@ -98,8 +101,8 @@ export class AiSummaryRepository {
   }
 
   private mapSentiment(sentiment: string): AiSentiment {
-    if (sentiment === 'BULLISH') return AiSentiment.BULLISH;
-    if (sentiment === 'BEARISH') return AiSentiment.BEARISH;
+    if (sentiment === "BULLISH") return AiSentiment.BULLISH;
+    if (sentiment === "BEARISH") return AiSentiment.BEARISH;
     return AiSentiment.NEUTRAL;
   }
 }

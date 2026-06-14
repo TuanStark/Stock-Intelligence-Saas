@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { ContextData } from '../types/ai-summary.types';
-import { RetrievedChunk } from '../helper/hybrid-retriever.service';
+import { Injectable } from "@nestjs/common";
+import { ContextData } from "../types/ai-summary.types";
+import { RetrievedChunk } from "../helper/hybrid-retriever.service";
 
 @Injectable()
 export class PromptBuilder {
@@ -16,16 +16,27 @@ export class PromptBuilder {
     const cleanSym = symbol.toUpperCase().trim();
 
     // 1. Nếu có Markdown Report và Qualitative Chunks (Bộ Hybrid RAG mới)
-    if (options?.markdownReport || (options?.qualitativeChunks && options.qualitativeChunks.length > 0)) {
-      const markdownReport = options.markdownReport || '*(Không tìm thấy báo cáo số liệu cứng)*';
-      
-      const chunksText = options.qualitativeChunks && options.qualitativeChunks.length > 0
-        ? options.qualitativeChunks.map((chunk, index) => {
-            const dateStr = chunk.createdAt ? new Date(chunk.createdAt).toLocaleDateString('vi-VN') : 'N/A';
-            const scoreStr = chunk.finalScore ? chunk.finalScore.toFixed(3) : 'N/A';
-            return `[Nguồn tin số ${index + 1}] [Loại: ${chunk.type}] [Ngày cập nhật: ${dateStr}] [Điểm tin cậy: ${scoreStr}]\nNội dung: ${chunk.content}`;
-          }).join('\n\n')
-        : '*(Không tìm thấy dữ liệu bối cảnh/tin tức liên quan)*';
+    if (
+      options?.markdownReport ||
+      (options?.qualitativeChunks && options.qualitativeChunks.length > 0)
+    ) {
+      const markdownReport =
+        options.markdownReport || "*(Không tìm thấy báo cáo số liệu cứng)*";
+
+      const chunksText =
+        options.qualitativeChunks && options.qualitativeChunks.length > 0
+          ? options.qualitativeChunks
+              .map((chunk, index) => {
+                const dateStr = chunk.createdAt
+                  ? new Date(chunk.createdAt).toLocaleDateString("vi-VN")
+                  : "N/A";
+                const scoreStr = chunk.finalScore
+                  ? chunk.finalScore.toFixed(3)
+                  : "N/A";
+                return `[Nguồn tin số ${index + 1}] [Loại: ${chunk.type}] [Ngày cập nhật: ${dateStr}] [Điểm tin cậy: ${scoreStr}]\nNội dung: ${chunk.content}`;
+              })
+              .join("\n\n")
+          : "*(Không tìm thấy dữ liệu bối cảnh/tin tức liên quan)*";
 
       return `Bạn là một Cố vấn Đầu tư Chứng khoán Cấp cao (Senior Investment Mentor) với hơn 10 năm kinh nghiệm thực chiến, chuyên hướng dẫn và đưa ra khuyến nghị đầu tư cực kỳ tận tâm, dễ hiểu cho các nhà đầu tư cá nhân mới tham gia thị trường (F0 / nhà đầu tư trẻ tuổi).
 
@@ -79,22 +90,33 @@ Không viết thêm bất kỳ văn bản giới thiệu, kết luận hoặc k�
     } = data;
 
     const priceText = latestQuote
-      ? `${Number(latestQuote.price).toLocaleString()} VND (${Number(latestQuote.changePercent) >= 0 ? '+' : ''}${Number(latestQuote.changePercent).toFixed(2)}%)`
-      : 'N/A';
+      ? `${Number(latestQuote.price).toLocaleString()} VND (${Number(latestQuote.changePercent) >= 0 ? "+" : ""}${Number(latestQuote.changePercent).toFixed(2)}%)`
+      : "N/A";
 
-    const signalsText = activeSignals && activeSignals.length > 0
-      ? activeSignals.map(s => `${s.type} (Strength: ${s.strength})`).join(', ')
-      : 'No major indicator crossovers detected';
+    const signalsText =
+      activeSignals && activeSignals.length > 0
+        ? activeSignals
+            .map((s) => `${s.type} (Strength: ${s.strength})`)
+            .join(", ")
+        : "No major indicator crossovers detected";
 
-    const newsText = recentNews && recentNews.length > 0
-      ? recentNews.map(n => `- ${n.headline}: ${n.summary ? n.summary.slice(0, 100) : ''}`).join('\n')
-      : 'No recent significant corporate press releases';
+    const newsText =
+      recentNews && recentNews.length > 0
+        ? recentNews
+            .map(
+              (n) =>
+                `- ${n.headline}: ${n.summary ? n.summary.slice(0, 100) : ""}`,
+            )
+            .join("\n")
+        : "No recent significant corporate press releases";
 
-    let profileText = 'N/A';
+    let profileText = "N/A";
     if (companyProfile) {
       const mgmt = Array.isArray(companyProfile.management)
-        ? companyProfile.management.map((m: any) => `${m.name} (${m.position})`).join(', ')
-        : 'N/A';
+        ? companyProfile.management
+            .map((m: any) => `${m.name} (${m.position})`)
+            .join(", ")
+        : "N/A";
       profileText = `
 - Industry: ${companyProfile.industry}
 - Description: ${companyProfile.description}
@@ -108,17 +130,35 @@ Không viết thêm bất kỳ văn bản giới thiệu, kết luận hoặc k�
 `;
     }
 
-    const shareholdersText = companyShareholders && companyShareholders.length > 0
-      ? companyShareholders.map(s => `- ${s.name}: ${Number(s.percentage).toFixed(2)}% ownership (${Number(s.shares).toLocaleString()} shares)`).join('\n')
-      : 'No major shareholder records available';
+    const shareholdersText =
+      companyShareholders && companyShareholders.length > 0
+        ? companyShareholders
+            .map(
+              (s) =>
+                `- ${s.name}: ${Number(s.percentage).toFixed(2)}% ownership (${Number(s.shares).toLocaleString()} shares)`,
+            )
+            .join("\n")
+        : "No major shareholder records available";
 
-    const dividendsText = companyDividends && companyDividends.length > 0
-      ? companyDividends.map(d => `- Ex-Date: ${new Date(d.exDate).toLocaleDateString('vi-VN')} | Type: ${d.type} | Rate: ${d.rate}`).join('\n')
-      : 'No recent dividend announcements';
+    const dividendsText =
+      companyDividends && companyDividends.length > 0
+        ? companyDividends
+            .map(
+              (d) =>
+                `- Ex-Date: ${new Date(d.exDate).toLocaleDateString("vi-VN")} | Type: ${d.type} | Rate: ${d.rate}`,
+            )
+            .join("\n")
+        : "No recent dividend announcements";
 
-    const financialsText = companyFinancialQuarters && companyFinancialQuarters.length > 0
-      ? companyFinancialQuarters.map(f => `- Quarter ${f.quarter} | Revenue: ${Number(f.revenue).toLocaleString()} VND | Net Profit: ${Number(f.netProfit).toLocaleString()} VND | ROE: ${f.roe ? f.roe + '%' : 'N/A'}`).join('\n')
-      : 'No quarterly financial statements available';
+    const financialsText =
+      companyFinancialQuarters && companyFinancialQuarters.length > 0
+        ? companyFinancialQuarters
+            .map(
+              (f) =>
+                `- Quarter ${f.quarter} | Revenue: ${Number(f.revenue).toLocaleString()} VND | Net Profit: ${Number(f.netProfit).toLocaleString()} VND | ROE: ${f.roe ? f.roe + "%" : "N/A"}`,
+            )
+            .join("\n")
+        : "No quarterly financial statements available";
 
     return `Bạn là một Cố vấn Đầu tư Chứng khoán Cấp cao (Senior Investment Mentor) tận tâm hướng dẫn cho nhà đầu tư mới (F0). Hãy phân tích các dữ liệu sau cho mã cổ phiếu ${symbol.toUpperCase()} để đưa ra cẩm nang đầu tư thực chiến, chi tiết bằng tiếng Việt, hướng dẫn rõ ràng nên mua/bán bao nhiêu % và tại sao làm thế.
 

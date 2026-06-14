@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { PrismaService } from "../../../prisma/prisma.service";
 
 @Injectable()
 export class EmbeddingIngesterService {
@@ -12,22 +12,22 @@ export class EmbeddingIngesterService {
    */
   async getEmbedding(text: string): Promise<number[]> {
     const apiKey = process.env.OPENAI_API_KEY;
-    const baseUrl = process.env.LITELLM_API_BASE || 'https://api.openai.com/v1';
+    const baseUrl = process.env.LITELLM_API_BASE || "https://api.openai.com/v1";
 
-    if (!apiKey || apiKey.includes('REPLACE')) {
-      this.logger.warn('API Key not configured, returning mock zero vector');
+    if (!apiKey || apiKey.includes("REPLACE")) {
+      this.logger.warn("API Key not configured, returning mock zero vector");
       return new Array(1536).fill(0);
     }
 
     try {
       const response = await fetch(`${baseUrl}/embeddings`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'text-embedding-3-small',
+          model: "text-embedding-3-small",
           input: text,
         }),
       });
@@ -39,7 +39,7 @@ export class EmbeddingIngesterService {
       const data = await response.json();
       const embedding = data.data?.[0]?.embedding;
       if (!embedding || !Array.isArray(embedding)) {
-        throw new Error('Empty embedding from API response');
+        throw new Error("Empty embedding from API response");
       }
 
       return embedding;
@@ -52,7 +52,10 @@ export class EmbeddingIngesterService {
   /**
    * Đồng bộ hóa mô tả công ty (Company Profile Description) vào Vector DB.
    */
-  async ingestCompanyProfileEmbedding(instrumentId: string, symbol: string): Promise<void> {
+  async ingestCompanyProfileEmbedding(
+    instrumentId: string,
+    symbol: string,
+  ): Promise<void> {
     const cleanSym = symbol.toUpperCase().trim();
     const profile = await this.prisma.companyProfile.findUnique({
       where: { instrumentId },
@@ -76,7 +79,7 @@ export class EmbeddingIngesterService {
         symbol: cleanSym,
         content,
         embedding,
-        type: 'profile_description',
+        type: "profile_description",
         updatedAt: new Date(),
       },
       create: {
@@ -85,11 +88,13 @@ export class EmbeddingIngesterService {
         symbol: cleanSym,
         content,
         embedding,
-        type: 'profile_description',
+        type: "profile_description",
       },
     });
 
-    this.logger.log(`[RAG Ingestion] Successfully upserted profile embedding for ${cleanSym}`);
+    this.logger.log(
+      `[RAG Ingestion] Successfully upserted profile embedding for ${cleanSym}`,
+    );
   }
 
   /**
@@ -106,11 +111,13 @@ export class EmbeddingIngesterService {
       return;
     }
 
-    const symbolStr = article.newsInstruments.map(ni => ni.instrument.symbol).join(', ') || 'Chưa rõ';
+    const symbolStr =
+      article.newsInstruments.map((ni) => ni.instrument.symbol).join(", ") ||
+      "Chưa rõ";
     const instrumentId = article.newsInstruments[0]?.instrumentId || null;
     const symbol = article.newsInstruments[0]?.instrument.symbol || null;
 
-    const content = `Bản tin chứng khoán [Ngày ${new Date(article.publishedAt).toLocaleDateString('vi-VN')}]. Mã liên quan: ${symbolStr}. Tiêu đề: ${article.headline}. Tóm tắt nội dung: ${article.summary || article.content || 'Không có mô tả chi tiết.'}`;
+    const content = `Bản tin chứng khoán [Ngày ${new Date(article.publishedAt).toLocaleDateString("vi-VN")}]. Mã liên quan: ${symbolStr}. Tiêu đề: ${article.headline}. Tóm tắt nội dung: ${article.summary || article.content || "Không có mô tả chi tiết."}`;
     const embedding = await this.getEmbedding(content);
 
     await this.prisma.marketKnowledgeChunk.upsert({
@@ -122,7 +129,7 @@ export class EmbeddingIngesterService {
         symbol,
         content,
         embedding,
-        type: 'news',
+        type: "news",
         metadata: {
           source: article.source,
           publishedAt: article.publishedAt,
@@ -136,7 +143,7 @@ export class EmbeddingIngesterService {
         symbol,
         content,
         embedding,
-        type: 'news',
+        type: "news",
         metadata: {
           source: article.source,
           publishedAt: article.publishedAt,
@@ -145,6 +152,8 @@ export class EmbeddingIngesterService {
       },
     });
 
-    this.logger.log(`[RAG Ingestion] Successfully upserted news article embedding (ID: news-${newsId})`);
+    this.logger.log(
+      `[RAG Ingestion] Successfully upserted news article embedding (ID: news-${newsId})`,
+    );
   }
 }

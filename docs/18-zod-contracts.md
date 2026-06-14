@@ -22,7 +22,7 @@
 ```typescript
 // packages/contracts/src/utils/schemas.ts
 
-import { z } from 'zod';
+import { z } from "zod";
 
 /** UUID v4 format */
 export const uuid = z.string().uuid();
@@ -31,28 +31,27 @@ export const uuid = z.string().uuid();
 export const timestamp = z.string().datetime({ offset: true });
 
 /** Decimal-safe numeric string */
-export const decimal = z.string().regex(
-  /^-?\d+(\.\d+)?$/,
-  'Must be a valid decimal string',
-);
+export const decimal = z
+  .string()
+  .regex(/^-?\d+(\.\d+)?$/, "Must be a valid decimal string");
 
 /** Positive decimal */
 export const positiveDecimal = decimal.refine(
   (v) => parseFloat(v) > 0,
-  'Must be positive',
+  "Must be positive",
 );
 
 /** Score 0-100 */
-export const score = decimal.refine(
-  (v) => { const n = parseFloat(v); return n >= 0 && n <= 100; },
-  'Score must be between 0 and 100',
-);
+export const score = decimal.refine((v) => {
+  const n = parseFloat(v);
+  return n >= 0 && n <= 100;
+}, "Score must be between 0 and 100");
 
 /** Confidence 0-1 */
-export const confidence = decimal.refine(
-  (v) => { const n = parseFloat(v); return n >= 0 && n <= 1; },
-  'Confidence must be between 0 and 1',
-);
+export const confidence = decimal.refine((v) => {
+  const n = parseFloat(v);
+  return n >= 0 && n <= 1;
+}, "Confidence must be between 0 and 1");
 ```
 
 ---
@@ -62,13 +61,13 @@ export const confidence = decimal.refine(
 ```typescript
 // packages/contracts/src/instrument/instrument.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp } from "../utils/schemas";
 
-export const InstrumentStatusEnum = z.enum(['ACTIVE', 'HALTED', 'DELISTED']);
+export const InstrumentStatusEnum = z.enum(["ACTIVE", "HALTED", "DELISTED"]);
 
 export const InstrumentSchema = z.object({
-  version: z.literal('v1'),
+  version: z.literal("v1"),
   instrumentId: uuid,
   symbol: z.string().min(1).max(20),
   exchange: z.string().min(1).max(20),
@@ -95,11 +94,11 @@ export type Instrument = z.infer<typeof InstrumentSchema>;
 ```typescript
 // packages/contracts/src/market-data/quote.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp, decimal } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp, decimal } from "../utils/schemas";
 
 export const QuoteSchema = z.object({
-  version: z.literal('v1'),
+  version: z.literal("v1"),
   instrumentId: uuid,
   symbol: z.string().min(1).max(20),
   price: decimal,
@@ -122,13 +121,21 @@ export type Quote = z.infer<typeof QuoteSchema>;
 ```typescript
 // packages/contracts/src/market-data/candle.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp, decimal } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp, decimal } from "../utils/schemas";
 
-export const TimeframeEnum = z.enum(['1m', '5m', '15m', '1h', '1d', '1w', '1mo']);
+export const TimeframeEnum = z.enum([
+  "1m",
+  "5m",
+  "15m",
+  "1h",
+  "1d",
+  "1w",
+  "1mo",
+]);
 
 export const CandleSchema = z.object({
-  version: z.literal('v1'),
+  version: z.literal("v1"),
   instrumentId: uuid,
   timeframe: TimeframeEnum,
   open: decimal,
@@ -151,13 +158,13 @@ export type Candle = z.infer<typeof CandleSchema>;
 ```typescript
 // packages/contracts/src/fundamentals/financial-snapshot.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp, decimal } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp, decimal } from "../utils/schemas";
 
-export const PeriodEnum = z.enum(['QUARTER', 'YEAR']);
+export const PeriodEnum = z.enum(["QUARTER", "YEAR"]);
 
 export const FinancialSnapshotSchema = z.object({
-  version: z.literal('v1'),
+  version: z.literal("v1"),
   instrumentId: uuid,
   period: PeriodEnum,
   fiscalYear: z.number().int().min(2000).max(2100),
@@ -184,11 +191,11 @@ export type FinancialSnapshot = z.infer<typeof FinancialSnapshotSchema>;
 ```typescript
 // packages/contracts/src/fundamentals/valuation-snapshot.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp, decimal } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp, decimal } from "../utils/schemas";
 
 export const ValuationSnapshotSchema = z.object({
-  version: z.literal('v1'),
+  version: z.literal("v1"),
   instrumentId: uuid,
   pe: decimal.nullable(),
   pb: decimal.nullable(),
@@ -211,13 +218,13 @@ export type ValuationSnapshot = z.infer<typeof ValuationSnapshotSchema>;
 ```typescript
 // packages/contracts/src/news/news.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp, decimal } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp, decimal } from "../utils/schemas";
 
-export const NewsSentimentEnum = z.enum(['POSITIVE', 'NEUTRAL', 'NEGATIVE']);
+export const NewsSentimentEnum = z.enum(["POSITIVE", "NEUTRAL", "NEGATIVE"]);
 
 export const NewsArticleSchema = z.object({
-  version: z.literal('v1'),
+  version: z.literal("v1"),
   newsId: uuid,
   instrumentIds: z.array(uuid).min(0),
   headline: z.string().min(1).max(500),
@@ -242,23 +249,23 @@ export type NewsArticle = z.infer<typeof NewsArticleSchema>;
 ```typescript
 // packages/contracts/src/signal/signal.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp, decimal, score } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp, decimal, score } from "../utils/schemas";
 
 export const SignalTypeEnum = z.enum([
-  'RSI_OVERBOUGHT',
-  'RSI_OVERSOLD',
-  'MACD_BULLISH',
-  'MACD_BEARISH',
-  'BREAKOUT',
-  'BREAKDOWN',
-  'VOLUME_SPIKE',
+  "RSI_OVERBOUGHT",
+  "RSI_OVERSOLD",
+  "MACD_BULLISH",
+  "MACD_BEARISH",
+  "BREAKOUT",
+  "BREAKDOWN",
+  "VOLUME_SPIKE",
 ]);
 
-export const SignalStrengthEnum = z.enum(['LOW', 'MEDIUM', 'HIGH']);
+export const SignalStrengthEnum = z.enum(["LOW", "MEDIUM", "HIGH"]);
 
 export const SignalSchema = z.object({
-  version: z.literal('v1'),
+  version: z.literal("v1"),
   signalId: uuid,
   instrumentId: uuid,
   type: SignalTypeEnum,
@@ -268,7 +275,7 @@ export const SignalSchema = z.object({
   explanation: z.string().max(1000).nullable(),
   detectedAt: timestamp,
   expiresAt: timestamp.nullable(),
-  source: z.literal('SYSTEM'),
+  source: z.literal("SYSTEM"),
 });
 
 export type Signal = z.infer<typeof SignalSchema>;
@@ -281,15 +288,19 @@ export type Signal = z.infer<typeof SignalSchema>;
 ```typescript
 // packages/contracts/src/intelligence/stock-score.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp, score } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp, score } from "../utils/schemas";
 
 export const StockRatingEnum = z.enum([
-  'STRONG_BUY', 'BUY', 'HOLD', 'SELL', 'STRONG_SELL',
+  "STRONG_BUY",
+  "BUY",
+  "HOLD",
+  "SELL",
+  "STRONG_SELL",
 ]);
 
 export const StockScoreSchema = z.object({
-  version: z.literal('v1'),
+  version: z.literal("v1"),
   instrumentId: uuid,
   score: score,
   rating: StockRatingEnum,
@@ -309,13 +320,13 @@ export type StockScore = z.infer<typeof StockScoreSchema>;
 ```typescript
 // packages/contracts/src/intelligence/ai-summary.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp, confidence } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp, confidence } from "../utils/schemas";
 
-export const AISentimentEnum = z.enum(['BULLISH', 'NEUTRAL', 'BEARISH']);
+export const AISentimentEnum = z.enum(["BULLISH", "NEUTRAL", "BEARISH"]);
 
 export const AISummarySchema = z.object({
-  version: z.literal('v1'),
+  version: z.literal("v1"),
   instrumentId: uuid,
   summary: z.string().min(1).max(5000),
   sentiment: AISentimentEnum,
@@ -337,11 +348,11 @@ export type AISummary = z.infer<typeof AISummarySchema>;
 ```typescript
 // packages/contracts/src/portfolio/portfolio.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp, decimal } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp, decimal } from "../utils/schemas";
 
 export const PortfolioPositionSchema = z.object({
-  version: z.literal('v1'),
+  version: z.literal("v1"),
   portfolioId: uuid,
   instrumentId: uuid,
   quantity: decimal,
@@ -356,7 +367,7 @@ export const PortfolioPositionSchema = z.object({
 export type PortfolioPosition = z.infer<typeof PortfolioPositionSchema>;
 
 export const PortfolioSnapshotSchema = z.object({
-  version: z.literal('v1'),
+  version: z.literal("v1"),
   portfolioId: uuid,
   totalValue: decimal,
   totalCost: decimal,
@@ -377,12 +388,12 @@ export type PortfolioSnapshot = z.infer<typeof PortfolioSnapshotSchema>;
 ```typescript
 // packages/contracts/src/events/event-envelope.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp } from "../utils/schemas";
 
 export const DomainEventSchema = <T extends z.ZodType>(payloadSchema: T) =>
   z.object({
-    version: z.literal('v1'),
+    version: z.literal("v1"),
     eventId: uuid,
     eventType: z.string().min(1),
     producer: z.string().min(1),
@@ -409,8 +420,8 @@ export type SignalDetectedEvent = z.infer<typeof SignalDetectedEventSchema>;
 ```typescript
 // packages/contracts/src/api/response.schema.ts
 
-import { z } from 'zod';
-import { uuid, timestamp } from '../utils/schemas';
+import { z } from "zod";
+import { uuid, timestamp } from "../utils/schemas";
 
 export const PaginationMetaSchema = z.object({
   nextCursor: z.string().nullable(),
@@ -423,11 +434,13 @@ export const ApiSuccessSchema = <T extends z.ZodType>(dataSchema: T) =>
   z.object({
     success: z.literal(true),
     data: dataSchema,
-    meta: z.object({
-      requestId: z.string(),
-      timestamp: timestamp,
-      pagination: PaginationMetaSchema.optional(),
-    }).optional(),
+    meta: z
+      .object({
+        requestId: z.string(),
+        timestamp: timestamp,
+        pagination: PaginationMetaSchema.optional(),
+      })
+      .optional(),
   });
 
 export const ApiErrorSchema = z.object({
@@ -453,10 +466,10 @@ export type PaginationMeta = z.infer<typeof PaginationMetaSchema>;
 ```typescript
 // packages/contracts/src/api/queries.schema.ts
 
-import { z } from 'zod';
+import { z } from "zod";
 
 export const GetCandlesQuerySchema = z.object({
-  timeframe: z.enum(['1m', '5m', '15m', '1h', '1d', '1w', '1mo']).default('1d'),
+  timeframe: z.enum(["1m", "5m", "15m", "1h", "1d", "1w", "1mo"]).default("1d"),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
   limit: z.coerce.number().int().min(1).max(1000).default(100),
@@ -471,13 +484,15 @@ export const SearchInstrumentsQuerySchema = z.object({
 });
 
 export const GetNewsQuerySchema = z.object({
-  sentiment: z.enum(['POSITIVE', 'NEUTRAL', 'NEGATIVE']).optional(),
+  sentiment: z.enum(["POSITIVE", "NEUTRAL", "NEGATIVE"]).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   cursor: z.string().optional(),
 });
 
 export type GetCandlesQuery = z.infer<typeof GetCandlesQuerySchema>;
-export type SearchInstrumentsQuery = z.infer<typeof SearchInstrumentsQuerySchema>;
+export type SearchInstrumentsQuery = z.infer<
+  typeof SearchInstrumentsQuerySchema
+>;
 export type GetNewsQuery = z.infer<typeof GetNewsQuerySchema>;
 ```
 
@@ -489,24 +504,24 @@ export type GetNewsQuery = z.infer<typeof GetNewsQuerySchema>;
 // packages/contracts/src/index.ts
 
 // Shared utilities
-export * from './utils/schemas';
+export * from "./utils/schemas";
 
 // Domain schemas & types
-export * from './instrument';
-export * from './market-data';
-export * from './fundamentals';
-export * from './news';
-export * from './signal';
-export * from './intelligence';
-export * from './portfolio';
-export * from './events';
+export * from "./instrument";
+export * from "./market-data";
+export * from "./fundamentals";
+export * from "./news";
+export * from "./signal";
+export * from "./intelligence";
+export * from "./portfolio";
+export * from "./events";
 
 // API schemas & types
-export * from './api/response.schema';
-export * from './api/queries.schema';
+export * from "./api/response.schema";
+export * from "./api/queries.schema";
 
 // Error types
-export * from './errors';
+export * from "./errors";
 ```
 
 ---
@@ -517,19 +532,19 @@ export * from './errors';
 
 ```typescript
 // worker-ingestion: validate data from external source
-import { QuoteSchema } from '@stock-intel/contracts';
+import { QuoteSchema } from "@stock-intel/contracts";
 
 async function processRawQuote(rawData: unknown): Promise<void> {
   const result = QuoteSchema.safeParse(rawData);
-  
+
   if (!result.success) {
     logger.warn({
-      message: 'Invalid quote data from source',
+      message: "Invalid quote data from source",
       errors: result.error.flatten(),
     });
     return; // Skip invalid data
   }
-  
+
   const validQuote = result.data; // Fully typed Quote
   await this.quoteRepo.upsert(validQuote);
 }

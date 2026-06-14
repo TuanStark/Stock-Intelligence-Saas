@@ -71,27 +71,30 @@ Hệ thống chia thành 10 core services:
 
 # 4. Bounded Context Map
 
-| Bounded Context | Owner Service | Source of Truth |
-|---|---|---|
-| Identity & Access | Auth Service | users, sessions, roles |
-| Market Data | Market Data Service | quotes, candles, instruments |
-| Intelligence | Intelligence Service | signals, scores, rankings |
-| Portfolio | Portfolio Service | portfolios, positions, pnl |
-| Alerts | Alert Service | alert rules, alert events |
-| News | News Service | news articles, sentiment |
-| AI Intelligence | AI Service | ai summaries |
-| Billing | Billing Service | subscriptions, invoices |
-| Admin Ops | Admin Service | admin controls, moderation |
+| Bounded Context   | Owner Service        | Source of Truth              |
+| ----------------- | -------------------- | ---------------------------- |
+| Identity & Access | Auth Service         | users, sessions, roles       |
+| Market Data       | Market Data Service  | quotes, candles, instruments |
+| Intelligence      | Intelligence Service | signals, scores, rankings    |
+| Portfolio         | Portfolio Service    | portfolios, positions, pnl   |
+| Alerts            | Alert Service        | alert rules, alert events    |
+| News              | News Service         | news articles, sentiment     |
+| AI Intelligence   | AI Service           | ai summaries                 |
+| Billing           | Billing Service      | subscriptions, invoices      |
+| Admin Ops         | Admin Service        | admin controls, moderation   |
 
 ---
 
 # 5. Service Ownership (Source of Truth)
 
 ## 5.1 API Gateway
+
 ### Owns
+
 - Không sở hữu business data
 
 ### Responsibilities
+
 - request routing
 - auth verification
 - rate limiting
@@ -99,6 +102,7 @@ Hệ thống chia thành 10 core services:
 - response aggregation
 
 ### Rules
+
 - không chứa business logic
 - không sở hữu domain state
 - chỉ orchestration
@@ -106,7 +110,9 @@ Hệ thống chia thành 10 core services:
 ---
 
 ## 5.2 Auth Service
+
 ### Owns
+
 - users
 - sessions
 - roles
@@ -114,16 +120,19 @@ Hệ thống chia thành 10 core services:
 - api_keys
 
 ### Source of Truth
+
 - identity
 - access control
 
 ### Responsibilities
+
 - signup/login
 - JWT
 - RBAC
 - API key lifecycle
 
 ### Publishes
+
 - `user.created`
 - `user.updated`
 - `api_key.created`
@@ -132,7 +141,9 @@ Hệ thống chia thành 10 core services:
 ---
 
 ## 5.3 Market Data Service
+
 ### Owns
+
 - instruments
 - exchanges
 - quotes
@@ -140,21 +151,25 @@ Hệ thống chia thành 10 core services:
 - market snapshots
 
 ### Source of Truth
+
 - market state
 
 ### Responsibilities
+
 - ingest market feeds
 - normalize market data
 - publish quote updates
 - maintain market cache
 
 ### Publishes
+
 - `instrument.updated`
 - `quote.updated`
 - `candle.closed`
 - `market.snapshot.updated`
 
 ### Rules
+
 - không tính signals
 - không tính AI
 - không xử lý user logic
@@ -162,32 +177,39 @@ Hệ thống chia thành 10 core services:
 ---
 
 ## 5.4 Intelligence Service
+
 ### Owns
+
 - signals
 - stock_scores
 - rankings
 
 ### Source of Truth
+
 - derived market intelligence
 
 ### Responsibilities
+
 - compute indicators
 - generate signals
 - compute stock scores
 - generate ranking models
 
 ### Consumes
+
 - `quote.updated`
 - `candle.closed`
 - `report.published`
 - `news.ingested`
 
 ### Publishes
+
 - `signal.detected`
 - `score.updated`
 - `ranking.updated`
 
 ### Rules
+
 - không ingest raw market data
 - không sở hữu quotes
 - không gọi AI trực tiếp trong sync path
@@ -195,55 +217,68 @@ Hệ thống chia thành 10 core services:
 ---
 
 ## 5.5 Portfolio Service
+
 ### Owns
+
 - portfolios
 - positions
 - transactions
 - pnl snapshots
 
 ### Source of Truth
+
 - portfolio state
 
 ### Responsibilities
+
 - portfolio CRUD
 - holdings
 - pnl compute
 - allocation analysis
 
 ### Consumes
+
 - `quote.updated`
 
 ### Publishes
+
 - `portfolio.updated`
 - `portfolio.snapshot.updated`
 
 ### Rules
+
 - không sở hữu market data
 - chỉ consume latest market state
 
 ---
 
 ## 5.6 Alert Service
+
 ### Owns
+
 - alert_rules
 - alert_events
 - notification state
 
 ### Source of Truth
+
 - user alert state
 
 ### Responsibilities
+
 - evaluate rules
 - trigger alerts
 - dedupe notifications
 - delivery tracking
 
 ### Consumes
+
 - `quote.updated`
 - `signal.detected`
 - `portfolio.snapshot.updated`
 
 ### Publishes
+
 - `alert.triggered`
 - `alert.delivered`
 - `alert.failed`
@@ -251,15 +286,19 @@ Hệ thống chia thành 10 core services:
 ---
 
 ## 5.7 News Service
+
 ### Owns
+
 - news_articles
 - news_instruments
 - news sentiment (rule-based / base NLP)
 
 ### Source of Truth
+
 - normalized news corpus
 
 ### Responsibilities
+
 - ingest news
 - dedupe
 - classify
@@ -267,40 +306,49 @@ Hệ thống chia thành 10 core services:
 - sentiment baseline
 
 ### Publishes
+
 - `news.ingested`
 - `news.classified`
 
 ### Rules
+
 - không generate AI summary
 - chỉ produce normalized news
 
 ---
 
 ## 5.8 AI Service
+
 ### Owns
+
 - ai_summaries
 - ai generation jobs
 - ai prompt templates
 
 ### Source of Truth
+
 - generated AI intelligence
 
 ### Responsibilities
+
 - summarize stock
 - summarize news
 - generate AI insights
 - cache AI outputs
 
 ### Consumes
+
 - `score.updated`
 - `news.classified`
 - `portfolio.snapshot.updated`
 
 ### Publishes
+
 - `summary.generated`
 - `summary.failed`
 
 ### Rules
+
 - async only
 - không nằm trong request path
 - cached output only
@@ -308,37 +356,46 @@ Hệ thống chia thành 10 core services:
 ---
 
 ## 5.9 Billing Service
+
 ### Owns
+
 - subscriptions
 - invoices
 - usage
 - quotas
 
 ### Source of Truth
+
 - monetization state
 
 ### Responsibilities
+
 - plans
 - quotas
 - premium access
 - usage metering
 
 ### Publishes
+
 - `subscription.updated`
 - `quota.updated`
 
 ---
 
 ## 5.10 Admin Service
+
 ### Owns
+
 - admin actions
 - moderation
 - operational overrides
 
 ### Source of Truth
+
 - admin operational state
 
 ### Responsibilities
+
 - admin dashboards
 - data repair tools
 - manual replays
@@ -349,12 +406,15 @@ Hệ thống chia thành 10 core services:
 # 6. Inter-Service Communication Rules
 
 ## Sync Communication (HTTP/gRPC)
+
 Chỉ dùng cho:
+
 - user-facing request path
 - auth checks
 - API composition
 
 ### Allowed Sync Paths
+
 - API Gateway → Auth Service
 - API Gateway → Market Data Service
 - API Gateway → Intelligence Service
@@ -362,6 +422,7 @@ Chỉ dùng cho:
 - API Gateway → Billing Service
 
 ### Rules
+
 - sync chỉ cho reads / auth / immediate UX
 - timeout ngắn
 - retry hạn chế
@@ -370,9 +431,11 @@ Chỉ dùng cho:
 ---
 
 ## Async Communication (Event Bus)
+
 Default cho internal propagation.
 
 ### Event Bus Flow
+
 - Market Data → quote.updated
 - News → news.ingested
 - Intelligence → signal.detected
@@ -382,6 +445,7 @@ Default cho internal propagation.
 - Alert → alert.triggered
 
 ### Rules
+
 - async first
 - idempotent consumers
 - replayable events
@@ -392,6 +456,7 @@ Default cho internal propagation.
 # 7. Canonical Runtime Flow
 
 ## Flow 1 — Market Update
+
 1. Market Data ingests quote
 2. publish `quote.updated`
 3. Intelligence consumes → compute signal
@@ -402,6 +467,7 @@ Default cho internal propagation.
 ---
 
 ## Flow 2 — News Intelligence
+
 1. News ingests article
 2. publish `news.ingested`
 3. Intelligence consumes for score impact
@@ -411,6 +477,7 @@ Default cho internal propagation.
 ---
 
 ## Flow 3 — Portfolio Revaluation
+
 1. Market publishes `quote.updated`
 2. Portfolio consumes
 3. recompute PnL snapshot
@@ -422,6 +489,7 @@ Default cho internal propagation.
 # 8. Read Ownership Rules
 
 ## User-facing reads
+
 - Market screen → Market Data Service
 - Stock score → Intelligence Service
 - Portfolio screen → Portfolio Service
@@ -430,6 +498,7 @@ Default cho internal propagation.
 - AI summary → AI Service
 
 ### Rule
+
 Mỗi read endpoint chỉ có 1 owner.
 
 API Gateway chỉ aggregate.
@@ -439,9 +508,11 @@ API Gateway chỉ aggregate.
 # 9. Write Ownership Rules
 
 ### Rule tối quan trọng
+
 Chỉ owner service được write domain của nó.
 
 Ví dụ:
+
 - chỉ Portfolio Service write portfolios
 - chỉ Alert Service write alert_rules
 - chỉ Intelligence Service write signals
@@ -452,15 +523,15 @@ Không service nào write domain của service khác.
 
 # 10. Anti-Coupling Rules (Non-Negotiable)
 
-1. Không service nào đọc DB của service khác  
-2. Không shared domain ownership  
-3. Không duplicate business rules  
-4. Không sync chaining quá 2 hops  
-5. Internal propagation ưu tiên event  
-6. Read models có thể denormalize  
-7. Write ownership luôn strict  
-8. API Gateway không chứa business logic  
-9. AI không nằm trong synchronous request path  
+1. Không service nào đọc DB của service khác
+2. Không shared domain ownership
+3. Không duplicate business rules
+4. Không sync chaining quá 2 hops
+5. Internal propagation ưu tiên event
+6. Read models có thể denormalize
+7. Write ownership luôn strict
+8. API Gateway không chứa business logic
+9. AI không nằm trong synchronous request path
 10. Service boundary không được phá vì “tiện”
 
 ---
@@ -468,15 +539,18 @@ Không service nào write domain của service khác.
 # 11. Migration Strategy
 
 Phase 1:
+
 - modular monolith
 - shared runtime
 - strict module boundaries
 
 Phase 2:
+
 - split workers
 - split async consumers
 
 Phase 3:
+
 - extract independent services
 - isolate scale hotspots
 

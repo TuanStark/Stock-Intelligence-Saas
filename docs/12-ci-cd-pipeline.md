@@ -19,12 +19,12 @@
 
 # 2. Environment Strategy
 
-| Environment | Branch | Deploy Trigger | Purpose |
-|---|---|---|---|
-| Local | — | Manual | Developer workstation |
-| CI | PR branches | Automatic (PR open/update) | Validation |
-| Staging | `main` | Auto-deploy on merge | QA / Integration testing |
-| Production | Git tags `v*` | Manual approval + Auto-deploy | Live users |
+| Environment | Branch        | Deploy Trigger                | Purpose                  |
+| ----------- | ------------- | ----------------------------- | ------------------------ |
+| Local       | —             | Manual                        | Developer workstation    |
+| CI          | PR branches   | Automatic (PR open/update)    | Validation               |
+| Staging     | `main`        | Auto-deploy on merge          | QA / Integration testing |
+| Production  | Git tags `v*` | Manual approval + Auto-deploy | Live users               |
 
 ---
 
@@ -69,7 +69,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -192,7 +192,7 @@ name: Deploy Production
 
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
 
 jobs:
   deploy:
@@ -247,13 +247,13 @@ jobs:
 
 ## Dangerous Operations (Require Special Handling)
 
-| Operation | Risk | Strategy |
-|---|---|---|
-| Add column | Low | Add nullable, backfill later |
-| Add index | Medium | CREATE INDEX CONCURRENTLY |
-| Rename column | High | 3-phase: add → backfill → drop old |
-| Drop column | High | 2-phase: stop reading → drop |
-| Change type | High | Add new column → migrate → drop |
+| Operation     | Risk   | Strategy                           |
+| ------------- | ------ | ---------------------------------- |
+| Add column    | Low    | Add nullable, backfill later       |
+| Add index     | Medium | CREATE INDEX CONCURRENTLY          |
+| Rename column | High   | 3-phase: add → backfill → drop old |
+| Drop column   | High   | 2-phase: stop reading → drop       |
+| Change type   | High   | Add new column → migrate → drop    |
 
 ---
 
@@ -325,12 +325,12 @@ Database migrations are **forward-only**. If a migration causes issues:
 
 ## Automated Checks (5 minutes after deploy)
 
-| Check | Threshold | Action |
-|---|---|---|
-| Error rate | > 1% increase | Auto-rollback |
-| P95 latency | > 500ms | Alert |
-| Health endpoint | Non-200 | Auto-rollback |
-| Pod restarts | > 2 in 5 min | Alert + investigate |
+| Check           | Threshold     | Action              |
+| --------------- | ------------- | ------------------- |
+| Error rate      | > 1% increase | Auto-rollback       |
+| P95 latency     | > 500ms       | Alert               |
+| Health endpoint | Non-200       | Auto-rollback       |
+| Pod restarts    | > 2 in 5 min  | Alert + investigate |
 
 ## Deploy Notification
 
@@ -350,13 +350,13 @@ Deploy completed:
 
 # 11. Secret Management
 
-| Secret Type | Storage | Rotation |
-|---|---|---|
-| Database credentials | Kubernetes Secrets | 90 days |
-| JWT signing keys | Kubernetes Secrets | On incident |
-| API provider keys | Kubernetes Secrets | Per provider policy |
-| Redis password | Kubernetes Secrets | 90 days |
-| Docker registry creds | GitHub Secrets | 1 year |
+| Secret Type           | Storage            | Rotation            |
+| --------------------- | ------------------ | ------------------- |
+| Database credentials  | Kubernetes Secrets | 90 days             |
+| JWT signing keys      | Kubernetes Secrets | On incident         |
+| API provider keys     | Kubernetes Secrets | Per provider policy |
+| Redis password        | Kubernetes Secrets | 90 days             |
+| Docker registry creds | GitHub Secrets     | 1 year              |
 
 ### Rules
 

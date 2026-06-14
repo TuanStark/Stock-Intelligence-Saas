@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useTranslation } from '@/lib/i18n/i18n-context';
-import { Bookmark, Loader2, Plus, Trash2 } from 'lucide-react';
-import Link from 'next/link';
+import React from "react";
+import { useTranslation } from "@/lib/i18n/i18n-context";
+import { Bookmark, Loader2, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 export interface WatchlistTabProps {
   loadingWatchlist: boolean;
@@ -24,7 +24,7 @@ export const WatchlistTab: React.FC<WatchlistTabProps> = ({
   handleAddWatchlist,
   handleRemoveWatchlist,
   setSelectedSymbol,
-  setIsModalOpen
+  setIsModalOpen,
 }) => {
   const { t, locale } = useTranslation();
 
@@ -32,10 +32,10 @@ export const WatchlistTab: React.FC<WatchlistTabProps> = ({
     <div>
       <div className="mb-8">
         <h1 className="font-outfit text-3xl font-extrabold tracking-tight mb-2 title-gradient">
-          {t('watchlist.title')}
+          {t("watchlist.title")}
         </h1>
         <p className="text-text-secondary text-sm">
-          {t('watchlist.description')}
+          {t("watchlist.description")}
         </p>
       </div>
 
@@ -43,14 +43,17 @@ export const WatchlistTab: React.FC<WatchlistTabProps> = ({
       <form onSubmit={handleAddWatchlist} className="flex gap-3 max-w-lg mb-8">
         <input
           type="text"
-          placeholder={t('watchlist.symbolPlaceholder')}
+          placeholder={t("watchlist.symbolPlaceholder")}
           value={watchlistInput}
           onChange={(e) => setWatchlistInput(e.target.value)}
           className="bg-surface border border-board-border rounded-lg py-2.5 px-4 text-text-primary text-sm outline-none flex-grow focus:border-accent transition-colors"
         />
-        <button type="submit" className="btn-primary py-2.5 px-5 text-sm flex items-center gap-1.5 shrink-0">
+        <button
+          type="submit"
+          className="btn-primary py-2.5 px-5 text-sm flex items-center gap-1.5 shrink-0"
+        >
           <Plus size={16} />
-          {t('watchlist.addBtn')}
+          {t("watchlist.addBtn")}
         </button>
       </form>
 
@@ -61,9 +64,11 @@ export const WatchlistTab: React.FC<WatchlistTabProps> = ({
       ) : watchlistItems.length === 0 ? (
         <div className="glass-panel py-16 text-center rounded-2xl border border-board-border max-w-xl mx-auto">
           <Bookmark size={40} className="text-accent mx-auto mb-4" />
-          <h3 className="font-outfit text-lg font-extrabold text-text-primary mb-2">{t('watchlist.emptyTitle')}</h3>
+          <h3 className="font-outfit text-lg font-extrabold text-text-primary mb-2">
+            {t("watchlist.emptyTitle")}
+          </h3>
           <p className="text-text-secondary max-w-md mx-auto text-sm leading-relaxed px-4">
-            {t('watchlist.emptyDesc')}
+            {t("watchlist.emptyDesc")}
           </p>
         </div>
       ) : (
@@ -82,29 +87,50 @@ export const WatchlistTab: React.FC<WatchlistTabProps> = ({
                   <Trash2 size={16} />
                 </button>
 
-                <Link href={`/instruments/${item.instrument.symbol}`} className="no-underline text-inherit">
+                <Link
+                  href={`/instruments/${item.instrument.symbol}`}
+                  className="no-underline text-inherit"
+                >
                   <div className="flex items-center gap-2 mb-3.5 pr-6">
-                    <span className="font-outfit text-lg font-extrabold text-text-primary">{item.instrument.symbol}</span>
-                    <span className="text-xs text-text-muted truncate max-w-[120px]">{item.instrument.name}</span>
+                    <span className="font-outfit text-lg font-extrabold text-text-primary">
+                      {item.instrument.symbol}
+                    </span>
+                    <span className="text-xs text-text-muted truncate max-w-[120px]">
+                      {item.instrument.name}
+                    </span>
                   </div>
 
                   <div className="flex justify-between items-end">
                     <div>
                       <p className="font-outfit text-xl font-extrabold text-text-primary m-0">
-                        {item.instrument.price.toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')} <span className="text-[10px] text-text-muted">VND</span>
+                        {item.instrument.price.toLocaleString(
+                          locale === "vi" ? "vi-VN" : "en-US",
+                        )}{" "}
+                        <span className="text-[10px] text-text-muted">VND</span>
                       </p>
                     </div>
-                    <span className={`badge ${isUp ? 'badge-bullish' : 'badge-bearish'}`}>
-                      {isUp ? '+' : ''}{(item.instrument.changePercent * 100).toFixed(2)}%
+                    <span
+                      className={`badge ${isUp ? "badge-bullish" : "badge-bearish"}`}
+                    >
+                      {isUp ? "+" : ""}
+                      {(item.instrument.changePercent * 100).toFixed(2)}%
                     </span>
                   </div>
 
                   {item.instrument.latestSignal && (
-                    <div className={`mt-4 py-2 px-3 rounded-lg text-xs font-semibold ${item.instrument.latestSignal.type === 'BUY'
-                      ? 'bg-bullish/10 text-bullish border border-bullish/20'
-                      : 'bg-bearish/10 text-bearish border border-bearish/20'
-                      }`}>
-                      {t('sidebar.signals')}: {item.instrument.latestSignal.type} (Score: {Number(item.instrument.latestSignal.score || 0).toFixed(1)})
+                    <div
+                      className={`mt-4 py-2 px-3 rounded-lg text-xs font-semibold ${
+                        item.instrument.latestSignal.type === "BUY"
+                          ? "bg-bullish/10 text-bullish border border-bullish/20"
+                          : "bg-bearish/10 text-bearish border border-bearish/20"
+                      }`}
+                    >
+                      {t("sidebar.signals")}:{" "}
+                      {item.instrument.latestSignal.type} (Score:{" "}
+                      {Number(item.instrument.latestSignal.score || 0).toFixed(
+                        1,
+                      )}
+                      )
                     </div>
                   )}
                 </Link>

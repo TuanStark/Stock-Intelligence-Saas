@@ -8,13 +8,13 @@
 
 # 1. WebSocket Use Cases
 
-| Feature | Data | Update Frequency |
-|---|---|---|
-| Live quotes | Price, change, volume | 1-15 giây |
-| Market status | Open/closed/pre-market | Khi thay đổi |
-| Alert notifications | Triggered alerts | Real-time |
-| Portfolio PnL | Live PnL updates | 15-30 giây |
-| Market overview | Top movers, indices | 5-15 giây |
+| Feature             | Data                   | Update Frequency |
+| ------------------- | ---------------------- | ---------------- |
+| Live quotes         | Price, change, volume  | 1-15 giây        |
+| Market status       | Open/closed/pre-market | Khi thay đổi     |
+| Alert notifications | Triggered alerts       | Real-time        |
+| Portfolio PnL       | Live PnL updates       | 15-30 giây       |
+| Market overview     | Top movers, indices    | 5-15 giây        |
 
 ---
 
@@ -71,14 +71,14 @@ Mọi WebSocket message tuân theo envelope chuẩn:
 ```typescript
 type WSMessage = {
   type: WSMessageType;
-  id?: string;              // Client-generated ID for request tracking
-  channel?: string;         // Channel name
-  payload?: unknown;        // Message-specific data
+  id?: string; // Client-generated ID for request tracking
+  channel?: string; // Channel name
+  payload?: unknown; // Message-specific data
   error?: {
     code: string;
     message: string;
   };
-  timestamp: string;        // ISO8601 UTC
+  timestamp: string; // ISO8601 UTC
 };
 
 type WSMessageType =
@@ -300,15 +300,15 @@ ws://api.stockintel.com/ws/v1?token=<jwt>
 
 ### Error Codes
 
-| Code | Description | Action |
-|---|---|---|
-| `AUTH_REQUIRED` | No auth token | Send auth message |
-| `TOKEN_EXPIRED` | JWT expired | Refresh + re-auth |
-| `FORBIDDEN` | Tier insufficient | Upgrade subscription |
-| `SUBSCRIPTION_LIMIT` | Too many symbols | Reduce symbols |
-| `CHANNEL_NOT_FOUND` | Invalid channel | Fix channel name |
-| `RATE_LIMITED` | Too many messages | Back off |
-| `INTERNAL_ERROR` | Server error | Retry later |
+| Code                 | Description       | Action               |
+| -------------------- | ----------------- | -------------------- |
+| `AUTH_REQUIRED`      | No auth token     | Send auth message    |
+| `TOKEN_EXPIRED`      | JWT expired       | Refresh + re-auth    |
+| `FORBIDDEN`          | Tier insufficient | Upgrade subscription |
+| `SUBSCRIPTION_LIMIT` | Too many symbols  | Reduce symbols       |
+| `CHANNEL_NOT_FOUND`  | Invalid channel   | Fix channel name     |
+| `RATE_LIMITED`       | Too many messages | Back off             |
+| `INTERNAL_ERROR`     | Server error      | Retry later          |
 
 ---
 
@@ -320,7 +320,7 @@ Client ◄──pong── Server    (immediate response)
 
 If no pong for 60 seconds:
   Client → close connection → reconnect
-  
+
 If no ping for 90 seconds:
   Server → close connection → cleanup subscriptions
 ```
@@ -341,13 +341,10 @@ If no ping for 90 seconds:
 class WSClient {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
-  
+
   private getReconnectDelay(): number {
     // Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
-    const delay = Math.min(
-      1000 * Math.pow(2, this.reconnectAttempts),
-      30_000,
-    );
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30_000);
     // Add jitter (±20%)
     return delay + (Math.random() - 0.5) * delay * 0.4;
   }
@@ -386,11 +383,12 @@ class WSClient {
 // apps/api/src/modules/market-data/market-data.gateway.ts
 
 @WebSocketGateway({
-  namespace: '/ws/v1',
+  namespace: "/ws/v1",
   cors: { origin: process.env.CORS_ORIGIN },
 })
-export class MarketDataGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  
+export class MarketDataGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -401,15 +399,15 @@ export class MarketDataGateway implements OnGatewayConnection, OnGatewayDisconne
     const token = client.handshake.query.token as string;
     const user = await this.authService.verifyToken(token);
     if (!user) {
-      client.emit('error', { code: 'AUTH_REQUIRED' });
+      client.emit("error", { code: "AUTH_REQUIRED" });
       client.disconnect();
       return;
     }
     client.data.user = user;
-    client.emit('connected', { sessionId: client.id, tier: user.tier });
+    client.emit("connected", { sessionId: client.id, tier: user.tier });
   }
 
-  @SubscribeMessage('subscribe')
+  @SubscribeMessage("subscribe")
   handleSubscribe(client: Socket, payload: SubscribePayload) {
     // Validate channel, symbols, tier permissions
     // Add to subscription tracking
@@ -417,14 +415,14 @@ export class MarketDataGateway implements OnGatewayConnection, OnGatewayDisconne
     for (const symbol of payload.symbols) {
       client.join(`quote:${symbol}`);
     }
-    return { event: 'subscribed', data: { channel: payload.channel } };
+    return { event: "subscribed", data: { channel: payload.channel } };
   }
 
   // Called by ingestion pipeline when new quotes arrive
   broadcastQuote(symbol: string, quote: Quote) {
-    this.server.to(`quote:${symbol}`).emit('data', {
-      type: 'data',
-      channel: 'quotes',
+    this.server.to(`quote:${symbol}`).emit("data", {
+      type: "data",
+      channel: "quotes",
       payload: quote,
       timestamp: new Date().toISOString(),
     });
@@ -465,11 +463,11 @@ export class MarketDataGateway implements OnGatewayConnection, OnGatewayDisconne
 
 # 12. Rate Limiting
 
-| Action | Limit |
-|---|---|
-| Subscribe messages | 10 per minute per connection |
-| Ping messages | 2 per minute |
-| Total messages client→server | 30 per minute |
+| Action                       | Limit                        |
+| ---------------------------- | ---------------------------- |
+| Subscribe messages           | 10 per minute per connection |
+| Ping messages                | 2 per minute                 |
+| Total messages client→server | 30 per minute                |
 
 Exceed → error message → disconnect if persist.
 

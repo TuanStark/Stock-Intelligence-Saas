@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { RedisService } from '../redis/redis.service';
-import { IndicatorCalculatorService } from './indicator-calculator.service';
-import { SignalType, SignalStrength } from '@stock-intel/db';
+import { Injectable, Logger } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { RedisService } from "../redis/redis.service";
+import { IndicatorCalculatorService } from "./indicator-calculator.service";
+import { SignalType, SignalStrength } from "@stock-intel/db";
 
 @Injectable()
 export class SignalDetectorService {
@@ -20,7 +20,9 @@ export class SignalDetectorService {
     candles: any[],
   ): Promise<void> {
     if (candles.length < 25) {
-      this.logger.debug(`Not enough candles to run signal detection for ${symbol} (got ${candles.length}, needs >=25)`);
+      this.logger.debug(
+        `Not enough candles to run signal detection for ${symbol} (got ${candles.length}, needs >=25)`,
+      );
       return;
     }
 
@@ -40,7 +42,8 @@ export class SignalDetectorService {
           instrumentId,
           symbol,
           type: SignalType.RSI_OVERBOUGHT,
-          strength: latestRSI > 80 ? SignalStrength.HIGH : SignalStrength.MEDIUM,
+          strength:
+            latestRSI > 80 ? SignalStrength.HIGH : SignalStrength.MEDIUM,
           score: latestRSI,
           value: latestClose,
           explanation: `RSI ở mức ${latestRSI.toFixed(1)} chỉ ra rằng cổ phiếu đang đi sâu vào vùng quá mua (Overbought).`,
@@ -50,7 +53,8 @@ export class SignalDetectorService {
           instrumentId,
           symbol,
           type: SignalType.RSI_OVERSOLD,
-          strength: latestRSI < 20 ? SignalStrength.HIGH : SignalStrength.MEDIUM,
+          strength:
+            latestRSI < 20 ? SignalStrength.HIGH : SignalStrength.MEDIUM,
           score: latestRSI,
           value: latestClose,
           explanation: `RSI ở mức ${latestRSI.toFixed(1)} chỉ ra rằng cổ phiếu đang đi sâu vào vùng quá bán (Oversold).`,
@@ -185,7 +189,9 @@ export class SignalDetectorService {
             expiresAt,
           },
         });
-        this.logger.log(`🔄 Updated existing real-time technical signal: ${params.symbol} [${params.type}]`);
+        this.logger.log(
+          `🔄 Updated existing real-time technical signal: ${params.symbol} [${params.type}]`,
+        );
       } else {
         savedSignal = await this.prisma.stockSignal.create({
           data: {
@@ -199,7 +205,9 @@ export class SignalDetectorService {
             expiresAt,
           },
         });
-        this.logger.log(`🔥 Detected NEW real-time technical signal: ${params.symbol} [${params.type}]`);
+        this.logger.log(
+          `🔥 Detected NEW real-time technical signal: ${params.symbol} [${params.type}]`,
+        );
       }
 
       // Publish signal details onto Redis PubSub so that users get live alerts

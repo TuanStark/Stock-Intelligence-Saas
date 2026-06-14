@@ -22,51 +22,51 @@
 
 ## Files & Directories
 
-| Type | Convention | Example |
-|---|---|---|
-| Module | `kebab-case` | `market-data/` |
-| Component (React) | `PascalCase.tsx` | `StockCard.tsx` |
-| Service (NestJS) | `kebab-case.service.ts` | `market-data.service.ts` |
-| Controller | `kebab-case.controller.ts` | `portfolio.controller.ts` |
-| DTO | `kebab-case.dto.ts` | `create-watchlist.dto.ts` |
-| Schema (Zod) | `kebab-case.schema.ts` | `instrument.schema.ts` |
-| Test | `*.spec.ts` / `*.test.ts` | `auth.service.spec.ts` |
-| Constants | `kebab-case.constants.ts` | `cache-keys.constants.ts` |
-| Types | `kebab-case.types.ts` | `market-data.types.ts` |
-| Utils | `kebab-case.ts` | `decimal.ts` |
+| Type              | Convention                 | Example                   |
+| ----------------- | -------------------------- | ------------------------- |
+| Module            | `kebab-case`               | `market-data/`            |
+| Component (React) | `PascalCase.tsx`           | `StockCard.tsx`           |
+| Service (NestJS)  | `kebab-case.service.ts`    | `market-data.service.ts`  |
+| Controller        | `kebab-case.controller.ts` | `portfolio.controller.ts` |
+| DTO               | `kebab-case.dto.ts`        | `create-watchlist.dto.ts` |
+| Schema (Zod)      | `kebab-case.schema.ts`     | `instrument.schema.ts`    |
+| Test              | `*.spec.ts` / `*.test.ts`  | `auth.service.spec.ts`    |
+| Constants         | `kebab-case.constants.ts`  | `cache-keys.constants.ts` |
+| Types             | `kebab-case.types.ts`      | `market-data.types.ts`    |
+| Utils             | `kebab-case.ts`            | `decimal.ts`              |
 
 ## Variables & Functions
 
-| Type | Convention | Example |
-|---|---|---|
-| Variables | `camelCase` | `currentPrice` |
-| Functions | `camelCase` | `calculateScore()` |
-| Constants | `UPPER_SNAKE_CASE` | `MAX_RETRY_COUNT` |
-| Boolean | `is/has/should` prefix | `isActive`, `hasExpired` |
-| Handlers | `handle` prefix | `handleQuoteUpdate()` |
-| Getters | `get` prefix | `getLatestQuote()` |
-| Validators | `validate/is` prefix | `validateInstrument()` |
-| Transformers | `to/from/map` prefix | `toCanonicalQuote()` |
+| Type         | Convention             | Example                  |
+| ------------ | ---------------------- | ------------------------ |
+| Variables    | `camelCase`            | `currentPrice`           |
+| Functions    | `camelCase`            | `calculateScore()`       |
+| Constants    | `UPPER_SNAKE_CASE`     | `MAX_RETRY_COUNT`        |
+| Boolean      | `is/has/should` prefix | `isActive`, `hasExpired` |
+| Handlers     | `handle` prefix        | `handleQuoteUpdate()`    |
+| Getters      | `get` prefix           | `getLatestQuote()`       |
+| Validators   | `validate/is` prefix   | `validateInstrument()`   |
+| Transformers | `to/from/map` prefix   | `toCanonicalQuote()`     |
 
 ## Classes & Interfaces
 
-| Type | Convention | Example |
-|---|---|---|
-| Class | `PascalCase` | `MarketDataService` |
-| Interface | `PascalCase` (no `I` prefix) | `MarketDataAdapter` |
-| Enum | `PascalCase` | `SignalStrength` |
-| Enum values | `UPPER_SNAKE_CASE` | `SignalStrength.RSI_OVERBOUGHT` |
-| Type alias | `PascalCase` | `InstrumentStatus` |
+| Type        | Convention                   | Example                         |
+| ----------- | ---------------------------- | ------------------------------- |
+| Class       | `PascalCase`                 | `MarketDataService`             |
+| Interface   | `PascalCase` (no `I` prefix) | `MarketDataAdapter`             |
+| Enum        | `PascalCase`                 | `SignalStrength`                |
+| Enum values | `UPPER_SNAKE_CASE`           | `SignalStrength.RSI_OVERBOUGHT` |
+| Type alias  | `PascalCase`                 | `InstrumentStatus`              |
 
 ## Database
 
-| Type | Convention | Example |
-|---|---|---|
-| Table | `snake_case` (plural) | `portfolio_positions` |
-| Column | `snake_case` | `average_cost` |
-| Index | `idx_{table}_{columns}` | `idx_signals_instrument_detected` |
-| Enum | `snake_case` | `signal_strength` |
-| FK | `{table}_{column}_fkey` | `portfolio_positions_portfolio_id_fkey` |
+| Type   | Convention              | Example                                 |
+| ------ | ----------------------- | --------------------------------------- |
+| Table  | `snake_case` (plural)   | `portfolio_positions`                   |
+| Column | `snake_case`            | `average_cost`                          |
+| Index  | `idx_{table}_{columns}` | `idx_signals_instrument_detected`       |
+| Enum   | `snake_case`            | `signal_strength`                       |
+| FK     | `{table}_{column}_fkey` | `portfolio_positions_portfolio_id_fkey` |
 
 ---
 
@@ -112,10 +112,10 @@ function getQuote(symbol: string) { ... }  // implicit return type
 
 ```typescript
 // ✅ Good order
-import { Injectable } from '@nestjs/common';
-import { Quote } from '@stock-intel/contracts';
-import { PrismaService } from '@stock-intel/db';
-import { MarketDataAdapter } from './adapters/market-data-adapter.interface';
+import { Injectable } from "@nestjs/common";
+import { Quote } from "@stock-intel/contracts";
+import { PrismaService } from "@stock-intel/db";
+import { MarketDataAdapter } from "./adapters/market-data-adapter.interface";
 ```
 
 ---
@@ -141,13 +141,13 @@ module/
 
 ```typescript
 // ✅ Controller: thin, no business logic
-@Controller('api/v1/public/instruments')
+@Controller("api/v1/public/instruments")
 export class MarketDataController {
   constructor(private readonly marketDataService: MarketDataService) {}
 
-  @Get(':symbol/candles')
+  @Get(":symbol/candles")
   async getCandles(
-    @Param('symbol') symbol: string,
+    @Param("symbol") symbol: string,
     @Query() query: GetCandlesDto,
   ): Promise<ApiSuccess<Candle[]>> {
     const candles = await this.marketDataService.getCandles(symbol, query);
@@ -181,8 +181,8 @@ export class MarketDataService {
 
 ```typescript
 // DTO uses Zod for runtime validation
-import { createZodDto } from 'nestjs-zod';
-import { GetCandlesQuerySchema } from '@stock-intel/contracts';
+import { createZodDto } from "nestjs-zod";
+import { GetCandlesQuerySchema } from "@stock-intel/contracts";
 
 export class GetCandlesDto extends createZodDto(GetCandlesQuerySchema) {}
 ```
@@ -235,10 +235,10 @@ export function useQuote(symbol: string) {
 // ✅ Usage in component
 function StockDetail({ symbol }: { symbol: string }) {
   const { data: quote, isLoading, error } = useQuote(symbol);
-  
+
   if (isLoading) return <Skeleton />;
   if (error) return <ErrorState error={error} />;
-  
+
   return <QuoteDisplay quote={quote} />;
 }
 ```

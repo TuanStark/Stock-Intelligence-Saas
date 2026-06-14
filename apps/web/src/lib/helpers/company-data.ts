@@ -12,7 +12,7 @@ export interface OwnershipSegment {
 
 export interface DividendRecord {
   exDate: string;
-  type: 'Tiền mặt' | 'Cổ phiếu';
+  type: "Tiền mặt" | "Cổ phiếu";
   rate: string;
 }
 
@@ -26,7 +26,7 @@ export interface NewsArticle {
   title: string;
   date: string;
   source: string;
-  sentiment: 'BULLISH' | 'NEUTRAL' | 'BEARISH';
+  sentiment: "BULLISH" | "NEUTRAL" | "BEARISH";
 }
 
 export interface CorporateEvent {

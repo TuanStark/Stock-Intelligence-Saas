@@ -77,7 +77,7 @@ export abstract class BaseError extends Error {
 
 ```typescript
 export class NotFoundError extends BaseError {
-  readonly code = 'NOT_FOUND';
+  readonly code = "NOT_FOUND";
   readonly statusCode = 404;
 
   constructor(entity: string, identifier: string) {
@@ -86,17 +86,17 @@ export class NotFoundError extends BaseError {
 }
 
 export class ValidationError extends BaseError {
-  readonly code = 'VALIDATION_ERROR';
+  readonly code = "VALIDATION_ERROR";
   readonly statusCode = 400;
 
   constructor(errors: Record<string, string[]>) {
-    super('Validation failed');
+    super("Validation failed");
     this.details = errors;
   }
 }
 
 export class ConflictError extends BaseError {
-  readonly code = 'CONFLICT';
+  readonly code = "CONFLICT";
   readonly statusCode = 409;
 
   constructor(message: string) {
@@ -105,7 +105,7 @@ export class ConflictError extends BaseError {
 }
 
 export class BusinessRuleError extends BaseError {
-  readonly code = 'BUSINESS_RULE_VIOLATION';
+  readonly code = "BUSINESS_RULE_VIOLATION";
   readonly statusCode = 422;
 
   constructor(rule: string, message: string) {
@@ -119,27 +119,35 @@ export class BusinessRuleError extends BaseError {
 
 ```typescript
 export class UnauthorizedError extends BaseError {
-  readonly code = 'UNAUTHORIZED';
+  readonly code = "UNAUTHORIZED";
   readonly statusCode = 401;
-  constructor(message = 'Authentication required') { super(message); }
+  constructor(message = "Authentication required") {
+    super(message);
+  }
 }
 
 export class ForbiddenError extends BaseError {
-  readonly code = 'FORBIDDEN';
+  readonly code = "FORBIDDEN";
   readonly statusCode = 403;
-  constructor(message = 'Insufficient permissions') { super(message); }
+  constructor(message = "Insufficient permissions") {
+    super(message);
+  }
 }
 
 export class TokenExpiredError extends BaseError {
-  readonly code = 'TOKEN_EXPIRED';
+  readonly code = "TOKEN_EXPIRED";
   readonly statusCode = 401;
-  constructor() { super('Token has expired'); }
+  constructor() {
+    super("Token has expired");
+  }
 }
 
 export class QuotaExceededError extends BaseError {
-  readonly code = 'QUOTA_EXCEEDED';
+  readonly code = "QUOTA_EXCEEDED";
   readonly statusCode = 429;
-  constructor(resource: string) { super(`Quota exceeded for ${resource}`); }
+  constructor(resource: string) {
+    super(`Quota exceeded for ${resource}`);
+  }
 }
 ```
 
@@ -147,7 +155,7 @@ export class QuotaExceededError extends BaseError {
 
 ```typescript
 export class UpstreamError extends BaseError {
-  readonly code = 'UPSTREAM_UNAVAILABLE';
+  readonly code = "UPSTREAM_UNAVAILABLE";
   readonly statusCode = 503;
   readonly isOperational = true;
 
@@ -157,7 +165,7 @@ export class UpstreamError extends BaseError {
 }
 
 export class DatabaseError extends BaseError {
-  readonly code = 'DATABASE_ERROR';
+  readonly code = "DATABASE_ERROR";
   readonly statusCode = 500;
   readonly isOperational = false;
 
@@ -177,13 +185,13 @@ Mọi API error response phải tuân theo format chuẩn:
 type ApiErrorResponse = {
   success: false;
   error: {
-    code: string;          // Machine-readable error code
-    message: string;       // Human-readable message
-    details?: unknown;     // Validation errors, field-level details
+    code: string; // Machine-readable error code
+    message: string; // Human-readable message
+    details?: unknown; // Validation errors, field-level details
   };
   meta: {
-    requestId: string;     // Correlation ID
-    timestamp: string;     // Error timestamp
+    requestId: string; // Correlation ID
+    timestamp: string; // Error timestamp
   };
 };
 ```
@@ -250,7 +258,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
     const request = ctx.getRequest();
-    const requestId = request.headers['x-request-id'] || uuid();
+    const requestId = request.headers["x-request-id"] || uuid();
 
     if (exception instanceof BaseError) {
       // Known operational error → structured response
@@ -274,15 +282,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const status = exception.getStatus();
       return response.status(status).json({
         success: false,
-        error: { code: 'HTTP_ERROR', message: exception.message },
+        error: { code: "HTTP_ERROR", message: exception.message },
         meta: { requestId, timestamp: new Date().toISOString() },
       });
     }
 
     // Unknown error → log full, respond generic
     this.logger.error({
-      message: 'Unhandled exception',
-      error: exception instanceof Error ? exception.message : 'Unknown',
+      message: "Unhandled exception",
+      error: exception instanceof Error ? exception.message : "Unknown",
       stack: exception instanceof Error ? exception.stack : undefined,
       requestId,
       path: request.url,
@@ -290,7 +298,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     return response.status(500).json({
       success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "An unexpected error occurred",
+      },
       meta: { requestId, timestamp: new Date().toISOString() },
     });
   }
@@ -331,18 +342,18 @@ async function withRetry<T>(
       await sleep(delay + jitter(delay * 0.1));
     }
   }
-  throw new Error('Unreachable');
+  throw new Error("Unreachable");
 }
 ```
 
 ### Retry Configuration per Service
 
-| Service | Max Attempts | Base Delay | Retryable Errors |
-|---|---|---|---|
-| Market Data Adapter | 3 | 1000ms | `UPSTREAM_UNAVAILABLE`, `TIMEOUT` |
-| AI Provider | 2 | 2000ms | `RATE_LIMITED`, `TIMEOUT` |
-| Database | 2 | 500ms | `CONNECTION_ERROR` |
-| Cache (Redis) | 1 | 0ms | — (fail fast, serve stale) |
+| Service             | Max Attempts | Base Delay | Retryable Errors                  |
+| ------------------- | ------------ | ---------- | --------------------------------- |
+| Market Data Adapter | 3            | 1000ms     | `UPSTREAM_UNAVAILABLE`, `TIMEOUT` |
+| AI Provider         | 2            | 2000ms     | `RATE_LIMITED`, `TIMEOUT`         |
+| Database            | 2            | 500ms      | `CONNECTION_ERROR`                |
+| Cache (Redis)       | 1            | 0ms        | — (fail fast, serve stale)        |
 
 ## Circuit Breaker
 
@@ -386,14 +397,14 @@ Main Queue ──► Worker ──► Success
 
 # 8. Error Handling by Layer
 
-| Layer | Error Strategy |
-|---|---|
+| Layer      | Error Strategy                                   |
+| ---------- | ------------------------------------------------ |
 | Controller | Catch nothing — let GlobalExceptionFilter handle |
-| Service | Throw domain errors, wrap infra errors |
-| Repository | Catch Prisma errors, rethrow as domain errors |
-| Adapter | Catch provider errors, rethrow as UpstreamError |
-| Worker | Log + retry + DLQ |
-| WebSocket | Send error frame, don't close connection |
+| Service    | Throw domain errors, wrap infra errors           |
+| Repository | Catch Prisma errors, rethrow as domain errors    |
+| Adapter    | Catch provider errors, rethrow as UpstreamError  |
+| Worker     | Log + retry + DLQ                                |
+| WebSocket  | Send error frame, don't close connection         |
 
 ### Example: Repository Error Wrapping
 
@@ -403,11 +414,11 @@ async findInstrumentBySymbol(symbol: string): Promise<Instrument> {
     const instrument = await this.prisma.instrument.findUnique({
       where: { symbol_exchangeId: { symbol, exchangeId } },
     });
-    
+
     if (!instrument) {
       throw new NotFoundError('Instrument', symbol);
     }
-    
+
     return instrument;
   } catch (error) {
     if (error instanceof BaseError) throw error;
@@ -431,12 +442,12 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {
-        if (error.code === 'UNAUTHORIZED') return false;
-        if (error.code === 'NOT_FOUND') return false;
+        if (error.code === "UNAUTHORIZED") return false;
+        if (error.code === "NOT_FOUND") return false;
         return failureCount < 3;
       },
       onError: (error) => {
-        if (error.code === 'UNAUTHORIZED') {
+        if (error.code === "UNAUTHORIZED") {
           // Redirect to login
         }
       },
@@ -449,15 +460,15 @@ const queryClient = new QueryClient({
 
 # 10. Error Monitoring & Alerting
 
-| Error Type | Action |
-|---|---|
-| Validation errors | Log, no alert (expected) |
-| Not found | Log, no alert (expected) |
-| Unauthorized | Log, alert if spike |
-| Upstream errors | Log, alert, circuit breaker |
-| Database errors | Log, alert immediately, page on-call |
+| Error Type           | Action                                 |
+| -------------------- | -------------------------------------- |
+| Validation errors    | Log, no alert (expected)               |
+| Not found            | Log, no alert (expected)               |
+| Unauthorized         | Log, alert if spike                    |
+| Upstream errors      | Log, alert, circuit breaker            |
+| Database errors      | Log, alert immediately, page on-call   |
 | Unhandled exceptions | Log, alert immediately, Sentry capture |
-| DLQ accumulation | Alert when > 10 items |
+| DLQ accumulation     | Alert when > 10 items                  |
 
 ---
 

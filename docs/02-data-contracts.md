@@ -18,6 +18,7 @@ Data Contract Blueprint định nghĩa:
 Đây là **xương sống dữ liệu** của toàn hệ thống.
 
 Nếu không có data contract:
+
 - mỗi service trả 1 kiểu
 - FE mapping loạn
 - đổi source là vỡ
@@ -76,20 +77,20 @@ Toàn hệ thống chia thành 8 domain dữ liệu:
 ```ts
 type Instrument = {
   version: "v1";
-  instrumentId: string;         // internal UUID
-  symbol: string;               // FPT
-  exchange: string;             // HOSE
-  market: string;               // VN
-  name: string;                 // CTCP FPT
-  sector: string | null;        // Technology
-  industry: string | null;      // IT Services
-  currency: string;             // VND
+  instrumentId: string; // internal UUID
+  symbol: string; // FPT
+  exchange: string; // HOSE
+  market: string; // VN
+  name: string; // CTCP FPT
+  sector: string | null; // Technology
+  industry: string | null; // IT Services
+  currency: string; // VND
   isin: string | null;
   status: "ACTIVE" | "HALTED" | "DELISTED";
   tradable: boolean;
   lotSize: number | null;
-  createdAt: string;            // ISO8601 UTC
-  updatedAt: string;            // ISO8601 UTC
+  createdAt: string; // ISO8601 UTC
+  updatedAt: string; // ISO8601 UTC
 };
 ```
 
@@ -110,7 +111,7 @@ type Quote = {
   version: "v1";
   instrumentId: string;
   symbol: string;
-  price: string;                // decimal string
+  price: string; // decimal string
   change: string;
   changePercent: string;
   open: string;
@@ -119,8 +120,8 @@ type Quote = {
   previousClose: string;
   volume: string;
   value: string;
-  timestamp: string;            // market timestamp
-  asOf: string;                 // ingestion timestamp UTC
+  timestamp: string; // market timestamp
+  asOf: string; // ingestion timestamp UTC
   source: string;
 };
 ```
@@ -138,7 +139,7 @@ type Candle = {
   close: string;
   volume: string;
   value: string | null;
-  timestamp: string;            // candle open time UTC
+  timestamp: string; // candle open time UTC
   source: string;
 };
 ```
@@ -243,8 +244,8 @@ type Signal = {
     | "BREAKDOWN"
     | "VOLUME_SPIKE";
   strength: "LOW" | "MEDIUM" | "HIGH";
-  score: string;                // 0-100
-  value: string | null;         // raw signal value
+  score: string; // 0-100
+  value: string | null; // raw signal value
   explanation: string | null;
   detectedAt: string;
   expiresAt: string | null;
@@ -268,7 +269,7 @@ type Signal = {
 type StockScore = {
   version: "v1";
   instrumentId: string;
-  score: string;                // 0-100
+  score: string; // 0-100
   rating: "STRONG_BUY" | "BUY" | "HOLD" | "SELL" | "STRONG_SELL";
   factors: {
     technical: string;
@@ -289,7 +290,7 @@ type AISummary = {
   instrumentId: string;
   summary: string;
   sentiment: "BULLISH" | "NEUTRAL" | "BEARISH";
-  confidence: string;           // 0-1
+  confidence: string; // 0-1
   drivers: string[];
   risks: string[];
   generatedAt: string;

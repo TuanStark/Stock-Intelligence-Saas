@@ -1,16 +1,24 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
-import type { Instrument } from '@stock-intel/db';
-import { PrismaService } from './prisma/prisma.service';
-import { ProviderFallbackService } from './adapters/provider.service';
-import { RedisService } from './redis/redis.service';
-import { MarketDataBatchIngestor } from './ingestor/market-data-batch.ingestor';
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { Cron } from "@nestjs/schedule";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import type { Instrument } from "@stock-intel/db";
+import { PrismaService } from "./prisma/prisma.service";
+import { ProviderFallbackService } from "./adapters/provider.service";
+import { RedisService } from "./redis/redis.service";
+import { MarketDataBatchIngestor } from "./ingestor/market-data-batch.ingestor";
 
 const DEFAULT_VN_SYMBOLS = [
-  'VNM', 'VCB', 'FPT', 'MWG', 'HPG',
-  'VHM', 'VIC', 'MSN', 'TCB', 'MBB',
+  "VNM",
+  "VCB",
+  "FPT",
+  "MWG",
+  "HPG",
+  "VHM",
+  "VIC",
+  "MSN",
+  "TCB",
+  "MBB",
 ];
 
 @Injectable()
@@ -24,13 +32,15 @@ export class IngestionService implements OnModuleInit {
     private readonly provider: ProviderFallbackService,
     private readonly redis: RedisService,
     private readonly batchIngestor: MarketDataBatchIngestor,
-    @InjectQueue('stock-processing') private readonly processingQueue: Queue,
-  ) { }
+    @InjectQueue("stock-processing") private readonly processingQueue: Queue,
+  ) {}
 
   // ─── Lifecycle ────────────────────────────────────────────
 
   async onModuleInit() {
-    this.logger.log(' IngestionService initialized. Running initial bootstrap…');
+    this.logger.log(
+      " IngestionService initialized. Running initial bootstrap…",
+    );
     await this.bootstrapInstruments();
     await this.prewarmHistoricalCandles(); // Run background pre-warming for historical candles
     await this.ingestMarketData();
@@ -39,16 +49,24 @@ export class IngestionService implements OnModuleInit {
   // ─── Bootstrap Instruments ────────────────────────────────
 
   private async bootstrapInstruments(): Promise<void> {
-    let exchange = await this.prisma.exchange.findFirst({ where: { code: 'HOSE' } });
+    let exchange = await this.prisma.exchange.findFirst({
+      where: { code: "HOSE" },
+    });
     if (!exchange) {
       exchange = await this.prisma.exchange.create({
-        data: { code: 'HOSE', name: 'Ho Chi Minh Stock Exchange', market: 'VN' },
+        data: {
+          code: "HOSE",
+          name: "Ho Chi Minh Stock Exchange",
+          market: "VN",
+        },
       });
-      this.logger.log('Created exchange: HOSE');
+      this.logger.log("Created exchange: HOSE");
     }
 
     for (const symbol of DEFAULT_VN_SYMBOLS) {
-      const existing = await this.prisma.instrument.findFirst({ where: { symbol } });
+      const existing = await this.prisma.instrument.findFirst({
+        where: { symbol },
+      });
       if (existing) continue;
 
       try {
@@ -57,26 +75,30 @@ export class IngestionService implements OnModuleInit {
           data: {
             symbol,
             name: profile.name,
-            currency: 'VND',
+            currency: "VND",
             exchangeId: exchange.id,
             industry: profile.industry || null,
-            status: 'ACTIVE',
+            status: "ACTIVE",
             tradable: true,
           },
         });
         this.logger.log(`Bootstrapped instrument: ${symbol} (${profile.name})`);
       } catch (error) {
-        this.logger.warn(`Could not bootstrap ${symbol}: ${(error as Error).message}`);
+        this.logger.warn(
+          `Could not bootstrap ${symbol}: ${(error as Error).message}`,
+        );
       }
     }
   }
 
   // ─── Cron: Market Data Ingestion ──────────────────────────
 
-  @Cron('*/30 * * * * *')
+  @Cron("*/30 * * * * *")
   async ingestMarketData(): Promise<void> {
     if (this.isIngesting) {
-      this.logger.debug(' Previous ingestion cycle still running. Skipping this tick.');
+      this.logger.debug(
+        " Previous ingestion cycle still running. Skipping this tick.",
+      );
       return;
     }
 
@@ -85,15 +107,19 @@ export class IngestionService implements OnModuleInit {
 
     try {
       const instruments = await this.prisma.instrument.findMany({
-        where: { status: 'ACTIVE' },
+        where: { status: "ACTIVE" },
       });
 
       if (instruments.length === 0) {
-        this.logger.warn('No active instruments found. Skipping ingestion cycle.');
+        this.logger.warn(
+          "No active instruments found. Skipping ingestion cycle.",
+        );
         return;
       }
 
-      this.logger.log(`Ingesting quotes for ${instruments.length} instruments…`);
+      this.logger.log(
+        `Ingesting quotes for ${instruments.length} instruments…`,
+      );
 
       const CONCURRENCY = 5;
       const results = { success: 0, failed: 0 };
@@ -102,11 +128,13 @@ export class IngestionService implements OnModuleInit {
         const batch = instruments.slice(i, i + CONCURRENCY);
 
         const settled = await Promise.allSettled(
-          batch.map((inst: Instrument) => this.ingestSingleInstrument(inst.id, inst.symbol)),
+          batch.map((inst: Instrument) =>
+            this.ingestSingleInstrument(inst.id, inst.symbol),
+          ),
         );
 
         for (const result of settled) {
-          if (result.status === 'fulfilled') {
+          if (result.status === "fulfilled") {
             results.success++;
           } else {
             results.failed++;
@@ -117,10 +145,12 @@ export class IngestionService implements OnModuleInit {
       const elapsed = Date.now() - startTime;
       this.logger.log(
         `Ingestion cycle complete in ${elapsed}ms — ` +
-        `success: ${results.success}, failed: ${results.failed}`,
+          `success: ${results.success}, failed: ${results.failed}`,
       );
     } catch (error) {
-      this.logger.error(` Fatal error in ingestion cycle: ${(error as Error).message}`);
+      this.logger.error(
+        ` Fatal error in ingestion cycle: ${(error as Error).message}`,
+      );
     } finally {
       this.isIngesting = false;
     }
@@ -128,7 +158,10 @@ export class IngestionService implements OnModuleInit {
 
   // ─── Single Instrument Pipeline ───────────────────────────
 
-  private async ingestSingleInstrument(instrumentId: string, symbol: string): Promise<void> {
+  private async ingestSingleInstrument(
+    instrumentId: string,
+    symbol: string,
+  ): Promise<void> {
     const quote = await this.provider.getQuote(symbol);
 
     this.batchIngestor.pushTick({
@@ -157,7 +190,7 @@ export class IngestionService implements OnModuleInit {
       where: {
         instrumentId_timeframe_timestamp: {
           instrumentId,
-          timeframe: '1D',
+          timeframe: "1D",
           timestamp: candleDate,
         },
       },
@@ -170,14 +203,14 @@ export class IngestionService implements OnModuleInit {
       },
       create: {
         instrumentId,
-        timeframe: '1D',
+        timeframe: "1D",
         open: Math.round(quote.open),
         high: Math.round(quote.high),
         low: Math.round(quote.low),
         close: Math.round(quote.price),
         volume: Math.round(quote.volume),
         timestamp: candleDate,
-        source: 'INGESTION_REALTIME',
+        source: "INGESTION_REALTIME",
       },
     });
 
@@ -226,7 +259,7 @@ export class IngestionService implements OnModuleInit {
     }
 
     await this.processingQueue.add(
-      'process-indicators',
+      "process-indicators",
       {
         instrumentId,
         symbol,
@@ -237,7 +270,7 @@ export class IngestionService implements OnModuleInit {
         removeOnFail: 200,
         attempts: 3,
         backoff: {
-          type: 'exponential',
+          type: "exponential",
           delay: 3000,
         },
       },
@@ -247,9 +280,11 @@ export class IngestionService implements OnModuleInit {
   // ─── Background Pre-warming Candles Engine ─────────────────
   private async prewarmHistoricalCandles(): Promise<void> {
     const instruments = await this.prisma.instrument.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: "ACTIVE" },
     });
-    this.logger.log(`Pre-warming and synchronizing historical candles for ${instruments.length} active instruments asynchronously...`);
+    this.logger.log(
+      `Pre-warming and synchronizing historical candles for ${instruments.length} active instruments asynchronously...`,
+    );
 
     // Execute in a background closure to keep main thread bootstrap unblocked
     (async () => {
@@ -261,16 +296,17 @@ export class IngestionService implements OnModuleInit {
           const fromTime = toTime - daysToFetch * 24 * 60 * 60;
 
           const url = `https://dchart-api.vndirect.com.vn/dchart/history?symbol=${cleanSym}&resolution=D&from=${fromTime}&to=${toTime}`;
-          
+
           const response = await fetch(url, {
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             },
           });
 
           if (response.ok) {
             const data = (await response.json()) as any;
-            if (data && data.s === 'ok' && data.t && data.t.length > 0) {
+            if (data && data.s === "ok" && data.t && data.t.length > 0) {
               const limit = 1000; // Synchronize up to 1000 daily candles for rich history
               const startIndex = Math.max(0, data.t.length - limit);
               const candlesToSave = [];
@@ -278,14 +314,14 @@ export class IngestionService implements OnModuleInit {
               for (let idx = startIndex; idx < data.t.length; idx++) {
                 candlesToSave.push({
                   instrumentId: inst.id,
-                  timeframe: '1D',
+                  timeframe: "1D",
                   open: Math.round(data.o[idx] * 1000),
                   high: Math.round(data.h[idx] * 1000),
                   low: Math.round(data.l[idx] * 1000),
                   close: Math.round(data.c[idx] * 1000),
                   volume: data.v[idx] || 0,
                   timestamp: new Date(data.t[idx] * 1000),
-                  source: 'VNDIRECT_DCHART_PREWARM',
+                  source: "VNDIRECT_DCHART_PREWARM",
                 });
               }
 
@@ -294,23 +330,30 @@ export class IngestionService implements OnModuleInit {
                 data: candlesToSave,
                 skipDuplicates: true,
               });
-              
-              this.logger.log(` Successfully pre-warmed ${candlesToSave.length} real historical daily candles for ${cleanSym}`);
+
+              this.logger.log(
+                ` Successfully pre-warmed ${candlesToSave.length} real historical daily candles for ${cleanSym}`,
+              );
             }
           }
         } catch (e) {
-          this.logger.error(`Failed to pre-warm historical candles for ${inst.symbol}:`, e);
+          this.logger.error(
+            `Failed to pre-warm historical candles for ${inst.symbol}:`,
+            e,
+          );
         }
         // Throttling: 1-second delay between requests to be friendly to public external API rate limits
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     })();
   }
 
   // ─── Cron: Periodic Historical Candles Synchronization ──────
-  @Cron('0 */6 * * *')
+  @Cron("0 */6 * * *")
   async handlePeriodicHistoricalSync(): Promise<void> {
-    this.logger.log('⌛ Starting periodic background sync for historical daily candles...');
+    this.logger.log(
+      "⌛ Starting periodic background sync for historical daily candles...",
+    );
     await this.prewarmHistoricalCandles();
   }
 }

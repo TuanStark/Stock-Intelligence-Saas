@@ -1,26 +1,29 @@
-import { Logger } from '@nestjs/common';
-import axios from 'axios';
+import { Logger } from "@nestjs/common";
+import axios from "axios";
 import {
   IMarketDataProvider,
   NormalizedQuote,
   NormalizedCandle,
   NormalizedCompany,
   ProviderError,
-} from '@stock-intel/contracts';
+} from "@stock-intel/contracts";
 
 export class FireAntAdapter implements IMarketDataProvider {
-  readonly name = 'FIREANT';
+  readonly name = "FIREANT";
   private readonly logger = new Logger(FireAntAdapter.name);
-  private readonly baseUrl = 'https://restv2.fireant.vn';
+  private readonly baseUrl = "https://restv2.fireant.vn";
 
   // FireAnt usually requires Bearer token, but some endpoints might be open or we can mock for fallback
   async getQuote(symbol: string): Promise<NormalizedQuote> {
     try {
-      const response = await axios.get(`${this.baseUrl}/symbols/${symbol}/quotes`, { timeout: 5000 });
+      const response = await axios.get(
+        `${this.baseUrl}/symbols/${symbol}/quotes`,
+        { timeout: 5000 },
+      );
       const data = response.data;
 
       if (!data || data.length === 0) {
-        throw new Error('No quote data from FireAnt');
+        throw new Error("No quote data from FireAnt");
       }
 
       const quote = data[0];
@@ -50,7 +53,11 @@ export class FireAntAdapter implements IMarketDataProvider {
       };
     } catch (error) {
       this.logger.error(`Failed to get quote for ${symbol}: ${error}`);
-      throw new ProviderError(this.name, `Failed to get quote for ${symbol}`, error);
+      throw new ProviderError(
+        this.name,
+        `Failed to get quote for ${symbol}`,
+        error,
+      );
     }
   }
 
@@ -58,12 +65,18 @@ export class FireAntAdapter implements IMarketDataProvider {
     symbol: string,
     period1: Date,
     period2: Date,
-    resolution: '1D' | '1W' | '1M' | '15m' | '1h'
+    resolution: "1D" | "1W" | "1M" | "15m" | "1h",
   ): Promise<NormalizedCandle[]> {
-    throw new ProviderError(this.name, 'Historical data not implemented for FireAnt MVP');
+    throw new ProviderError(
+      this.name,
+      "Historical data not implemented for FireAnt MVP",
+    );
   }
 
   async getCompanyProfile(symbol: string): Promise<NormalizedCompany> {
-    throw new ProviderError(this.name, 'Company profile not implemented for FireAnt MVP');
+    throw new ProviderError(
+      this.name,
+      "Company profile not implemented for FireAnt MVP",
+    );
   }
 }

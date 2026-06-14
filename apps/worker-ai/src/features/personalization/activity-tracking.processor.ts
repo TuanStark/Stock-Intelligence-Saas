@@ -1,8 +1,8 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ActivityType } from '@stock-intel/db';
+import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { Logger } from "@nestjs/common";
+import { Job } from "bullmq";
+import { PrismaService } from "../../prisma/prisma.service";
+import { ActivityType } from "@stock-intel/db";
 
 interface TrackJobPayload {
   userId: string;
@@ -12,7 +12,7 @@ interface TrackJobPayload {
   metadata?: any;
 }
 
-@Processor('activity-tracking')
+@Processor("activity-tracking")
 export class ActivityTrackingProcessor extends WorkerHost {
   private readonly logger = new Logger(ActivityTrackingProcessor.name);
   private readonly DECAY_FACTOR = 0.92; // 8% interest decay per interaction to fade old history naturally
@@ -23,7 +23,9 @@ export class ActivityTrackingProcessor extends WorkerHost {
 
   async process(job: Job<TrackJobPayload>): Promise<any> {
     const { userId, activityType, symbol, sectorId, metadata } = job.data;
-    this.logger.log(`Processing activity tracking job: ${activityType} for user ${userId}`);
+    this.logger.log(
+      `Processing activity tracking job: ${activityType} for user ${userId}`,
+    );
 
     // 1. Persist the raw activity record in the Timeseries/Postgres logs
     const activity = await this.prisma.userActivity.create({
@@ -47,22 +49,29 @@ export class ActivityTrackingProcessor extends WorkerHost {
           userId,
           preferredSectors: {},
           viewedStocks: {},
-          investmentStyle: 'NEUTRAL',
-          riskTolerance: 0.50,
+          investmentStyle: "NEUTRAL",
+          riskTolerance: 0.5,
         },
       });
     }
 
     // 3. Process dynamic weights based on activity type (Decay & Boost Model)
     const viewedStocks = (profile.viewedStocks || {}) as Record<string, number>;
-    const preferredSectors = (profile.preferredSectors || {}) as Record<string, number>;
+    const preferredSectors = (profile.preferredSectors || {}) as Record<
+      string,
+      number
+    >;
 
     // Step A: Apply Exponential Decay to all existing items to ensure freshness
     for (const key in viewedStocks) {
-      viewedStocks[key] = Number((viewedStocks[key] * this.DECAY_FACTOR).toFixed(4));
+      viewedStocks[key] = Number(
+        (viewedStocks[key] * this.DECAY_FACTOR).toFixed(4),
+      );
     }
     for (const key in preferredSectors) {
-      preferredSectors[key] = Number((preferredSectors[key] * this.DECAY_FACTOR).toFixed(4));
+      preferredSectors[key] = Number(
+        (preferredSectors[key] * this.DECAY_FACTOR).toFixed(4),
+      );
     }
 
     // Step B: Calculate and apply active boosts based on interaction type
@@ -102,7 +111,9 @@ export class ActivityTrackingProcessor extends WorkerHost {
     if (symbol) {
       const upperSymbol = symbol.toUpperCase();
       const currentStockWeight = viewedStocks[upperSymbol] || 0;
-      viewedStocks[upperSymbol] = Number((currentStockWeight + stockBoost).toFixed(4));
+      viewedStocks[upperSymbol] = Number(
+        (currentStockWeight + stockBoost).toFixed(4),
+      );
 
       // Auto-resolve sector if not provided to enrich context profiles
       if (!sectorId) {
@@ -111,8 +122,11 @@ export class ActivityTrackingProcessor extends WorkerHost {
           select: { sectorId: true },
         });
         if (instrument && instrument.sectorId) {
-          const currentSectorWeight = preferredSectors[instrument.sectorId] || 0;
-          preferredSectors[instrument.sectorId] = Number((currentSectorWeight + sectorBoost).toFixed(4));
+          const currentSectorWeight =
+            preferredSectors[instrument.sectorId] || 0;
+          preferredSectors[instrument.sectorId] = Number(
+            (currentSectorWeight + sectorBoost).toFixed(4),
+          );
         }
       }
     }
@@ -120,7 +134,9 @@ export class ActivityTrackingProcessor extends WorkerHost {
     // Apply sector boost
     if (sectorId) {
       const currentSectorWeight = preferredSectors[sectorId] || 0;
-      preferredSectors[sectorId] = Number((currentSectorWeight + sectorBoost).toFixed(4));
+      preferredSectors[sectorId] = Number(
+        (currentSectorWeight + sectorBoost).toFixed(4),
+      );
     }
 
     // 4. Update the computed weights profile back to DB

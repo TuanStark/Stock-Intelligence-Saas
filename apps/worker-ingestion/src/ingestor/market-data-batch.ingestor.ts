@@ -1,5 +1,5 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
 
 interface MarketTick {
   time: Date;
@@ -24,7 +24,9 @@ export class MarketDataBatchIngestor implements OnModuleDestroy {
   public pushTick(tick: MarketTick) {
     this.tickBuffer.push(tick);
     if (this.tickBuffer.length >= this.maxBufferSize) {
-      this.logger.debug(`Buffer reached maximum size (${this.tickBuffer.length}). Flushing immediately.`);
+      this.logger.debug(
+        `Buffer reached maximum size (${this.tickBuffer.length}). Flushing immediately.`,
+      );
       this.flush();
     }
   }
@@ -48,13 +50,15 @@ export class MarketDataBatchIngestor implements OnModuleDestroy {
 
       currentBatch.forEach((tick, index) => {
         const offset = index * 4;
-        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`);
+        values.push(
+          `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`,
+        );
         params.push(tick.time, tick.symbol, tick.price, tick.volume);
       });
 
       const sql = `
         INSERT INTO "raw_ticks" ("time", "symbol", "price", "volume") 
-        VALUES ${values.join(', ')} 
+        VALUES ${values.join(", ")} 
         ON CONFLICT ("symbol", "time") 
         DO UPDATE SET 
           "volume" = EXCLUDED."volume",
@@ -63,9 +67,14 @@ export class MarketDataBatchIngestor implements OnModuleDestroy {
       await this.prisma.$executeRawUnsafe(sql, ...params);
 
       const elapsed = Date.now() - startTime;
-      this.logger.log(`Bulk inserted ${currentBatch.length} market ticks successfully in ${elapsed}ms!`);
+      this.logger.log(
+        `Bulk inserted ${currentBatch.length} market ticks successfully in ${elapsed}ms!`,
+      );
     } catch (err) {
-      this.logger.error('Failed to batch insert ticks into database. Dropping batch to prevent OOM memory leak.', err);
+      this.logger.error(
+        "Failed to batch insert ticks into database. Dropping batch to prevent OOM memory leak.",
+        err,
+      );
     } finally {
       this.isFlushing = false;
     }

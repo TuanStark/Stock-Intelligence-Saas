@@ -42,21 +42,21 @@
 
 # 3. TTL Policy Matrix
 
-| Data Type | Redis TTL | CDN TTL | Client `staleTime` | Reasoning |
-|---|---|---|---|---|
-| Live quote | 10-15s | No cache | 10s | Near-realtime, frequent updates |
-| Market overview | 15s | No cache | 15s | Aggregate, frequent updates |
-| Candles (daily) | 5 min | 5 min | 5 min | Changes once per candle close |
-| Candles (intraday) | 30s | No cache | 30s | Active trading hours |
-| Instrument profile | 1 hour | 10 min | 10 min | Rarely changes |
-| Financial snapshot | 24 hours | 1 hour | 1 hour | Quarterly updates |
-| Signal (active) | 5 min | No cache | 5 min | Recomputed periodically |
-| Stock score | 15 min | 5 min | 5 min | Recomputed batch |
-| AI summary | 6 hours | 1 hour | 1 hour | Expensive, stable |
-| News list | 2 min | No cache | 2 min | Frequent new articles |
-| News detail | 1 hour | 30 min | 30 min | Content doesn't change |
-| User portfolio | 30s | No cache | 15s | Per-user, price-dependent |
-| Static assets | — | 1 year | — | Immutable builds |
+| Data Type          | Redis TTL | CDN TTL  | Client `staleTime` | Reasoning                       |
+| ------------------ | --------- | -------- | ------------------ | ------------------------------- |
+| Live quote         | 10-15s    | No cache | 10s                | Near-realtime, frequent updates |
+| Market overview    | 15s       | No cache | 15s                | Aggregate, frequent updates     |
+| Candles (daily)    | 5 min     | 5 min    | 5 min              | Changes once per candle close   |
+| Candles (intraday) | 30s       | No cache | 30s                | Active trading hours            |
+| Instrument profile | 1 hour    | 10 min   | 10 min             | Rarely changes                  |
+| Financial snapshot | 24 hours  | 1 hour   | 1 hour             | Quarterly updates               |
+| Signal (active)    | 5 min     | No cache | 5 min              | Recomputed periodically         |
+| Stock score        | 15 min    | 5 min    | 5 min              | Recomputed batch                |
+| AI summary         | 6 hours   | 1 hour   | 1 hour             | Expensive, stable               |
+| News list          | 2 min     | No cache | 2 min              | Frequent new articles           |
+| News detail        | 1 hour    | 30 min   | 30 min             | Content doesn't change          |
+| User portfolio     | 30s       | No cache | 15s                | Per-user, price-dependent       |
+| Static assets      | —         | 1 year   | —                  | Immutable builds                |
 
 ---
 
@@ -86,17 +86,17 @@ Examples:
 // packages/config/src/cache-keys.ts
 
 export const CacheKeys = {
-  quote:      (symbol: string) => `si:quote:${symbol}`,
-  candles:    (symbol: string, tf: string) => `si:candles:${symbol}:${tf}`,
-  score:      (symbol: string) => `si:score:${symbol}`,
-  signal:     (symbol: string) => `si:signal:${symbol}:active`,
-  summary:    (symbol: string) => `si:summary:${symbol}`,
-  market:     () => `si:market:overview`,
-  instruments:() => `si:instruments:list`,
-  
+  quote: (symbol: string) => `si:quote:${symbol}`,
+  candles: (symbol: string, tf: string) => `si:candles:${symbol}:${tf}`,
+  score: (symbol: string) => `si:score:${symbol}`,
+  signal: (symbol: string) => `si:signal:${symbol}:active`,
+  summary: (symbol: string) => `si:summary:${symbol}`,
+  market: () => `si:market:overview`,
+  instruments: () => `si:instruments:list`,
+
   // Per-user keys
   userWatchlists: (userId: string) => `si:user:${userId}:watchlists`,
-  userPortfolio:  (userId: string, portfolioId: string) =>
+  userPortfolio: (userId: string, portfolioId: string) =>
     `si:user:${userId}:portfolio:${portfolioId}`,
 } as const;
 ```
@@ -110,17 +110,17 @@ export const CacheKeys = {
 ```typescript
 async getQuote(symbol: string): Promise<Quote> {
   const cacheKey = CacheKeys.quote(symbol);
-  
+
   // 1. Try cache
   const cached = await this.redis.get(cacheKey);
   if (cached) return JSON.parse(cached);
-  
+
   // 2. Miss → fetch from source
   const quote = await this.marketDataRepo.getLatestQuote(symbol);
-  
+
   // 3. Write to cache
   await this.redis.setex(cacheKey, TTL.QUOTE, JSON.stringify(quote));
-  
+
   return quote;
 }
 ```
@@ -131,11 +131,11 @@ async getQuote(symbol: string): Promise<Quote> {
 async processQuoteUpdate(quote: Quote): Promise<void> {
   // 1. Store in DB
   await this.marketDataRepo.upsertQuote(quote);
-  
+
   // 2. Update cache immediately
   const cacheKey = CacheKeys.quote(quote.symbol);
   await this.redis.setex(cacheKey, TTL.QUOTE, JSON.stringify(quote));
-  
+
   // 3. Publish event
   this.eventBus.emit('quote.updated', quote);
 }
@@ -146,20 +146,20 @@ async processQuoteUpdate(quote: Quote): Promise<void> {
 ```typescript
 async getStockScore(symbol: string): Promise<StockScore> {
   const cacheKey = CacheKeys.score(symbol);
-  
+
   const cached = await this.redis.get(cacheKey);
   if (cached) {
     const data = JSON.parse(cached);
     const age = Date.now() - new Date(data._cachedAt).getTime();
-    
+
     if (age > SOFT_TTL.SCORE) {
       // Stale → return stale, revalidate in background
       this.revalidateScore(symbol).catch(log);
     }
-    
+
     return data;
   }
-  
+
   // Hard miss → fetch sync
   return this.fetchAndCacheScore(symbol);
 }
@@ -173,9 +173,9 @@ async precomputeAllScores(): Promise<void> {
   const instruments = await this.prisma.instrument.findMany({
     where: { status: 'ACTIVE' },
   });
-  
+
   const pipeline = this.redis.pipeline();
-  
+
   for (const inst of instruments) {
     const score = await this.computeScore(inst);
     pipeline.setex(
@@ -184,7 +184,7 @@ async precomputeAllScores(): Promise<void> {
       JSON.stringify(score),
     );
   }
-  
+
   await pipeline.exec();
 }
 ```
@@ -208,7 +208,7 @@ async precomputeAllScores(): Promise<void> {
 // On watchlist update → invalidate cache
 async addToWatchlist(userId: string, instrumentId: string): Promise<void> {
   await this.prisma.watchlistItem.create({ ... });
-  
+
   // Invalidate user's watchlist cache
   await this.redis.del(CacheKeys.userWatchlists(userId));
 }
@@ -260,8 +260,8 @@ maxmemory-policy allkeys-lru  # Evict least recently used
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,      // 30s default stale time
-      gcTime: 5 * 60_000,     // 5 min garbage collection
+      staleTime: 30_000, // 30s default stale time
+      gcTime: 5 * 60_000, // 5 min garbage collection
       refetchOnWindowFocus: true,
       retry: 2,
     },
@@ -271,18 +271,18 @@ export const queryClient = new QueryClient({
 // Per-query stale time overrides
 export function useQuote(symbol: string) {
   return useQuery({
-    queryKey: ['quote', symbol],
+    queryKey: ["quote", symbol],
     queryFn: () => api.getQuote(symbol),
-    staleTime: 10_000,        // 10s for realtime quotes
-    refetchInterval: 15_000,  // Auto-refresh every 15s
+    staleTime: 10_000, // 10s for realtime quotes
+    refetchInterval: 15_000, // Auto-refresh every 15s
   });
 }
 
 export function useAISummary(symbol: string) {
   return useQuery({
-    queryKey: ['ai-summary', symbol],
+    queryKey: ["ai-summary", symbol],
     queryFn: () => api.getAISummary(symbol),
-    staleTime: 60 * 60_000,   // 1 hour — expensive, stable
+    staleTime: 60 * 60_000, // 1 hour — expensive, stable
   });
 }
 ```
@@ -291,27 +291,27 @@ export function useAISummary(symbol: string) {
 
 # 9. Cache Monitoring
 
-| Metric | Target | Alert |
-|---|---|---|
-| Cache hit ratio | > 90% | Alert if < 80% |
-| Redis memory usage | < 80% of maxmemory | Alert if > 80% |
-| Redis connection count | < 200 | Alert if > 150 |
-| Cache latency (P95) | < 5ms | Alert if > 10ms |
-| Eviction rate | Low | Alert if spike |
+| Metric                 | Target             | Alert           |
+| ---------------------- | ------------------ | --------------- |
+| Cache hit ratio        | > 90%              | Alert if < 80%  |
+| Redis memory usage     | < 80% of maxmemory | Alert if > 80%  |
+| Redis connection count | < 200              | Alert if > 150  |
+| Cache latency (P95)    | < 5ms              | Alert if > 10ms |
+| Eviction rate          | Low                | Alert if spike  |
 
 ---
 
 # 10. Anti-Patterns to Avoid
 
-| ❌ Anti-Pattern | ✅ Correct Approach |
-|---|---|
-| Cache everything | Cache read-heavy, frequently accessed data |
-| No TTL | Always set TTL |
-| Cache user-specific data without namespace | Namespace by userId |
-| Cache large objects (> 1MB) | Break into smaller keys |
-| Ignore cache thundering herd | Use locking or stale-while-revalidate |
-| Cache DB result directly | Cache API-ready response |
-| Invalidate cache from multiple services | Single owner invalidates |
+| ❌ Anti-Pattern                            | ✅ Correct Approach                        |
+| ------------------------------------------ | ------------------------------------------ |
+| Cache everything                           | Cache read-heavy, frequently accessed data |
+| No TTL                                     | Always set TTL                             |
+| Cache user-specific data without namespace | Namespace by userId                        |
+| Cache large objects (> 1MB)                | Break into smaller keys                    |
+| Ignore cache thundering herd               | Use locking or stale-while-revalidate      |
+| Cache DB result directly                   | Cache API-ready response                   |
+| Invalidate cache from multiple services    | Single owner invalidates                   |
 
 ---
 

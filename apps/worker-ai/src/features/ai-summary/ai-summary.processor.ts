@@ -1,11 +1,14 @@
 // src/features/ai-summary/ai-summary.processor.ts
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
-import { SummaryJobPayload, ProcessedSummaryResult } from './types/ai-summary.types';
-import { AiSummaryService } from './ai-summary.service';
+import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { Logger } from "@nestjs/common";
+import { Job } from "bullmq";
+import {
+  SummaryJobPayload,
+  ProcessedSummaryResult,
+} from "./types/ai-summary.types";
+import { AiSummaryService } from "./ai-summary.service";
 
-@Processor('ai-summary')
+@Processor("ai-summary")
 export class AiSummaryProcessor extends WorkerHost {
   private readonly logger = new Logger(AiSummaryProcessor.name);
 
@@ -19,7 +22,10 @@ export class AiSummaryProcessor extends WorkerHost {
     this.logger.log(`Processing AI Summary → ${symbol}`);
 
     try {
-      const result = await this.aiSummaryService.processSummary(instrumentId, symbol);
+      const result = await this.aiSummaryService.processSummary(
+        instrumentId,
+        symbol,
+      );
       return result;
     } catch (error) {
       this.logger.error(`Failed processing ${symbol}`, error);

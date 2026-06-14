@@ -94,7 +94,7 @@ jobs:
     timeout-minutes: 20
     environment:
       name: production
-      url: https://stockintel.com # Replace with your production domain
+      url: http://chungkhoanai.dpdns.org # Replace with your production domain
 
     steps:
       - name: Checkout Code
@@ -131,6 +131,9 @@ jobs:
           username: ${{ secrets.PRODUCTION_SSH_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
+            pwd
+            whoami
+            ls -la
             cd /app/stock-intelligence
             
             # Export production variables

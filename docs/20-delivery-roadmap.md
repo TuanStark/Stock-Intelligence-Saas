@@ -16,6 +16,7 @@ Roadmap được chia theo 4 milestone lớn:
 4. Launch Ready
 
 Mỗi milestone phải:
+
 - deployable
 - testable
 - measurable
@@ -38,21 +39,23 @@ Không milestone nào được tính là complete nếu chỉ “code xong”.
 
 # 3. Milestone Map
 
-| Milestone | Target Week | Outcome |
-|---|---:|---|
-| Foundation Ready | Week 2 | Repo, infra, auth, DB chạy ổn |
-| MVP Usable | Week 6 | User có thể dùng sản phẩm end-to-end |
-| Beta Ready | Week 9 | Signals + alerts + AI summary usable |
-| Launch Ready | Week 12 | Billing + hardening + production-ready |
+| Milestone        | Target Week | Outcome                                |
+| ---------------- | ----------: | -------------------------------------- |
+| Foundation Ready |      Week 2 | Repo, infra, auth, DB chạy ổn          |
+| MVP Usable       |      Week 6 | User có thể dùng sản phẩm end-to-end   |
+| Beta Ready       |      Week 9 | Signals + alerts + AI summary usable   |
+| Launch Ready     |     Week 12 | Billing + hardening + production-ready |
 
 ---
 
 # 4. Weeks 1–2 — Foundation Ready
 
 ## Goal
+
 Dựng toàn bộ foundation để team build không block nhau.
 
 ## Build Scope
+
 - monorepo scaffold
 - pnpm + Turbo setup
 - CI baseline
@@ -67,6 +70,7 @@ Dựng toàn bộ foundation để team build không block nhau.
 - Docker local stack
 
 ## Deliverables
+
 - repo chạy local 1 lệnh
 - FE boot được
 - BE boot được
@@ -75,6 +79,7 @@ Dựng toàn bộ foundation để team build không block nhau.
 - CI pass
 
 ## Exit Criteria
+
 - `pnpm dev` chạy full local stack
 - CI chạy lint + typecheck + test pass
 - login flow skeleton hoạt động
@@ -85,9 +90,11 @@ Dựng toàn bộ foundation để team build không block nhau.
 # 5. Weeks 3–4 — Core Market Experience
 
 ## Goal
+
 Ship vertical slice đầu tiên: market read experience.
 
 ## Build Scope
+
 - market overview API
 - instrument search API
 - stock detail API
@@ -100,13 +107,16 @@ Ship vertical slice đầu tiên: market read experience.
 - seed market data ingestion
 
 ## Deliverables
+
 User có thể:
+
 - xem market overview
 - tìm mã cổ phiếu
 - xem stock detail
 - xem candles chart
 
 ## Exit Criteria
+
 - market overview usable end-to-end
 - stock detail usable end-to-end
 - candles load ổn
@@ -117,9 +127,11 @@ User có thể:
 # 6. Weeks 5–6 — MVP Usable
 
 ## Goal
+
 Biến sản phẩm thành usable MVP.
 
 ## Build Scope
+
 - watchlist CRUD
 - watchlist UI
 - portfolio CRUD
@@ -131,7 +143,9 @@ Biến sản phẩm thành usable MVP.
 - basic websocket quote updates
 
 ## Deliverables
+
 User có thể:
+
 - login
 - tạo watchlist
 - thêm mã
@@ -139,6 +153,7 @@ User có thể:
 - theo dõi PnL
 
 ## Exit Criteria
+
 - watchlist usable
 - portfolio usable
 - login stable
@@ -146,6 +161,7 @@ User có thể:
 - MVP demo được end-to-end
 
 ## Milestone
+
 **MVP Usable achieved**
 
 ---
@@ -153,9 +169,11 @@ User có thể:
 # 7. Weeks 7–8 — Intelligence Layer
 
 ## Goal
+
 Thêm lớp value thật sự cho sản phẩm.
 
 ## Build Scope
+
 - indicator engine
 - stock score engine
 - signal generation
@@ -167,13 +185,16 @@ Thêm lớp value thật sự cho sản phẩm.
 - notification pipeline
 
 ## Deliverables
+
 User có:
+
 - stock signals
 - stock score
 - alert rules
 - alert notifications
 
 ## Exit Criteria
+
 - signals xuất hiện ổn định
 - alerts trigger đúng
 - ranking usable
@@ -184,9 +205,11 @@ User có:
 # 8. Week 9 — Beta Ready
 
 ## Goal
+
 Thêm AI layer và hoàn tất beta loop.
 
 ## Build Scope
+
 - news ingestion
 - news linking
 - AI summary worker
@@ -197,18 +220,22 @@ Thêm AI layer và hoàn tất beta loop.
 - async AI jobs
 
 ## Deliverables
+
 User có:
+
 - stock news
 - AI summary
 - AI explanation
 
 ## Exit Criteria
+
 - AI summary async ổn định
 - cache hit hợp lý
 - summary usable
 - beta flow hoàn chỉnh
 
 ## Milestone
+
 **Beta Ready achieved**
 
 ---
@@ -216,9 +243,11 @@ User có:
 # 9. Weeks 10–11 — Monetization
 
 ## Goal
+
 Biến product thành SaaS.
 
 ## Build Scope
+
 - subscription model
 - billing service
 - plan gating
@@ -229,12 +258,14 @@ Biến product thành SaaS.
 - API key management
 
 ## Deliverables
+
 - free / pro plans
 - paywall
 - premium access
 - usage tracking
 
 ## Exit Criteria
+
 - plan gating đúng
 - quota enforcement đúng
 - billing flow testable
@@ -244,9 +275,11 @@ Biến product thành SaaS.
 # 10. Week 12 — Hardening + Launch Prep
 
 ## Goal
+
 Đưa hệ thống về trạng thái launch-ready.
 
 ## Build Scope
+
 - retries / DLQ
 - rate limiting
 - audit logs
@@ -259,18 +292,21 @@ Biến product thành SaaS.
 - launch runbook
 
 ## Deliverables
+
 - production-safe system
 - launch checklist
 - runbooks
 - observability dashboards
 
 ## Exit Criteria
+
 - staging stable
 - rollback tested
 - backup restore tested
 - launch checklist green
 
 ## Milestone
+
 **Launch Ready achieved**
 
 ---
@@ -278,15 +314,19 @@ Biến product thành SaaS.
 # 11. Release Plan
 
 ## Internal Demo
+
 - End Week 2
 
 ## MVP Demo
+
 - End Week 6
 
 ## Closed Beta
+
 - End Week 9
 
 ## Production Launch
+
 - End Week 12
 
 ---
@@ -296,6 +336,7 @@ Biến product thành SaaS.
 Nếu trễ timeline:
 
 ## Cut First
+
 - advanced rankings
 - fancy chart UX
 - AI explanation depth
@@ -303,6 +344,7 @@ Nếu trễ timeline:
 - admin polish
 
 ## Never Cut
+
 - auth
 - market read path
 - watchlist
@@ -315,15 +357,15 @@ Nếu trễ timeline:
 
 # 13. Weekly Risk Hotspots
 
-| Week | Risk |
-|---|---|
-| 1 | repo / infra bootstrap drag |
-| 3 | data ingestion instability |
-| 5 | auth + user state complexity |
-| 7 | signal correctness |
-| 9 | AI latency / cost |
-| 10 | billing edge cases |
-| 12 | staging drift / release instability |
+| Week | Risk                                |
+| ---- | ----------------------------------- |
+| 1    | repo / infra bootstrap drag         |
+| 3    | data ingestion instability          |
+| 5    | auth + user state complexity        |
+| 7    | signal correctness                  |
+| 9    | AI latency / cost                   |
+| 10   | billing edge cases                  |
+| 12   | staging drift / release instability |
 
 ---
 

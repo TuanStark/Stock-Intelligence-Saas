@@ -557,15 +557,15 @@ Kiến trúc phải support monetization từ ngày đầu.
 
 # 22. Architecture Rules (Non-Negotiable)
 
-1. Không compute trong request path  
-2. Precompute mọi thứ có thể  
-3. Cache là bắt buộc, không phải optional  
-4. External sources luôn có thể fail  
-5. Reads luôn lớn hơn writes  
-6. AI phải async + cached  
-7. User traffic luôn bursty  
-8. Stale-but-fast tốt hơn fresh-but-down  
-9. Observability là bắt buộc  
+1. Không compute trong request path
+2. Precompute mọi thứ có thể
+3. Cache là bắt buộc, không phải optional
+4. External sources luôn có thể fail
+5. Reads luôn lớn hơn writes
+6. AI phải async + cached
+7. User traffic luôn bursty
+8. Stale-but-fast tốt hơn fresh-but-down
+9. Observability là bắt buộc
 10. Cost là first-class concern
 
 ---

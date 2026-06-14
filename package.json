@@ -24,9 +24,19 @@
     "setup": "./scripts/dev-setup.sh"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "globals": "^17.0.0",
+    "jest": "^30.0.0",
     "prettier": "^3.4.0",
+    "ts-jest": "^29.2.5",
+    "@types/jest": "^30.0.0",
     "tsx": "^4.19.0",
-    "turbo": "^2.4.0"
+    "turbo": "^2.4.0",
+    "typescript-eslint": "^8.20.0"
   },
   "packageManager": "pnpm@11.2.2",
   "engines": {

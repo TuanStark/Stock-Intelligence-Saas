@@ -26,11 +26,11 @@
 
 # 2. Auth Methods
 
-| API Surface | Auth Method | Token Location |
-|---|---|---|
-| `/api/v1/public/*` | None | — |
-| `/api/v1/me/*` | JWT Bearer | `Authorization: Bearer <token>` |
-| `/api/v1/dev/*` | API Key | `X-API-Key: <key>` |
+| API Surface        | Auth Method | Token Location                  |
+| ------------------ | ----------- | ------------------------------- |
+| `/api/v1/public/*` | None        | —                               |
+| `/api/v1/me/*`     | JWT Bearer  | `Authorization: Bearer <token>` |
+| `/api/v1/dev/*`    | API Key     | `X-API-Key: <key>`              |
 
 ---
 
@@ -40,24 +40,24 @@
 
 ```ts
 type AccessTokenPayload = {
-  sub: string;              // user UUID
+  sub: string; // user UUID
   email: string;
   tier: "FREE" | "PRO" | "API";
   roles: string[];
-  iat: number;              // issued at
-  exp: number;              // expires at
+  iat: number; // issued at
+  exp: number; // expires at
 };
 ```
 
 ### Specifications
 
-| Property | Value |
-|---|---|
-| Algorithm | RS256 |
-| Expiry | 15 minutes |
-| Storage (client) | Memory only (not localStorage) |
-| Refresh | Via refresh token |
-| Revocation | Short TTL + blacklist for emergencies |
+| Property         | Value                                 |
+| ---------------- | ------------------------------------- |
+| Algorithm        | RS256                                 |
+| Expiry           | 15 minutes                            |
+| Storage (client) | Memory only (not localStorage)        |
+| Refresh          | Via refresh token                     |
+| Revocation       | Short TTL + blacklist for emergencies |
 
 ---
 
@@ -65,23 +65,23 @@ type AccessTokenPayload = {
 
 ```ts
 type RefreshToken = {
-  tokenId: string;          // UUID
-  userId: string;           // user UUID
-  familyId: string;         // rotation family
-  expiresAt: string;        // ISO8601
+  tokenId: string; // UUID
+  userId: string; // user UUID
+  familyId: string; // rotation family
+  expiresAt: string; // ISO8601
   createdAt: string;
 };
 ```
 
 ### Specifications
 
-| Property | Value |
-|---|---|
-| Expiry | 7 days |
+| Property         | Value                                    |
+| ---------------- | ---------------------------------------- |
+| Expiry           | 7 days                                   |
 | Storage (client) | HttpOnly, Secure, SameSite=Strict cookie |
-| Storage (server) | PostgreSQL `refresh_tokens` table |
-| Rotation | Yes — new refresh token on each use |
-| Family tracking | Yes — detect reuse attacks |
+| Storage (server) | PostgreSQL `refresh_tokens` table        |
+| Rotation         | Yes — new refresh token on each use      |
+| Family tracking  | Yes — detect reuse attacks               |
 
 ---
 
@@ -198,28 +198,28 @@ Request with X-API-Key ──► Hash key ──► Lookup in DB ──► Check
 
 ## Roles
 
-| Role | Description |
-|---|---|
-| `USER` | Standard registered user |
-| `PRO` | Premium subscriber |
-| `API_USER` | API access customer |
-| `ADMIN` | Platform administrator |
+| Role       | Description              |
+| ---------- | ------------------------ |
+| `USER`     | Standard registered user |
+| `PRO`      | Premium subscriber       |
+| `API_USER` | API access customer      |
+| `ADMIN`    | Platform administrator   |
 
 ## Permission Matrix
 
-| Resource | `USER` | `PRO` | `API_USER` | `ADMIN` |
-|---|---|---|---|---|
-| Public market data | ✅ | ✅ | ✅ | ✅ |
-| Delayed quotes | ✅ | ✅ | ✅ | ✅ |
-| Realtime quotes | ❌ | ✅ | ✅ | ✅ |
-| Watchlists (max 3) | ✅ | — | — | ✅ |
-| Watchlists (unlimited) | ❌ | ✅ | — | ✅ |
-| Signals & scores | Basic | Full | Full | ✅ |
-| AI Summary | ❌ | ✅ | ✅ | ✅ |
-| Screener | ❌ | ✅ | — | ✅ |
-| Portfolio insights | ❌ | ✅ | — | ✅ |
-| API access | ❌ | ❌ | ✅ | ✅ |
-| Admin panel | ❌ | ❌ | ❌ | ✅ |
+| Resource               | `USER` | `PRO` | `API_USER` | `ADMIN` |
+| ---------------------- | ------ | ----- | ---------- | ------- |
+| Public market data     | ✅     | ✅    | ✅         | ✅      |
+| Delayed quotes         | ✅     | ✅    | ✅         | ✅      |
+| Realtime quotes        | ❌     | ✅    | ✅         | ✅      |
+| Watchlists (max 3)     | ✅     | —     | —          | ✅      |
+| Watchlists (unlimited) | ❌     | ✅    | —          | ✅      |
+| Signals & scores       | Basic  | Full  | Full       | ✅      |
+| AI Summary             | ❌     | ✅    | ✅         | ✅      |
+| Screener               | ❌     | ✅    | —          | ✅      |
+| Portfolio insights     | ❌     | ✅    | —          | ✅      |
+| API access             | ❌     | ❌    | ✅         | ✅      |
+| Admin panel            | ❌     | ❌    | ❌         | ✅      |
 
 ## Guard Implementation
 
@@ -250,13 +250,13 @@ async getAISummary(@Param('symbol') symbol: string) { ... }
 
 ## Rate Limiting
 
-| Endpoint | Limit |
-|---|---|
-| `/auth/login` | 5 per minute per IP |
-| `/auth/register` | 3 per minute per IP |
-| `/auth/refresh` | 10 per minute per user |
-| `/me/*` | 100 per minute per user |
-| `/dev/*` | Based on tier quota |
+| Endpoint         | Limit                   |
+| ---------------- | ----------------------- |
+| `/auth/login`    | 5 per minute per IP     |
+| `/auth/register` | 3 per minute per IP     |
+| `/auth/refresh`  | 10 per minute per user  |
+| `/me/*`          | 100 per minute per user |
+| `/dev/*`         | Based on tier quota     |
 
 ## Headers
 
@@ -308,16 +308,16 @@ model RefreshToken {
 
 # 9. Auth Events
 
-| Event | Trigger |
-|---|---|
-| `user.created` | Registration |
-| `user.updated` | Profile change |
-| `user.login` | Successful login |
-| `user.login.failed` | Failed login attempt |
-| `token.refreshed` | Token refresh |
-| `token.reuse.detected` | Potential theft |
-| `api_key.created` | API key generated |
-| `api_key.revoked` | API key revoked |
+| Event                  | Trigger              |
+| ---------------------- | -------------------- |
+| `user.created`         | Registration         |
+| `user.updated`         | Profile change       |
+| `user.login`           | Successful login     |
+| `user.login.failed`    | Failed login attempt |
+| `token.refreshed`      | Token refresh        |
+| `token.reuse.detected` | Potential theft      |
+| `api_key.created`      | API key generated    |
+| `api_key.revoked`      | API key revoked      |
 
 ---
 

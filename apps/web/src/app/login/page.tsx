@@ -1,19 +1,21 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
-import { useTranslation } from '@/lib/i18n/i18n-context';
-import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useTranslation } from "@/lib/i18n/i18n-context";
+import { Mail, Lock, Loader2, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function LoginPage() {
   return (
-    <Suspense fallback = {
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4" >
-        <Loader2 size={40} className="pulse text-accent" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+          <Loader2 size={40} className="pulse text-accent" />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );
@@ -24,32 +26,32 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const { t, locale, setLocale } = useTranslation();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
-    const errorParam = searchParams.get('error');
-    if (errorParam === 'SessionExpired') {
-      setErrorMsg(t('auth.sessionExpired'));
-    } else if (errorParam === 'OAuthSignin' || errorParam === 'OAuthCallback') {
-      setErrorMsg(t('auth.oauthError'));
+    const errorParam = searchParams.get("error");
+    if (errorParam === "SessionExpired") {
+      setErrorMsg(t("auth.sessionExpired"));
+    } else if (errorParam === "OAuthSignin" || errorParam === "OAuthCallback") {
+      setErrorMsg(t("auth.oauthError"));
     }
   }, [searchParams, t]);
 
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
 
     setLoading(true);
-    setErrorMsg('');
+    setErrorMsg("");
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
@@ -57,14 +59,14 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        setErrorMsg(t('auth.invalidCredentials'));
+        setErrorMsg(t("auth.invalidCredentials"));
       } else {
         router.push(callbackUrl);
         router.refresh();
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg(t('common.error'));
+      setErrorMsg(t("common.error"));
     } finally {
       setLoading(false);
     }
@@ -72,12 +74,12 @@ function LoginForm() {
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
-    setErrorMsg('');
+    setErrorMsg("");
     try {
-      await signIn('google', { callbackUrl });
+      await signIn("google", { callbackUrl });
     } catch (err) {
       console.error(err);
-      setErrorMsg(t('common.error'));
+      setErrorMsg(t("common.error"));
       setGoogleLoading(false);
     }
   };
@@ -87,20 +89,22 @@ function LoginForm() {
       {/* Dynamic language switch floating at top right */}
       <div className="absolute top-6 right-6 flex gap-2">
         <button
-          onClick={() => setLocale('vi')}
-          className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${locale === 'vi'
-              ? 'border-accent bg-accent/15 text-accent'
-              : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
-            }`}
+          onClick={() => setLocale("vi")}
+          className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${
+            locale === "vi"
+              ? "border-accent bg-accent/15 text-accent"
+              : "border-board-border bg-transparent text-text-secondary hover:text-text-primary"
+          }`}
         >
           VI
         </button>
         <button
-          onClick={() => setLocale('en')}
-          className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${locale === 'en'
-              ? 'border-accent bg-accent/15 text-accent'
-              : 'border-board-border bg-transparent text-text-secondary hover:text-text-primary'
-            }`}
+          onClick={() => setLocale("en")}
+          className={`py-1 px-2.5 rounded-[6px] text-xs font-semibold cursor-pointer border transition-colors ${
+            locale === "en"
+              ? "border-accent bg-accent/15 text-accent"
+              : "border-board-border bg-transparent text-text-secondary hover:text-text-primary"
+          }`}
         >
           EN
         </button>
@@ -109,17 +113,21 @@ function LoginForm() {
       <div className="glass-panel font-inter w-full max-w-[420px] p-10 rounded-2xl border border-board-border shadow-2xl">
         {/* LOGO */}
         <div className="flex items-center gap-2.5 justify-center mb-8">
-          <img src="/logo-new.png" alt="StockIntel Logo" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+          <img
+            src="/logo-new.png"
+            alt="StockIntel Logo"
+            className="w-9 h-9 rounded-lg object-cover shrink-0"
+          />
           <h2 className="font-outfit text-[22px] font-extrabold tracking-tight">
             STOCK<span className="text-accent">INTEL</span>
           </h2>
         </div>
 
         <h3 className="font-outfit text-2xl font-extrabold text-center mb-2 text-text-primary">
-          {t('auth.loginTitle')}
+          {t("auth.loginTitle")}
         </h3>
         <p className="text-text-secondary text-xs text-center leading-relaxed mb-8">
-          {t('auth.loginSub')}
+          {t("auth.loginSub")}
         </p>
 
         {errorMsg && (
@@ -132,7 +140,7 @@ function LoginForm() {
           {/* Email field */}
           <div className="flex flex-col gap-2">
             <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
-              {t('auth.email')}
+              {t("auth.email")}
             </label>
             <div className="flex items-center gap-3 bg-surface border border-board-border rounded-lg py-2.5 px-4 focus-within:border-accent transition-all duration-200">
               <Mail size={16} className="text-text-muted" />
@@ -150,7 +158,7 @@ function LoginForm() {
           {/* Password field */}
           <div className="flex flex-col gap-2">
             <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
-              {t('auth.password')}
+              {t("auth.password")}
             </label>
             <div className="flex items-center gap-3 bg-surface border border-board-border rounded-lg py-2.5 px-4 focus-within:border-accent transition-all duration-200">
               <Lock size={16} className="text-text-muted" />
@@ -174,11 +182,11 @@ function LoginForm() {
             {loading ? (
               <>
                 <Loader2 size={16} className="pulse text-white" />
-                {t('common.loading')}
+                {t("common.loading")}
               </>
             ) : (
               <>
-                {t('auth.loginBtn')}
+                {t("auth.loginBtn")}
                 <ArrowRight size={16} />
               </>
             )}
@@ -189,7 +197,7 @@ function LoginForm() {
         <div className="flex items-center my-6">
           <div className="flex-grow border-t border-board-border/60"></div>
           <span className="px-4 text-[10px] uppercase font-bold tracking-widest text-text-muted">
-            {t('auth.orDivider')}
+            {t("auth.orDivider")}
           </span>
           <div className="flex-grow border-t border-board-border/60"></div>
         </div>
@@ -223,13 +231,16 @@ function LoginForm() {
               />
             </svg>
           )}
-          <span>{t('auth.googleBtn')}</span>
+          <span>{t("auth.googleBtn")}</span>
         </button>
 
         <div className="text-center mt-6 text-xs text-text-secondary">
-          {t('auth.noAccount')}{' '}
-          <Link href="/register" className="text-accent font-semibold no-underline hover:underline">
-            {t('auth.signupPrompt')}
+          {t("auth.noAccount")}{" "}
+          <Link
+            href="/register"
+            className="text-accent font-semibold no-underline hover:underline"
+          >
+            {t("auth.signupPrompt")}
           </Link>
         </div>
       </div>

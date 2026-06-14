@@ -8,9 +8,9 @@ Tài liệu này chi tiết hóa **Vai trò của AI**, luồng xử lý bất �
 
 Trong một nền tảng phân tích tài chính thông thường, người dùng dễ bị ngợp bởi hàng tá biểu đồ nến, chỉ số kỹ thuật và hàng trăm tin tức rời rạc. Vai trò của **AI Service** (`apps/worker-ai`) là đóng vai trò làm **"Bộ não phân tích định tính" (Qualitative Intelligence Layer)** của hệ thống:
 
-*   **Tổng hợp Đa chiều:** Gom dữ liệu kỹ thuật từ chỉ báo (RSI, MACD), biến động giá thời gian thực từ bảng `Quote` và 3 tin tức doanh nghiệp gần nhất (`NewsArticle`).
-*   **Đưa ra Phán quyết Đầu tư (Decision Thesis):** Thay vì bắt nhà đầu tư tự đọc tin và xem chart, AI đưa ra một luận điểm phân tích ngắn gọn dưới 120 từ cực kỳ chuyên nghiệp và tập trung vào chất xúc tác (catalyst) và khối lượng giao dịch.
-*   **Phân loại Rõ ràng:** Cung cấp định lượng về các nhân tố tích cực (**Catalysts**), rủi ro hệ thống (**Risk Factors**), xu hướng tâm lý (**Sentiment: BULLISH/NEUTRAL/BEARISH**) kèm độ tin cậy (**Confidence Score**).
+- **Tổng hợp Đa chiều:** Gom dữ liệu kỹ thuật từ chỉ báo (RSI, MACD), biến động giá thời gian thực từ bảng `Quote` và 3 tin tức doanh nghiệp gần nhất (`NewsArticle`).
+- **Đưa ra Phán quyết Đầu tư (Decision Thesis):** Thay vì bắt nhà đầu tư tự đọc tin và xem chart, AI đưa ra một luận điểm phân tích ngắn gọn dưới 120 từ cực kỳ chuyên nghiệp và tập trung vào chất xúc tác (catalyst) và khối lượng giao dịch.
+- **Phân loại Rõ ràng:** Cung cấp định lượng về các nhân tố tích cực (**Catalysts**), rủi ro hệ thống (**Risk Factors**), xu hướng tâm lý (**Sentiment: BULLISH/NEUTRAL/BEARISH**) kèm độ tin cậy (**Confidence Score**).
 
 ```mermaid
 graph TD
@@ -65,44 +65,48 @@ Nếu bạn vừa cài đặt hoặc khởi động dự án mà chưa thấy AI
 ### Bước 1: Khởi động lại terminal phát triển (Rất Quan Trọng) ⚠️
 
 Trong môi trường Monorepo chạy bằng **Turborepo** và **NestJS CLI**, khi chúng ta bổ sung các liên kết thư viện mới (như Runtime Database Enums từ `@stock-intel/db`), trình biên dịch đang chạy ngầm (`pnpm dev` đang hoạt động) sẽ **không tự nạp lại** các type liên kết này.
-*   **Cách xử lý:** Mở terminal đang chạy `pnpm dev`, nhấn `Ctrl + C` để dừng hẳn.
-*   Chạy lại lệnh để nạp toàn bộ container và các package mới liên kết:
-    ```bash
-    pnpm dev
-    ```
+
+- **Cách xử lý:** Mở terminal đang chạy `pnpm dev`, nhấn `Ctrl + C` để dừng hẳn.
+- Chạy lại lệnh để nạp toàn bộ container và các package mới liên kết:
+  ```bash
+  pnpm dev
+  ```
 
 ### Bước 2: Đảm bảo Hạ tầng Docker & Redis đang chạy
 
 BullMQ dùng Redis làm bộ nhớ hàng đợi trung chuyển. Nếu Redis chưa bật, backend sẽ không thể đẩy job vào hàng đợi.
-*   Hãy chắc chắn rằng bạn đã khởi động hạ tầng bằng lệnh:
-    ```bash
-    pnpm infra:up
-    ```
-*   Bạn có thể truy cập **Redis Commander** tại `http://localhost:8081` để kiểm tra hàng đợi có tên `ai-summary` đang hoạt động.
+
+- Hãy chắc chắn rằng bạn đã khởi động hạ tầng bằng lệnh:
+  ```bash
+  pnpm infra:up
+  ```
+- Bạn có thể truy cập **Redis Commander** tại `http://localhost:8081` để kiểm tra hàng đợi có tên `ai-summary` đang hoạt động.
 
 ### Bước 3: Cơ chế Reactive - Cần tải trang hoặc gọi API để kích hoạt
 
 AI không được cào sẵn lúc Seed database để tránh lãng phí Token. Nó hoạt động theo cơ chế **Lazy-Loading (chỉ chạy khi có người xem)**.
-*   **Cách kích hoạt:** Bạn hãy mở trình duyệt và truy cập vào chi tiết một cổ phiếu bất kỳ nằm trong danh mục VN30 hỗ trợ sẵn như:
-    *   `http://localhost:3000/instruments/HPG` (Hoa Phat Group)
-    *   `http://localhost:3000/instruments/FPT` (FPT Corporation)
-    *   `http://localhost:3000/instruments/VND` (VNDirect)
-    *   `http://localhost:3000/instruments/VNM` (Vinamilk)
-    *   `http://localhost:3000/instruments/MSN` (Masan Group)
-    *   `http://localhost:3000/instruments/MWG` (Thế Giới Di Động)
-*   **Hiện tượng:** Ở lần đầu tiên bạn click vào xem, do AI Summary chưa có sẵn, hệ thống sẽ trả về giao diện mặc định chưa có phân tích và **lập tức bắn một job ngầm vào queue**.
-*   **Kết quả:** Hãy nhìn vào cửa sổ terminal đang chạy `pnpm dev`. Bạn sẽ thấy logs của `worker-ai` sáng lên:
-    ```text
-    [AiSummaryProcessor] 🤖 Processing AI Summary request for HPG…
-    [AiSummaryProcessor] ✅ Simulated fallback AI summary created for HPG. ID: cl...
-    ```
-*   Bây giờ, hãy **F5 (Refresh) lại trình duyệt**. AI Summary với đầy đủ luận điểm đầu tư chuyên sâu, các điểm xúc tác (Catalysts), rủi ro (Risks) và Sentiment sẽ hiển thị vô cùng rực rỡ và trực quan trên giao diện!
+
+- **Cách kích hoạt:** Bạn hãy mở trình duyệt và truy cập vào chi tiết một cổ phiếu bất kỳ nằm trong danh mục VN30 hỗ trợ sẵn như:
+  - `http://localhost:3000/instruments/HPG` (Hoa Phat Group)
+  - `http://localhost:3000/instruments/FPT` (FPT Corporation)
+  - `http://localhost:3000/instruments/VND` (VNDirect)
+  - `http://localhost:3000/instruments/VNM` (Vinamilk)
+  - `http://localhost:3000/instruments/MSN` (Masan Group)
+  - `http://localhost:3000/instruments/MWG` (Thế Giới Di Động)
+- **Hiện tượng:** Ở lần đầu tiên bạn click vào xem, do AI Summary chưa có sẵn, hệ thống sẽ trả về giao diện mặc định chưa có phân tích và **lập tức bắn một job ngầm vào queue**.
+- **Kết quả:** Hãy nhìn vào cửa sổ terminal đang chạy `pnpm dev`. Bạn sẽ thấy logs của `worker-ai` sáng lên:
+  ```text
+  [AiSummaryProcessor] 🤖 Processing AI Summary request for HPG…
+  [AiSummaryProcessor] ✅ Simulated fallback AI summary created for HPG. ID: cl...
+  ```
+- Bây giờ, hãy **F5 (Refresh) lại trình duyệt**. AI Summary với đầy đủ luận điểm đầu tư chuyên sâu, các điểm xúc tác (Catalysts), rủi ro (Risks) và Sentiment sẽ hiển thị vô cùng rực rỡ và trực quan trên giao diện!
 
 ### Bước 4: Chế độ Giả lập Phân tích (Visual Simulation Fallback)
 
 Để bảo vệ trải nghiệm của nhà phát triển và tránh yêu cầu cấu hình API key phức tạp ở local:
-*   Nếu biến môi trường `OPENAI_API_KEY` trong file `.env` chưa được điền (hoặc đang để mặc định dạng `sk-...`), hệ thống sẽ **tự động kích hoạt bộ giả lập phân tích tài chính toán học nâng cao** cho 6 mã bluechip hàng đầu (HPG, FPT, VND, VNM, MSN, MWG).
-*   Bộ giả lập này sinh ra dữ liệu có cấu trúc chuẩn chỉnh, nội dung phân tích tài chính bám sát thực tế thị trường của từng doanh nghiệp, giúp giao diện Frontend hiển thị đẹp mắt, đầy đủ tính năng và sẵn sàng cho việc kiểm thử UI/UX.
+
+- Nếu biến môi trường `OPENAI_API_KEY` trong file `.env` chưa được điền (hoặc đang để mặc định dạng `sk-...`), hệ thống sẽ **tự động kích hoạt bộ giả lập phân tích tài chính toán học nâng cao** cho 6 mã bluechip hàng đầu (HPG, FPT, VND, VNM, MSN, MWG).
+- Bộ giả lập này sinh ra dữ liệu có cấu trúc chuẩn chỉnh, nội dung phân tích tài chính bám sát thực tế thị trường của từng doanh nghiệp, giúp giao diện Frontend hiển thị đẹp mắt, đầy đủ tính năng và sẵn sàng cho việc kiểm thử UI/UX.
 
 ---
 

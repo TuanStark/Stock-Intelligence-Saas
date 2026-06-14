@@ -1,34 +1,34 @@
 {
-    "name": "@stock-intel/worker-payment",
-    "version": "0.1.0",
-    "private": true,
-    "scripts": {
-        "dev": "nest start --watch",
-        "build": "nest build",
-        "start": "nest start",
-        "start:prod": "node dist/main",
-        "lint": "eslint \"{src,test}/**/*.ts\" --fix",
-        "test": "jest"
-    },
-    "dependencies": {
-        "@nestjs/common": "^11.0.1",
-        "@nestjs/core": "^11.0.1",
-        "@nestjs/bullmq": "^11.0.0",
-        "@nestjs/schedule": "^4.1.1",
-        "@stock-intel/contracts": "workspace:^",
-        "@stock-intel/db": "workspace:^",
-        "bullmq": "^5.0.0",
-        "ioredis": "^5.4.1",
-        "reflect-metadata": "^0.2.2",
-        "rxjs": "^7.8.1"
-    },
-    "devDependencies": {
-        "@nestjs/cli": "^11.0.0",
-        "@nestjs/schematics": "^11.0.0",
-        "@nestjs/testing": "^11.0.1",
-        "@types/node": "^24.0.0",
-        "typescript": "^5.7.3",
-        "ts-jest": "^29.2.5",
-        "jest": "^30.0.0"
-    }
+  "name": "@stock-intel/worker-payment",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "nest start",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,test}/**/*.ts\" --fix",
+    "test": "jest --passWithNoTests"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/bullmq": "^11.0.0",
+    "@nestjs/schedule": "^4.1.1",
+    "@stock-intel/contracts": "workspace:^",
+    "@stock-intel/db": "workspace:^",
+    "bullmq": "^5.0.0",
+    "ioredis": "^5.4.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.1",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.7.3",
+    "ts-jest": "^29.2.5",
+    "jest": "^30.0.0"
+  }
 }

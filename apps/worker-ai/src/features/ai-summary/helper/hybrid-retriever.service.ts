@@ -1,6 +1,6 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { EmbeddingIngesterService } from './embedding-ingester.service';
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { PrismaService } from "../../../prisma/prisma.service";
+import { EmbeddingIngesterService } from "./embedding-ingester.service";
 
 export interface RetrievedChunk {
   id: string;
@@ -30,9 +30,13 @@ export class HybridRetrieverService implements OnModuleInit {
   async onModuleInit() {
     // Kiểm tra xem pgvector extension có sẵn trong Postgres không
     try {
-      await this.prisma.$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS vector;');
+      await this.prisma.$executeRawUnsafe(
+        "CREATE EXTENSION IF NOT EXISTS vector;",
+      );
       this.hasPgVector = true;
-      this.logger.log('[HybridRetriever] pgvector extension detected and enabled successfully.');
+      this.logger.log(
+        "[HybridRetriever] pgvector extension detected and enabled successfully.",
+      );
     } catch (err: any) {
       this.logger.warn(
         `[HybridRetriever] pgvector extension NOT available or could not be loaded: ${err.message}. Falling back to in-memory vector calculations.`,
@@ -72,7 +76,7 @@ export class HybridRetrieverService implements OnModuleInit {
       try {
         // Sử dụng toán tử <=> của pgvector (1 - khoảng cách cosine = cosine similarity)
         // Cần truyền mảng số thực dưới dạng chuỗi định dạng vector: '[v1,v2,...]'
-        const vectorString = `[${queryEmbedding.join(',')}]`;
+        const vectorString = `[${queryEmbedding.join(",")}]`;
         const results = await this.prisma.$queryRawUnsafe<any[]>(
           `
           SELECT 
@@ -93,7 +97,9 @@ export class HybridRetrieverService implements OnModuleInit {
           similarity: Number(r.similarity) || 0,
         }));
       } catch (err: any) {
-        this.logger.error(`[HybridRetriever] pgvector query failed: ${err.message}. Falling back to in-memory vector search.`);
+        this.logger.error(
+          `[HybridRetriever] pgvector query failed: ${err.message}. Falling back to in-memory vector search.`,
+        );
       }
     }
 
@@ -149,13 +155,15 @@ export class HybridRetrieverService implements OnModuleInit {
         score: Number(r.rank_score) || 0,
       }));
     } catch (err: any) {
-      this.logger.warn(`[HybridRetriever] PostgreSQL FTS failed: ${err.message}. Falling back to ILIKE text search.`);
-      
+      this.logger.warn(
+        `[HybridRetriever] PostgreSQL FTS failed: ${err.message}. Falling back to ILIKE text search.`,
+      );
+
       // Fallback: Tìm kiếm chứa chữ ILIKE đơn giản
       const chunks = await this.prisma.marketKnowledgeChunk.findMany({
         where: {
           symbol: cleanSym,
-          content: { contains: queryText, mode: 'insensitive' },
+          content: { contains: queryText, mode: "insensitive" },
         },
         take: limit,
       });
@@ -177,17 +185,22 @@ export class HybridRetrieverService implements OnModuleInit {
   ): Promise<RetrievedChunk[]> {
     const limit = options.limit || 5;
     const alpha = options.alpha !== undefined ? options.alpha : 0.7; // Tỷ trọng Vector search (Dense)
-    const lambdaDecay = options.lambdaDecay !== undefined ? options.lambdaDecay : 0.05; // Hệ số suy giảm tin tức theo ngày
+    const lambdaDecay =
+      options.lambdaDecay !== undefined ? options.lambdaDecay : 0.05; // Hệ số suy giảm tin tức theo ngày
 
     const cleanSym = symbol.toUpperCase().trim();
-    this.logger.log(`[HybridRetriever] Retrieving chunks for ${cleanSym} with query: "${queryText}"`);
+    this.logger.log(
+      `[HybridRetriever] Retrieving chunks for ${cleanSym} with query: "${queryText}"`,
+    );
 
     // 1. Lấy vector query embedding
     let queryEmbedding: number[];
     try {
       queryEmbedding = await this.embeddingIngester.getEmbedding(queryText);
     } catch (err) {
-      this.logger.error(`[HybridRetriever] Failed to get embedding for query, returning empty chunks: ${err}`);
+      this.logger.error(
+        `[HybridRetriever] Failed to get embedding for query, returning empty chunks: ${err}`,
+      );
       return [];
     }
 
@@ -197,11 +210,17 @@ export class HybridRetrieverService implements OnModuleInit {
       this.sparseSearch(cleanSym, queryText, limit * 2),
     ]);
 
-    const denseMap = new Map<string, number>(denseResults.map((r) => [r.id, r.similarity]));
-    const sparseMap = new Map<string, number>(sparseResults.map((r) => [r.id, r.score]));
+    const denseMap = new Map<string, number>(
+      denseResults.map((r) => [r.id, r.similarity]),
+    );
+    const sparseMap = new Map<string, number>(
+      sparseResults.map((r) => [r.id, r.score]),
+    );
 
     // Lấy tất cả các ID xuất hiện trong cả hai kết quả để truy vấn chi tiết
-    const allIds = Array.from(new Set([...denseMap.keys(), ...sparseMap.keys()]));
+    const allIds = Array.from(
+      new Set([...denseMap.keys(), ...sparseMap.keys()]),
+    );
     if (allIds.length === 0) return [];
 
     const dbChunks = await this.prisma.marketKnowledgeChunk.findMany({
@@ -218,13 +237,20 @@ export class HybridRetrieverService implements OnModuleInit {
       // Tin tức (news) sẽ suy giảm theo thời gian.
       // Mô tả công ty (profile_description) và tóm tắt tín hiệu (technical_signals_summary) có giá trị lâu dài nên lambda = 0
       let lambda = lambdaDecay;
-      if (chunk.type === 'profile_description' || chunk.type === 'technical_signals_summary') {
+      if (
+        chunk.type === "profile_description" ||
+        chunk.type === "technical_signals_summary"
+      ) {
         lambda = 0.0;
       }
 
       // Delta t tính bằng số ngày kể từ khi tạo/xuất bản chunk
       let publishedDate = chunk.createdAt;
-      if (chunk.type === 'news' && chunk.metadata && (chunk.metadata as any).publishedAt) {
+      if (
+        chunk.type === "news" &&
+        chunk.metadata &&
+        (chunk.metadata as any).publishedAt
+      ) {
         publishedDate = new Date((chunk.metadata as any).publishedAt);
       }
       const diffTime = Math.abs(now.getTime() - publishedDate.getTime());
@@ -239,7 +265,8 @@ export class HybridRetrieverService implements OnModuleInit {
       const normalizedKeywordScore = keywordScore / maxSparse;
 
       // Điểm số lai cuối cùng (Hybrid score)
-      const finalScore = alpha * decayedScore + (1 - alpha) * normalizedKeywordScore;
+      const finalScore =
+        alpha * decayedScore + (1 - alpha) * normalizedKeywordScore;
 
       return {
         id: chunk.id,
@@ -258,6 +285,8 @@ export class HybridRetrieverService implements OnModuleInit {
     });
 
     // Sắp xếp các chunk theo điểm số cuối cùng giảm dần và lấy đúng số lượng giới hạn
-    return scoredChunks.sort((a, b) => b.finalScore - a.finalScore).slice(0, limit);
+    return scoredChunks
+      .sort((a, b) => b.finalScore - a.finalScore)
+      .slice(0, limit);
   }
 }

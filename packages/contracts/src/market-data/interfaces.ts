@@ -1,4 +1,4 @@
-import { NormalizedQuote, NormalizedCandle, NormalizedCompany } from './index';
+import { NormalizedQuote, NormalizedCandle, NormalizedCompany } from "./index";
 
 export interface IMarketDataProvider {
   /**
@@ -14,7 +14,12 @@ export interface IMarketDataProvider {
   /**
    * Fetch historical candles
    */
-  getHistorical(symbol: string, period1: Date, period2: Date, resolution: '1D' | '1W' | '1M' | '15m' | '1h'): Promise<NormalizedCandle[]>;
+  getHistorical(
+    symbol: string,
+    period1: Date,
+    period2: Date,
+    resolution: "1D" | "1W" | "1M" | "15m" | "1h",
+  ): Promise<NormalizedCandle[]>;
 
   /**
    * Fetch basic company profile and fundamental indicators
@@ -23,22 +28,34 @@ export interface IMarketDataProvider {
 }
 
 export class ProviderError extends Error {
-  constructor(public providerName: string, message: string, public originalError?: any) {
+  constructor(
+    public providerName: string,
+    message: string,
+    public originalError?: any,
+  ) {
     super(`[Provider:${providerName}] ${message}`);
-    this.name = 'ProviderError';
+    this.name = "ProviderError";
   }
 }
 
 export class RateLimitError extends ProviderError {
-  constructor(providerName: string, message: string = 'Rate limit exceeded', originalError?: any) {
+  constructor(
+    providerName: string,
+    message: string = "Rate limit exceeded",
+    originalError?: any,
+  ) {
     super(providerName, message, originalError);
-    this.name = 'RateLimitError';
+    this.name = "RateLimitError";
   }
 }
 
 export class DataFormatError extends ProviderError {
-  constructor(providerName: string, message: string = 'Unexpected data format received', originalError?: any) {
+  constructor(
+    providerName: string,
+    message: string = "Unexpected data format received",
+    originalError?: any,
+  ) {
     super(providerName, message, originalError);
-    this.name = 'DataFormatError';
+    this.name = "DataFormatError";
   }
 }

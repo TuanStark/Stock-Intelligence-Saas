@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { PrismaService } from "../../../prisma/prisma.service";
 
 @Injectable()
 export class MarkdownGeneratorService {
@@ -10,35 +10,66 @@ export class MarkdownGeneratorService {
   /**
    * Tạo báo cáo Markdown tổng hợp toàn bộ dữ liệu cấu trúc cứng của một cổ phiếu.
    */
-  async generateMarkdownReport(instrumentId: string, symbol: string): Promise<string> {
+  async generateMarkdownReport(
+    instrumentId: string,
+    symbol: string,
+  ): Promise<string> {
     const cleanSym = symbol.toUpperCase().trim();
-    this.logger.log(`[MarkdownGenerator] Generating structured financial report for ${cleanSym}...`);
+    this.logger.log(
+      `[MarkdownGenerator] Generating structured financial report for ${cleanSym}...`,
+    );
 
-    const [profile, quote, shareholders, dividends, quarters, years, signals] = await Promise.all([
-      this.prisma.companyProfile.findUnique({ where: { instrumentId } }),
-      this.prisma.quote.findFirst({ where: { instrumentId }, orderBy: { asOf: 'desc' } }),
-      this.prisma.companyShareholder.findMany({ where: { instrumentId }, orderBy: { percentage: 'desc' }, take: 5 }),
-      this.prisma.companyDividend.findMany({ where: { instrumentId }, orderBy: { exDate: 'desc' }, take: 5 }),
-      this.prisma.companyFinancialQuarter.findMany({ where: { instrumentId }, orderBy: { quarter: 'desc' }, take: 4 }),
-      this.prisma.companyFinancialYear.findMany({ where: { instrumentId }, orderBy: { year: 'desc' }, take: 3 }),
-      this.prisma.stockSignal.findMany({ where: { instrumentId }, orderBy: { detectedAt: 'desc' }, take: 5 }),
-    ]);
+    const [profile, quote, shareholders, dividends, quarters, years, signals] =
+      await Promise.all([
+        this.prisma.companyProfile.findUnique({ where: { instrumentId } }),
+        this.prisma.quote.findFirst({
+          where: { instrumentId },
+          orderBy: { asOf: "desc" },
+        }),
+        this.prisma.companyShareholder.findMany({
+          where: { instrumentId },
+          orderBy: { percentage: "desc" },
+          take: 5,
+        }),
+        this.prisma.companyDividend.findMany({
+          where: { instrumentId },
+          orderBy: { exDate: "desc" },
+          take: 5,
+        }),
+        this.prisma.companyFinancialQuarter.findMany({
+          where: { instrumentId },
+          orderBy: { quarter: "desc" },
+          take: 4,
+        }),
+        this.prisma.companyFinancialYear.findMany({
+          where: { instrumentId },
+          orderBy: { year: "desc" },
+          take: 3,
+        }),
+        this.prisma.stockSignal.findMany({
+          where: { instrumentId },
+          orderBy: { detectedAt: "desc" },
+          take: 5,
+        }),
+      ]);
 
     const quotePrice = quote ? Number(quote.price) : 20000;
-    const marketCap = profile ? Number(profile.outstandingShares) * quotePrice : 0;
+    const marketCap = profile
+      ? Number(profile.outstandingShares) * quotePrice
+      : 0;
 
     let md = `# BÁO CÁO DỮ LIỆU TÀI CHÍNH CƠ BẢN VÀ CHỈ SỐ DOANH NGHIỆP: MÃ ${cleanSym}\n\n`;
 
     // 1. Chỉ số định giá cơ bản
     md += `## 1. THÔNG TIN CHỈ SỐ ĐỊNH GIÁ HIỆN TẠI\n`;
     if (profile) {
-      md += `- **Thị giá cổ phiếu hiện tại:** ${quotePrice.toLocaleString('vi-VN')} VNĐ\n`;
+      md += `- **Thị giá cổ phiếu hiện tại:** ${quotePrice.toLocaleString("vi-VN")} VNĐ\n`;
       md += `- **Ngành nghề:** ${profile.industry}\n`;
       md += `- **Vốn điều lệ:** ${(Number(profile.charterCapital) / 1e9).toFixed(2)} Tỷ VNĐ\n`;
-      md += `- **Số lượng cổ phiếu lưu hành:** ${Number(profile.outstandingShares).toLocaleString('vi-VN')} CP\n`;
+      md += `- **Số lượng cổ phiếu lưu hành:** ${Number(profile.outstandingShares).toLocaleString("vi-VN")} CP\n`;
       md += `- **Vốn hóa thị trường:** ${(marketCap / 1e9).toFixed(2)} Tỷ VNĐ\n`;
       md += `- **Hệ số Beta:** ${Number(profile.beta).toFixed(2)}\n`;
-      md += `- **EPS cơ bản:** ${Number(profile.eps).toLocaleString('vi-VN')} VNĐ\n`;
+      md += `- **EPS cơ bản:** ${Number(profile.eps).toLocaleString("vi-VN")} VNĐ\n`;
       md += `- **Chỉ số P/E:** ${Number(profile.pe).toFixed(2)}\n`;
       md += `- **Chỉ số P/B:** ${Number(profile.pb).toFixed(2)}\n`;
       md += `- **Tỷ suất cổ tức (Dividend Yield):** ${Number(profile.dividendYield).toFixed(2)}%\n\n`;
@@ -54,7 +85,7 @@ export class MarkdownGeneratorService {
       // Đảo chiều để hiển thị theo trình tự thời gian tăng dần cho AI dễ phân tích xu hướng
       const sortedQuarters = [...quarters].reverse();
       for (const q of sortedQuarters) {
-        md += `| ${q.quarter} | ${(Number(q.revenue) / 1e9).toFixed(2)} | ${(Number(q.grossProfit) / 1e9).toFixed(2)} | ${(Number(q.netProfit) / 1e9).toFixed(2)} | ${q.roe ? Number(q.roe).toFixed(2) : '0.00'} | ${q.roa ? Number(q.roa).toFixed(2) : '0.00'} |\n`;
+        md += `| ${q.quarter} | ${(Number(q.revenue) / 1e9).toFixed(2)} | ${(Number(q.grossProfit) / 1e9).toFixed(2)} | ${(Number(q.netProfit) / 1e9).toFixed(2)} | ${q.roe ? Number(q.roe).toFixed(2) : "0.00"} | ${q.roa ? Number(q.roa).toFixed(2) : "0.00"} |\n`;
       }
       md += `\n`;
     } else {
@@ -81,8 +112,8 @@ export class MarkdownGeneratorService {
       md += `| Ngày GDKHQ | Hình thức chi trả | Tỷ lệ / Giá trị |\n`;
       md += `| :--- | :--- | :--- |\n`;
       for (const d of dividends) {
-        const typeStr = d.type === 'CASH' ? 'Tiền mặt' : 'Cổ phiếu';
-        md += `| ${new Date(d.exDate).toLocaleDateString('vi-VN')} | ${typeStr} | ${d.rate} |\n`;
+        const typeStr = d.type === "CASH" ? "Tiền mặt" : "Cổ phiếu";
+        md += `| ${new Date(d.exDate).toLocaleDateString("vi-VN")} | ${typeStr} | ${d.rate} |\n`;
       }
       md += `\n`;
     } else {
@@ -95,8 +126,8 @@ export class MarkdownGeneratorService {
       md += `| Tên cổ đông | Số lượng cổ phiếu nắm giữ | Tỷ lệ sở hữu (%) | Loại cổ đông |\n`;
       md += `| :--- | :---: | :---: | :--- |\n`;
       for (const s of shareholders) {
-        const typeStr = s.isForeign ? 'Nước ngoài' : 'Trong nước';
-        md += `| ${s.name} | ${Number(s.shares).toLocaleString('vi-VN')} | ${Number(s.percentage).toFixed(2)}% | ${typeStr} |\n`;
+        const typeStr = s.isForeign ? "Nước ngoài" : "Trong nước";
+        md += `| ${s.name} | ${Number(s.shares).toLocaleString("vi-VN")} | ${Number(s.percentage).toFixed(2)}% | ${typeStr} |\n`;
       }
       md += `\n`;
     } else {
@@ -109,7 +140,7 @@ export class MarkdownGeneratorService {
       md += `| Thời điểm | Loại tín hiệu | Mức độ | Diễn giải chi tiết |\n`;
       md += `| :--- | :--- | :---: | :--- |\n`;
       for (const sig of signals) {
-        md += `| ${new Date(sig.detectedAt).toLocaleDateString('vi-VN')} | ${sig.type.replace('_', ' ')} | ${sig.strength} | ${sig.explanation || 'Không có mô tả'} |\n`;
+        md += `| ${new Date(sig.detectedAt).toLocaleDateString("vi-VN")} | ${sig.type.replace("_", " ")} | ${sig.strength} | ${sig.explanation || "Không có mô tả"} |\n`;
       }
       md += `\n`;
     } else {

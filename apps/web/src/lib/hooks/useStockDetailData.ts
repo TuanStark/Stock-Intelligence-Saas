@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { marketApi } from '@/lib/api/market.api';
-import { personalizationApi } from '@/lib/api/personalization.api';
+import { useState, useEffect } from "react";
+import { marketApi } from "@/lib/api/market.api";
+import { personalizationApi } from "@/lib/api/personalization.api";
 
 export interface Signal {
   id: string;
@@ -43,21 +43,24 @@ export interface AiSummary {
   risks: string[];
 }
 
-export function useStockDetailData(symbol: string | undefined, t: (key: string) => string) {
+export function useStockDetailData(
+  symbol: string | undefined,
+  t: (key: string) => string,
+) {
   const [instrument, setInstrument] = useState<Instrument | null>(null);
   const [latestQuote, setLatestQuote] = useState<Quote | null>(null);
   const [signals, setSignals] = useState<Signal[]>([]);
   const [aiSummary, setAiSummary] = useState<AiSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiMessage, setAiMessage] = useState('');
+  const [aiMessage, setAiMessage] = useState("");
 
   const loadData = async () => {
     if (!symbol) return;
     try {
       setLoading(true);
-      setErrorMsg('');
+      setErrorMsg("");
       const resData = await marketApi.getDetail(symbol);
 
       if (resData.success && resData.data) {
@@ -67,13 +70,13 @@ export function useStockDetailData(symbol: string | undefined, t: (key: string) 
         setAiSummary(resData.data.aiSummary);
 
         // Fire personalization tracking activity event (fire-and-forget)
-        personalizationApi.trackActivity('VIEW_STOCK', symbol).catch(() => { });
+        personalizationApi.trackActivity("VIEW_STOCK", symbol).catch(() => {});
       } else {
-        setErrorMsg(t('stockDetail.notFound'));
+        setErrorMsg(t("stockDetail.notFound"));
       }
     } catch (err: any) {
-      console.error('Error fetching stock detail:', err);
-      setErrorMsg('Failed to connect to backend server.');
+      console.error("Error fetching stock detail:", err);
+      setErrorMsg("Failed to connect to backend server.");
     } finally {
       setLoading(false);
     }
@@ -87,7 +90,7 @@ export function useStockDetailData(symbol: string | undefined, t: (key: string) 
     if (!symbol) return;
     try {
       setAiLoading(true);
-      setAiMessage('');
+      setAiMessage("");
       const res = await marketApi.triggerAiSummary(symbol);
 
       if (res && res.success) {
@@ -103,25 +106,27 @@ export function useStockDetailData(symbol: string | undefined, t: (key: string) 
               clearInterval(intervalId);
             }
           } catch (err) {
-            console.error('Error polling AI summary:', err);
+            console.error("Error polling AI summary:", err);
           }
 
           if (attempts >= maxAttempts) {
             setAiLoading(false);
-            setAiMessage('Quá trình phân tích mất nhiều thời gian hơn dự kiến. Vui lòng refresh lại trang sau ít phút!');
+            setAiMessage(
+              "Quá trình phân tích mất nhiều thời gian hơn dự kiến. Vui lòng refresh lại trang sau ít phút!",
+            );
             clearInterval(intervalId);
           }
         }, 2000);
       } else {
         setAiLoading(false);
-        setAiMessage(res?.message || 'Không thể yêu cầu phân tích AI lúc này.');
-        setTimeout(() => setAiMessage(''), 5000);
+        setAiMessage(res?.message || "Không thể yêu cầu phân tích AI lúc này.");
+        setTimeout(() => setAiMessage(""), 5000);
       }
     } catch (err) {
-      console.error('Failed to trigger AI summary:', err);
+      console.error("Failed to trigger AI summary:", err);
       setAiLoading(false);
-      setAiMessage('Không thể kết nối đến máy chủ để phân tích AI.');
-      setTimeout(() => setAiMessage(''), 5000);
+      setAiMessage("Không thể kết nối đến máy chủ để phân tích AI.");
+      setTimeout(() => setAiMessage(""), 5000);
     }
   };
 

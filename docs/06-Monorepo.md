@@ -525,15 +525,15 @@ pnpm --filter @stock-intel/web dev   # FE only
 
 ## Package Naming Convention
 
-| Package | npm name |
-|---|---|
+| Package              | npm name                 |
+| -------------------- | ------------------------ |
 | `packages/contracts` | `@stock-intel/contracts` |
-| `packages/db` | `@stock-intel/db` |
-| `packages/config` | `@stock-intel/config` |
-| `packages/utils` | `@stock-intel/utils` |
-| `apps/api` | `@stock-intel/api` |
-| `apps/web` | `@stock-intel/web` |
-| `apps/worker-*` | `@stock-intel/worker-*` |
+| `packages/db`        | `@stock-intel/db`        |
+| `packages/config`    | `@stock-intel/config`    |
+| `packages/utils`     | `@stock-intel/utils`     |
+| `apps/api`           | `@stock-intel/api`       |
+| `apps/web`           | `@stock-intel/web`       |
+| `apps/worker-*`      | `@stock-intel/worker-*`  |
 
 ---
 

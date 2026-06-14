@@ -1,21 +1,21 @@
 {
-    "name": "@stock-intel/utils",
-    "version": "0.1.0",
-    "private": true,
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "scripts": {
-        "build": "tsc",
-        "type-check": "tsc --noEmit",
-        "test": "jest",
-        "clean": "rm -rf dist"
-    },
-    "devDependencies": {
-        "@types/node": "^22.0.0",
-        "typescript": "^5.7.3"
-    },
-    "dependencies": {
-        "winston": "^3.19.0",
-        "winston-daily-rotate-file": "^5.0.0"
-    }
+  "name": "@stock-intel/utils",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "test": "jest --passWithNoTests",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  }
 }

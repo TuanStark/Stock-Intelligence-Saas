@@ -1,12 +1,12 @@
-import axios from 'axios';
-import { getSession } from 'next-auth/react';
+import axios from "axios";
+import { getSession } from "next-auth/react";
 
 // Centrally configured Axios HTTP client for StockIntel
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1",
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -17,24 +17,26 @@ async function generateSignature(
   timestamp: string,
   nonce: string,
   body: any,
-  baseURL: string
+  baseURL: string,
 ): Promise<string> {
-  const secret = process.env.NEXT_PUBLIC_API_SIGN_SECRET || 'stockintel-secret-hmac-key-2026';
+  const secret =
+    process.env.NEXT_PUBLIC_API_SIGN_SECRET ||
+    "stockintel-secret-hmac-key-2026";
   const normalizedMethod = method.toUpperCase();
 
   // Extract path from url to match backend req.originalUrl exactly
   let path = url;
-  if (!url.startsWith('http')) {
-    let prefix = '';
-    if (baseURL.startsWith('http')) {
+  if (!url.startsWith("http")) {
+    let prefix = "";
+    if (baseURL.startsWith("http")) {
       try {
         prefix = new URL(baseURL).pathname;
       } catch {}
     } else {
       prefix = baseURL;
     }
-    const cleanPrefix = prefix.endsWith('/') ? prefix.slice(0, -1) : prefix;
-    const cleanUrl = url.startsWith('/') ? url : '/' + url;
+    const cleanPrefix = prefix.endsWith("/") ? prefix.slice(0, -1) : prefix;
+    const cleanUrl = url.startsWith("/") ? url : "/" + url;
     path = cleanPrefix + cleanUrl;
   } else {
     try {
@@ -44,7 +46,8 @@ async function generateSignature(
   }
 
   // Consistent body representation
-  const bodyStr = body && Object.keys(body).length > 0 ? JSON.stringify(body) : '';
+  const bodyStr =
+    body && Object.keys(body).length > 0 ? JSON.stringify(body) : "";
   const signString = `${normalizedMethod}:${path}:${timestamp}:${nonce}:${bodyStr}`;
 
   const encoder = new TextEncoder();
@@ -52,29 +55,29 @@ async function generateSignature(
   const messageData = encoder.encode(signString);
 
   const cryptoKey = await window.crypto.subtle.importKey(
-    'raw',
+    "raw",
     keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
+    { name: "HMAC", hash: "SHA-256" },
     false,
-    ['sign']
+    ["sign"],
   );
 
   const signature = await window.crypto.subtle.sign(
-    'HMAC',
+    "HMAC",
     cryptoKey,
-    messageData
+    messageData,
   );
 
   return Array.from(new Uint8Array(signature))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // Automatic request interceptor to inject bearer token and HMAC signature headers
 apiClient.interceptors.request.use(
   async (config) => {
     // Only attempt to retrieve session in browser environments
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const session = await getSession();
       if (session && (session as any).accessToken) {
         config.headers.Authorization = `Bearer ${(session as any).accessToken}`;
@@ -86,29 +89,31 @@ apiClient.interceptors.request.use(
         // Generate a cryptographically secure random nonce
         const array = new Uint32Array(4);
         window.crypto.getRandomValues(array);
-        const nonce = Array.from(array).map((num) => num.toString(16)).join('');
+        const nonce = Array.from(array)
+          .map((num) => num.toString(16))
+          .join("");
 
         const signature = await generateSignature(
-          config.method || 'GET',
-          config.url || '',
+          config.method || "GET",
+          config.url || "",
           timestamp,
           nonce,
           config.data,
-          config.baseURL || ''
+          config.baseURL || "",
         );
 
-        config.headers['x-signature'] = signature;
-        config.headers['x-timestamp'] = timestamp;
-        config.headers['x-nonce'] = nonce;
+        config.headers["x-signature"] = signature;
+        config.headers["x-timestamp"] = timestamp;
+        config.headers["x-nonce"] = nonce;
       } catch (sigError) {
-        console.error('Failed to generate request signature:', sigError);
+        console.error("Failed to generate request signature:", sigError);
       }
     }
     return config;
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Custom strongly-typed API Error class extending Error to avoid printing empty object {} in logs
@@ -121,9 +126,9 @@ export class ApiError extends Error {
   meta?: any;
 
   constructor(errorData: any) {
-    const message = errorData.error?.message || 'An unexpected error occurred';
+    const message = errorData.error?.message || "An unexpected error occurred";
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.success = errorData.success ?? false;
     this.error = errorData.error || { message };
     this.meta = errorData.meta;
@@ -148,12 +153,21 @@ function onRefreshed(token: string) {
 }
 
 // Helper to decrypt AES-256-GCM encrypted payload natively using browser Web Crypto API
-async function decryptPayload(ivHex: string, contentHex: string, tagHex: string): Promise<any> {
-  const secret = process.env.NEXT_PUBLIC_API_ENCRYPTION_KEY || 'stockintel-aes-key-must-be-32bytes';
+async function decryptPayload(
+  ivHex: string,
+  contentHex: string,
+  tagHex: string,
+): Promise<any> {
+  const secret =
+    process.env.NEXT_PUBLIC_API_ENCRYPTION_KEY ||
+    "stockintel-aes-key-must-be-32bytes";
   const encoder = new TextEncoder();
 
   // Hash secret key to exactly 32 bytes (256 bits) to match backend sha256 hashing
-  const keyHash = await window.crypto.subtle.digest('SHA-256', encoder.encode(secret));
+  const keyHash = await window.crypto.subtle.digest(
+    "SHA-256",
+    encoder.encode(secret),
+  );
 
   // Helper to parse hex strings to Uint8Array
   const hexToUint8 = (hex: string) => {
@@ -172,21 +186,21 @@ async function decryptPayload(ivHex: string, contentHex: string, tagHex: string)
   combined.set(tag, content.length);
 
   const cryptoKey = await window.crypto.subtle.importKey(
-    'raw',
+    "raw",
     keyHash,
-    { name: 'AES-GCM' },
+    { name: "AES-GCM" },
     false,
-    ['decrypt']
+    ["decrypt"],
   );
 
   const decrypted = await window.crypto.subtle.decrypt(
     {
-      name: 'AES-GCM',
+      name: "AES-GCM",
       iv: iv,
-      tagLength: 128
+      tagLength: 128,
     },
     cryptoKey,
-    combined
+    combined,
   );
 
   const decoder = new TextDecoder();
@@ -197,17 +211,19 @@ async function decryptPayload(ivHex: string, contentHex: string, tagHex: string)
 apiClient.interceptors.response.use(
   async (response) => {
     // If the response is marked as encrypted, automatically decrypt it in-memory
-    if (response.headers?.['x-encrypted'] === 'true' && response.data) {
+    if (response.headers?.["x-encrypted"] === "true" && response.data) {
       try {
         const { iv, content, tag } = response.data;
         const decryptedData = await decryptPayload(iv, content, tag);
         return decryptedData;
       } catch (decError) {
-        console.error('Failed to decrypt response payload:', decError);
-        return Promise.reject(new ApiError({
-          success: false,
-          error: { message: 'Failed to decrypt secure API payload' }
-        }));
+        console.error("Failed to decrypt response payload:", decError);
+        return Promise.reject(
+          new ApiError({
+            success: false,
+            error: { message: "Failed to decrypt secure API payload" },
+          }),
+        );
       }
     }
     return response.data;
@@ -217,11 +233,11 @@ apiClient.interceptors.response.use(
 
     // If unauthorized (401), attempt silent token refresh first
     if (
-      typeof window !== 'undefined' &&
+      typeof window !== "undefined" &&
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes('/auth/refresh') &&
-      !window.location.pathname.startsWith('/login')
+      !originalRequest.url?.includes("/auth/refresh") &&
+      !window.location.pathname.startsWith("/login")
     ) {
       if (isRefreshing) {
         return new Promise((resolve) => {
@@ -243,20 +259,22 @@ apiClient.interceptors.response.use(
         if (refreshToken) {
           // Perform silent token rotation on the backend API
           const res = await axios.post(
-            (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1') + '/auth/refresh',
+            (process.env.NEXT_PUBLIC_API_URL ||
+              "http://localhost:3001/api/v1") + "/auth/refresh",
             { refreshToken },
-            { headers: { 'Content-Type': 'application/json' } }
+            { headers: { "Content-Type": "application/json" } },
           );
 
           if (res.data?.success && res.data?.data) {
-            const { accessToken, refreshToken: newRefreshToken } = res.data.data;
+            const { accessToken, refreshToken: newRefreshToken } =
+              res.data.data;
 
             // Dynamically update the client-side NextAuth session
-            await fetch('/api/auth/session', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+            await fetch("/api/auth/session", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                trigger: 'update',
+                trigger: "update",
                 session: {
                   accessToken,
                   refreshToken: newRefreshToken,
@@ -273,14 +291,14 @@ apiClient.interceptors.response.use(
           }
         }
       } catch (refreshError) {
-        console.error('Silent token refresh failed:', refreshError);
+        console.error("Silent token refresh failed:", refreshError);
       } finally {
         isRefreshing = false;
       }
 
       // If refresh failed or there is no refresh token, sign out
-      import('next-auth/react').then(({ signOut }) => {
-        signOut({ callbackUrl: '/login?error=SessionExpired' });
+      import("next-auth/react").then(({ signOut }) => {
+        signOut({ callbackUrl: "/login?error=SessionExpired" });
       });
     }
 
@@ -288,10 +306,10 @@ apiClient.interceptors.response.use(
     const errorData = error.response?.data || {
       success: false,
       error: {
-        message: error.message || 'An unexpected network error occurred',
+        message: error.message || "An unexpected network error occurred",
       },
     };
 
     return Promise.reject(new ApiError(errorData));
-  }
+  },
 );

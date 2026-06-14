@@ -73,12 +73,15 @@ Mỗi môi trường có topology khác nhau nhưng contract giống nhau.
 # 4. Environment Topology
 
 ## 4.1 Local
+
 Mục tiêu:
+
 - developer productivity
 - fast feedback
 - reproducible local stack
 
 Chạy bằng:
+
 - Docker Compose
 - local Postgres
 - local Redis
@@ -86,6 +89,7 @@ Chạy bằng:
 - mock external providers
 
 ### Rules
+
 - local không gọi provider thật mặc định
 - local deterministic
 - local bootstrap 1 command
@@ -93,18 +97,22 @@ Chạy bằng:
 ---
 
 ## 4.2 Development
+
 Mục tiêu:
+
 - shared integration env
 - feature validation
 - lightweight CI deploy target
 
 Chạy bằng:
+
 - shared K8s namespace
 - lightweight managed DB
 - shared Redis
 - mock / sandbox providers
 
 ### Rules
+
 - unstable allowed
 - cost tối ưu
 - resettable
@@ -112,17 +120,21 @@ Chạy bằng:
 ---
 
 ## 4.3 Staging
+
 Mục tiêu:
+
 - pre-production validation
 - production-like testing
 - release verification
 
 Chạy bằng:
+
 - production-like K8s
 - prod-like config
 - real integrations (guarded)
 
 ### Rules
+
 - staging ≈ production
 - no experimental infra
 - release candidate only
@@ -130,12 +142,15 @@ Chạy bằng:
 ---
 
 ## 4.4 Production
+
 Mục tiêu:
+
 - customer traffic
 - stable operations
 - reliability first
 
 Chạy bằng:
+
 - multi-node K8s
 - managed stateful infra
 - autoscaling
@@ -157,37 +172,44 @@ Deploy theo 4 loại runtime:
 ---
 
 ## 5.1 Web App
+
 - Next.js app
 - stateless
 - horizontally scalable
 - CDN fronted
 
 Deploy:
+
 - containerized web pods
 
 ---
 
 ## 5.2 API Services
+
 - stateless services
 - internal service-to-service traffic
 - scale independently
 
 Deploy:
+
 - 1 deployment / service
 
 ---
 
 ## 5.3 Workers
+
 - async consumers
 - queue-driven
 - independently scalable
 
 Deploy:
+
 - dedicated worker deployments
 
 ---
 
 ## 5.4 Stateful Infra
+
 - PostgreSQL
 - Redis
 - OpenSearch
@@ -201,11 +223,13 @@ stateful components tách lifecycle khỏi app workloads.
 # 6. Kubernetes Topology
 
 ## Namespaces
+
 - `stock-dev`
 - `stock-staging`
 - `stock-prod`
 
 ## Core Resources
+
 - Deployments
 - StatefulSets
 - Services
@@ -216,6 +240,7 @@ stateful components tách lifecycle khỏi app workloads.
 - CronJobs
 
 ### Rules
+
 - app per deployment
 - stateful per StatefulSet / managed service
 - workers scale riêng
@@ -233,9 +258,11 @@ stateful components tách lifecycle khỏi app workloads.
 ---
 
 ## 7.1 External Traffic
+
 Internet → CDN → Ingress → Web / API Gateway
 
 ### Rules
+
 - TLS bắt buộc
 - CDN cache first
 - ingress rate limiting
@@ -243,9 +270,11 @@ Internet → CDN → Ingress → Web / API Gateway
 ---
 
 ## 7.2 Internal Traffic
+
 Service ↔ Service trong cluster
 
 ### Rules
+
 - internal-only service discovery
 - mTLS later
 - short timeout
@@ -254,9 +283,11 @@ Service ↔ Service trong cluster
 ---
 
 ## 7.3 Data Plane Traffic
+
 Service ↔ DB / Cache / Queue
 
 ### Rules
+
 - private network only
 - least privilege
 - no public DB access
@@ -266,11 +297,13 @@ Service ↔ DB / Cache / Queue
 # 8. Environment Configuration Strategy
 
 ## Config Layers
+
 1. default config
 2. env config
 3. runtime overrides
 
 ## Rules
+
 - config typed
 - config validated on boot
 - no hidden envs
@@ -281,6 +314,7 @@ Service ↔ DB / Cache / Queue
 # 9. Secrets Management
 
 Secrets gồm:
+
 - DB credentials
 - JWT secrets
 - API keys
@@ -288,6 +322,7 @@ Secrets gồm:
 - webhook secrets
 
 ## Rules
+
 - không commit secrets
 - secret rotation supported
 - secrets inject runtime only
@@ -298,21 +333,25 @@ Secrets gồm:
 # 10. Storage Topology
 
 ## PostgreSQL
+
 - managed primary
 - read replicas
 - PITR backups
 
 ## Redis
+
 - primary + replica
 - persistence enabled
 
 ## Object Storage
+
 - raw files
 - exports
 - backups
 - archive
 
 ## OpenSearch
+
 - search cluster
 - hot/warm retention
 
@@ -321,23 +360,29 @@ Secrets gồm:
 # 11. Scaling Blueprint
 
 ## Horizontal Scale
+
 Dùng cho:
+
 - web
 - api
 - workers
 
 ## Vertical Scale
+
 Dùng cho:
+
 - DB
 - OpenSearch
 
 ## Autoscaling Signals
+
 - CPU
 - memory
 - queue lag
 - request latency
 
 ### Rules
+
 - workers scale by queue lag
 - API scale by latency / CPU
 - DB scale conservative
@@ -347,12 +392,14 @@ Dùng cho:
 # 12. Deployment Strategy
 
 ## Rules
+
 - build once
 - promote artifact
 - immutable image
 - no manual patching
 
 ## Strategy
+
 - rolling deploy
 - zero-downtime
 - health checks required
@@ -370,6 +417,7 @@ Dùng cho:
 6. promote prod
 
 ### Rules
+
 - same artifact promoted
 - no rebuild per env
 
@@ -378,6 +426,7 @@ Dùng cho:
 # 14. Observability Blueprint
 
 ## Must Have
+
 - centralized logs
 - metrics
 - traces
@@ -385,6 +434,7 @@ Dùng cho:
 - alerts
 
 ## Stack
+
 - OpenTelemetry
 - Prometheus
 - Grafana
@@ -392,6 +442,7 @@ Dùng cho:
 - Sentry
 
 ### Rules
+
 - request tracing end-to-end
 - queue lag monitored
 - error budget tracked
@@ -402,6 +453,7 @@ Dùng cho:
 # 15. Reliability Blueprint
 
 ## Must Have
+
 - retries
 - circuit breakers
 - timeouts
@@ -409,6 +461,7 @@ Dùng cho:
 - health probes
 
 ## Rules
+
 - graceful degradation
 - stale cache serving
 - fallback providers
@@ -419,12 +472,14 @@ Dùng cho:
 # 16. Backup & Disaster Recovery
 
 ## Backups
+
 - DB daily snapshots
 - PITR enabled
 - object storage versioning
 - config backup
 
 ## DR Rules
+
 - restore tested
 - RPO defined
 - RTO defined
@@ -435,6 +490,7 @@ Dùng cho:
 # 17. Security Blueprint
 
 ## Must Have
+
 - TLS
 - RBAC
 - network policies
@@ -448,6 +504,7 @@ Dùng cho:
 # 18. Cost Control Blueprint
 
 ## Cost Controls
+
 - autoscaling guardrails
 - aggressive caching
 - cold storage archive
@@ -460,6 +517,7 @@ Dùng cho:
 # 19. Ownership Model
 
 Infra ownership phải rõ:
+
 - app team owns app deploy
 - platform owns shared infra
 - security owns policies

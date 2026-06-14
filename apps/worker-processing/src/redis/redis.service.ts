@@ -1,6 +1,6 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import Redis from 'ioredis';
-import { env } from '../env';
+import { Injectable, OnModuleDestroy } from "@nestjs/common";
+import Redis from "ioredis";
+import { env } from "../env";
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
@@ -25,7 +25,10 @@ export class RedisService implements OnModuleDestroy {
 
   async publishSignal(symbol: string, signalData: any): Promise<void> {
     const channel = `market:signals:${symbol.toUpperCase()}`;
-    await this.client.publish(channel, JSON.stringify({ symbol, ...signalData }));
+    await this.client.publish(
+      channel,
+      JSON.stringify({ symbol, ...signalData }),
+    );
   }
 
   async onModuleDestroy() {

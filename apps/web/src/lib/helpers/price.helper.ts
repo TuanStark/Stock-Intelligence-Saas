@@ -12,9 +12,11 @@ export const calculatePricingBounds = (basePrice: number) => {
 /**
  * Pure helper function to cleanly format a number with localized thousands separator.
  */
-export const formatCurrency = (val: number | string | null | undefined): string => {
-  if (val === null || val === undefined) return '0';
-  const num = typeof val === 'number' ? val : Number(val);
-  if (isNaN(num)) return '0';
-  return num.toLocaleString('vi-VN');
+export const formatCurrency = (
+  val: number | string | null | undefined,
+): string => {
+  if (val === null || val === undefined) return "0";
+  const num = typeof val === "number" ? val : Number(val);
+  if (isNaN(num)) return "0";
+  return num.toLocaleString("vi-VN");
 };

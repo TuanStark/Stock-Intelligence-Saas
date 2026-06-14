@@ -162,11 +162,11 @@ type PaginationMeta = {
 
 ## Auth Types
 
-| API Layer | Auth Method |
-|---|---|
-| Public API | No auth |
-| User API | JWT Bearer |
-| Dev API | API Key |
+| API Layer  | Auth Method |
+| ---------- | ----------- |
+| Public API | No auth     |
+| User API   | JWT Bearer  |
+| Dev API    | API Key     |
 
 ## Headers
 
@@ -443,15 +443,15 @@ Gateway chỉ aggregate, không chứa domain logic.
 
 ### Standard Error Codes
 
-| Code | Description |
-|---|---|
-| `UNAUTHORIZED` | Missing or invalid auth |
-| `FORBIDDEN` | Insufficient permissions |
-| `NOT_FOUND` | Resource not found |
-| `VALIDATION_ERROR` | Invalid request data |
-| `RATE_LIMITED` | Rate limit exceeded |
-| `QUOTA_EXCEEDED` | API quota exceeded |
-| `INTERNAL_ERROR` | Server error |
+| Code                   | Description              |
+| ---------------------- | ------------------------ |
+| `UNAUTHORIZED`         | Missing or invalid auth  |
+| `FORBIDDEN`            | Insufficient permissions |
+| `NOT_FOUND`            | Resource not found       |
+| `VALIDATION_ERROR`     | Invalid request data     |
+| `RATE_LIMITED`         | Rate limit exceeded      |
+| `QUOTA_EXCEEDED`       | API quota exceeded       |
+| `INTERNAL_ERROR`       | Server error             |
 | `UPSTREAM_UNAVAILABLE` | External dependency down |
 
 ### Rules

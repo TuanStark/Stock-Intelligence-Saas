@@ -1,21 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron } from "@nestjs/schedule";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class CandleAggregatorService {
   private readonly logger = new Logger(CandleAggregatorService.name);
   private isRunning = false;
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-  @Cron('5 * * * * *')
+  @Cron("5 * * * * *")
   async aggregateCandles() {
     if (this.isRunning) return;
     this.isRunning = true;
 
     try {
-      this.logger.log(' Running 1-minute candle aggregation cycle...');
+      this.logger.log(" Running 1-minute candle aggregation cycle...");
       const startTime = Date.now();
 
       const query = `
@@ -52,7 +52,7 @@ export class CandleAggregatorService {
 
       await this.rollupHigherTimeframes();
     } catch (err) {
-      this.logger.error(' Failed to aggregate candles:', err);
+      this.logger.error(" Failed to aggregate candles:", err);
     } finally {
       this.isRunning = false;
     }
@@ -88,9 +88,9 @@ export class CandleAggregatorService {
       `;
 
       await this.prisma.$executeRawUnsafe(query5m);
-      this.logger.debug('Rolled up 5m candles successfully');
+      this.logger.debug("Rolled up 5m candles successfully");
     } catch (err) {
-      this.logger.error(' Failed rolling up higher timeframe candles:', err);
+      this.logger.error(" Failed rolling up higher timeframe candles:", err);
     }
   }
 }

@@ -9,15 +9,18 @@
 ## 1. Product Truth (Bản chất thật của sản phẩm)
 
 Stock Intelligence SaaS không phải là:
+
 - Website xem giá cổ phiếu đơn thuần.
 - Công cụ vẽ biểu đồ (charting tool) thuần túy.
 - Nơi chỉ để đọc tin tức.
 - Một trình theo dõi danh mục (portfolio tracker) thụ động.
 
 Bản chất thật của sản phẩm là:
+
 > **Một hệ thống hỗ trợ ra quyết định đầu tư**, giúp người dùng tìm cơ hội nhanh hơn, lọc nhiễu tốt hơn, giảm thời gian phân tích và hành động tự tin hơn.
 
 Người dùng trả tiền để mua:
+
 - **Clarity (Sự rõ ràng):** Biết nên nhìn vào mã nào giữa hàng ngàn mã.
 - **Speed (Tốc độ):** Biết có gì bất thường đang xảy ra ngay lập tức.
 - **Confidence (Sự tự tin):** Giảm bớt sự mơ hồ khi đặt lệnh.
@@ -28,6 +31,7 @@ Người dùng trả tiền để mua:
 ## 2. Core User Job-to-be-Done (JTBD)
 
 Người dùng "thuê" sản phẩm này để làm 5 việc chính:
+
 1. **Scan the market:** "Hôm nay có gì đáng chú ý?"
 2. **Validate an opportunity:** "Mã này có thực sự đáng xem/mua không?"
 3. **Track positions:** "Danh mục của tôi đang ổn hay đang gặp nguy hiểm?"
@@ -39,10 +43,12 @@ Người dùng "thuê" sản phẩm này để làm 5 việc chính:
 ## 3. User Segments & Decision Styles
 
 ### 3.1 Retail Investor (Primary)
+
 - **Mục tiêu:** Ra quyết định nhanh, ít tốn thời gian phân tích kỹ thuật/cơ bản phức tạp.
 - **Hành vi:** Mở app 1–3 lần/ngày, lướt nhanh, cần sự rõ ràng (Clarity).
 
 ### 3.2 Power User (Secondary)
+
 - **Mục tiêu:** Quét thị trường diện rộng, so sánh sâu, cần nhiều lớp dữ liệu.
 - **Hành vi:** Dùng screener chuyên sâu, cần mật độ dữ liệu (Data Density) cao, có nhu cầu trích xuất dữ liệu.
 
@@ -67,25 +73,31 @@ Người dùng "thuê" sản phẩm này để làm 5 việc chính:
 ## 5. Primary User Journey (Daily Flow)
 
 ### Step 1 — Market Scan
+
 - **User muốn biết:** "Cái gì đang nóng? Cái gì bất thường?"
 - **Trách nhiệm của Product:** Trả lời trong 5 giây đầu (Top movers, Unusual volume, Market sentiment, Strongest sectors). Nếu thất bại ở đây, người dùng sẽ thoát app.
 
 ### Step 2 — Opportunity Discovery
+
 - **Lý do click:** Người dùng chọn 1 mã vì có "tín hiệu" (Tăng mạnh, Volume lạ, AI Signal, Alert).
 - **Trách nhiệm của Product:** Phải chỉ ra "Tại sao mã này đáng chú ý?" (Reason to look).
 
 ### Step 3 — Opportunity Validation
+
 - **Xác nhận:** "Mã này có đáng để xuống tiền không?"
 - **Trách nhiệm của Product:** Biến dữ liệu thô thành thông tin có ý nghĩa (Trend, Momentum, Signal strength, Support/Resistance, AI Summary).
 
 ### Step 4 — Decision Point
+
 - **Hành động:** Add watchlist, Buy, Ignore, hoặc Exit. Đây là điểm chuyển đổi giá trị kinh doanh thực sự.
 
 ### Step 5 — Position Monitoring
+
 - **User muốn biết:** "Danh mục của tôi có ổn không?"
 - **Trách nhiệm của Product:** Portfolio không chỉ là một cái bảng, nó phải là một **Decision Cockpit** (Bảng điều khiển quyết định) hiển thị rủi ro và các mã cần chú ý.
 
 ### Step 6 — Alert-Driven Return
+
 - **Cơ chế:** Alerts là công cụ giữ chân (Retention engine). Alert phải trả lời: Cái gì xảy ra? Vì sao quan trọng? Cần làm gì?
 
 ---
@@ -93,26 +105,32 @@ Người dùng "thuê" sản phẩm này để làm 5 việc chính:
 ## 6. Screen-by-Screen Business Logic
 
 ### 6.1 Market Page (Opportunity Discovery Engine)
+
 - Nhiệm vụ: Ưu tiên sự chú ý, giảm thời gian quét (Scan time).
 - Business Goal: Giảm **Time-to-first-opportunity**.
 
 ### 6.2 Stock Detail Page (Decision Validation Engine)
+
 - Nhiệm vụ: Giải thích tín hiệu, giảm sự mơ hồ.
 - Business Goal: Chuyển đổi sự chú ý (Attention) thành niềm tin (Conviction).
 
 ### 6.3 Watchlist (Intent Queue)
+
 - Nhiệm vụ: Giữ lại các ứng viên đang cân nhắc, chờ đợi tín hiệu chín muồi.
 - Business Goal: Giữ cho ý định mua trong tương lai luôn sống.
 
 ### 6.4 Portfolio (Position Decision Engine)
+
 - Nhiệm vụ: Hiển thị rủi ro, mức độ tập trung và các hành động cần thực hiện.
 - Business Goal: Kéo người dùng quay lại hàng ngày để kiểm soát tài sản.
 
 ### 6.5 Alerts (Re-engagement Engine)
+
 - Nhiệm vụ: Kéo người dùng quay lại đúng lúc, kích hoạt hành động.
 - Business Goal: Tạo vòng lặp thói quen (Habit loop).
 
 ### 6.6 AI Summary (Time Compression Engine)
+
 - Nhiệm vụ: Rút ngắn thời gian hiểu bối cảnh, giảm mệt mỏi khi phân tích.
 - Business Goal: Giảm tải nhận thức (Cognitive load).
 
@@ -127,6 +145,7 @@ Người dùng "thuê" sản phẩm này để làm 5 việc chính:
 ## 8. Retention Loop (Vòng lặp giữ chân)
 
 Người dùng quay lại vì 3 lý do:
+
 1. Có diễn biến thị trường mới để quét (Fresh data).
 2. Có danh mục cần theo dõi (Personal stakes).
 3. Có thông báo kéo quay lại (External triggers).
@@ -136,6 +155,7 @@ Người dùng quay lại vì 3 lý do:
 ## 9. Monetization Logic (Logic kiếm tiền)
 
 Người dùng không trả tiền cho dữ liệu thô, họ trả tiền cho:
+
 - **Discovery Speed:** Tìm thấy mã ngon nhanh hơn người khác.
 - **Confidence:** Yên tâm hơn khi vào lệnh nhờ hệ thống validation.
 - **Convenience:** Tiết kiệm hàng giờ tự ngồi lọc mã.
