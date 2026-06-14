@@ -86,6 +86,150 @@ services:
     networks:
       - stockintel
 
+  # ─── NestJS API Server (Local Build) ────────────────────────
+  api:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.api
+    container_name: stockintel-api
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel
+
+  # ─── Worker Ingestion (Local Build) ─────────────────────────
+  worker-ingestion:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.worker
+      args:
+        WORKER: ingestion
+    container_name: stockintel-worker-ingestion
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel
+
+  # ─── Worker Processing (Local Build) ────────────────────────
+  worker-processing:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.worker
+      args:
+        WORKER: processing
+    container_name: stockintel-worker-processing
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel
+
+  # ─── Worker AI (Local Build) ────────────────────────────────
+  worker-ai:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.worker
+      args:
+        WORKER: ai
+    container_name: stockintel-worker-ai
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LITELLM_API_BASE=${LITELLM_API_BASE}
+      - OPENAI_MODEL=${OPENAI_MODEL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel
+
+  # ─── Worker Payment (Local Build) ───────────────────────────
+  worker-payment:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.worker
+      args:
+        WORKER: payment
+    container_name: stockintel-worker-payment
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PAYOS_WEBHOOK_SECRET=${PAYOS_WEBHOOK_SECRET}
+      - SEPAY_WEBHOOK_SECRET=${SEPAY_WEBHOOK_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stockintel
+
+  # ─── Next.js Frontend Web (Local Build) ─────────────────────
+  web:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.web
+    container_name: stockintel-web
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - stockintel
+
 networks:
   stockintel:
     driver: bridge

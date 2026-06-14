@@ -66,7 +66,7 @@ services:
     container_name: stockintel-api
     restart: unless-stopped
     env_file:
-      - ../../.env
+      - ./.env
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
@@ -88,7 +88,7 @@ services:
     container_name: stockintel-worker-ingestion
     restart: unless-stopped
     env_file:
-      - ../../.env
+      - ./.env
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
@@ -108,7 +108,7 @@ services:
     container_name: stockintel-worker-processing
     restart: unless-stopped
     env_file:
-      - ../../.env
+      - ./.env
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
@@ -128,7 +128,7 @@ services:
     container_name: stockintel-worker-ai
     restart: unless-stopped
     env_file:
-      - ../../.env
+      - ./.env
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
@@ -151,14 +151,14 @@ services:
     container_name: stockintel-worker-payment
     restart: unless-stopped
     env_file:
-      - ../../.env
+      - ./.env
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stockintel?schema=public
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - PAYOS_WEBHOOK_SECRET=${PAYOS_WEBHOOK_SECRET}
-      - SEPAY_WEBHOOK_SECRET=${SEPAY_WEBHOOK_SECRET}
+      # - PAYOS_WEBHOOK_SECRET=${PAYOS_WEBHOOK_SECRET}
+      # - SEPAY_WEBHOOK_SECRET=${SEPAY_WEBHOOK_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
@@ -173,7 +173,7 @@ services:
     container_name: stockintel-web
     restart: unless-stopped
     env_file:
-      - ../../.env
+      - ./.env
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=http://localhost:3001
