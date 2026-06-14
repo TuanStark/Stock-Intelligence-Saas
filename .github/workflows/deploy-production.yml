@@ -108,26 +108,6 @@ jobs:
         run: |
           echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.2.2
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run Database Migrations
-        env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-        run: |
-          pnpm --filter @stock-intel/db exec prisma migrate deploy
-
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -146,6 +126,9 @@ jobs:
             
             # Pull latest built production images
             docker compose -f infra/docker/docker-compose.prod.yml pull
+            
+            # Run database migrations using the newly pulled api image
+            docker compose -f infra/docker/docker-compose.prod.yml run --rm api npx prisma migrate deploy --schema=./packages/db/prisma/schema.prisma
             
             # Recreate container services gracefully
             docker compose -f infra/docker/docker-compose.prod.yml up -d --remove-orphans
