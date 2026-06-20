@@ -75,131 +75,131 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy-production:
-    name: Deploy to Production
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment:
-      name: production
-      url: http://chungkhoanai.dpdns.org # Replace with your production domain
+  # deploy-production:
+  #   name: Deploy to Production
+  #   needs: build-and-push
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 20
+  #   environment:
+  #     name: production
+  #     url: http://chungkhoanai.dpdns.org # Replace with your production domain
 
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v4
 
-      - name: Lowercase Repository Name for Docker
-        run: |
-          echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+  #     - name: Lowercase Repository Name for Docker
+  #       run: |
+  #         echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Deploy to Server via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          host: ${{ secrets.PRODUCTION_SSH_HOST }}
-          username: ${{ secrets.PRODUCTION_SSH_USER }}
-          key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
-          script: |
-            pwd
-            whoami
-            ls -la
-            cd /app/stock-intelligence/production
+  #     - name: Deploy to Server via SSH
+  #       uses: appleboy/ssh-action@v1.0.0
+  #       env:
+  #         DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #         DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  #       with:
+  #         host: ${{ secrets.PRODUCTION_SSH_HOST }}
+  #         username: ${{ secrets.PRODUCTION_SSH_USER }}
+  #         key: ${{ secrets.PRODUCTION_SSH_KEY }}
+  #         envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
+  #         script: |
+  #           pwd
+  #           whoami
+  #           ls -la
+  #           cd /app/stock-intelligence/production
             
-            # Export production variables (Docker Hub Registry Prefix)
-            export IMAGE_TAG=${{ github.sha }}
-            export REGISTRY_PREFIX=${{ env.DOCKERHUB_USERNAME }}
+  #           # Export production variables (Docker Hub Registry Prefix)
+  #           export IMAGE_TAG=${{ github.sha }}
+  #           export REGISTRY_PREFIX=${{ env.DOCKERHUB_USERNAME }}
             
-            # Log in to Docker Hub on the server (if credentials are provided)
-            if [ ! -z "$DOCKERHUB_USERNAME" ] && [ ! -z "$DOCKERHUB_TOKEN" ]; then
-              echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            fi
+  #           # Log in to Docker Hub on the server (if credentials are provided)
+  #           if [ ! -z "$DOCKERHUB_USERNAME" ] && [ ! -z "$DOCKERHUB_TOKEN" ]; then
+  #             echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+  #           fi
             
-            # Pull latest built production images
-            docker compose -f docker-compose.yml pull api web worker-ingestion worker-processing worker-ai worker-payment
+  #           # Pull latest built production images
+  #           docker compose -f docker-compose.yml pull api web worker-ingestion worker-processing worker-ai worker-payment
             
-            # Run database migrations using the newly pulled api image
-            docker compose -f docker-compose.yml run --rm api npx prisma migrate deploy --schema=./packages/db/prisma/schema.prisma
+  #           # Run database migrations using the newly pulled api image
+  #           docker compose -f docker-compose.yml run --rm api npx prisma migrate deploy --schema=./packages/db/prisma/schema.prisma
             
-            # Recreate container services gracefully
-            docker compose -f docker-compose.yml up -d --remove-orphans
+  #           # Recreate container services gracefully
+  #           docker compose -f docker-compose.yml up -d --remove-orphans
             
-            # Verification loop
-            echo "Waiting for services to initialize..."
-            sleep 10
+  #           # Verification loop
+  #           echo "Waiting for services to initialize..."
+  #           sleep 10
             
-            services=(stockintel-api stockintel-web stockintel-worker-ingestion stockintel-worker-processing stockintel-worker-ai stockintel-worker-payment)
-            failed=0
-            for service in "${services[@]}"; do
-              running=$(docker inspect --format='{{.State.Running}}' $service 2>/dev/null || echo "false")
-              if [ "$running" != "true" ]; then
-                echo "❌ Service $service is NOT running!"
-                failed=1
-              else
-                health=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}healthy{{end}}' $service 2>/dev/null || echo "healthy")
-                if [ "$health" = "unhealthy" ]; then
-                  echo "❌ Service $service is running but UNHEALTHY!"
-                  failed=1
-                else
-                  echo "✅ Service $service is running and healthy."
-                fi
-              fi
-            done
+  #           services=(stockintel-api stockintel-web stockintel-worker-ingestion stockintel-worker-processing stockintel-worker-ai stockintel-worker-payment)
+  #           failed=0
+  #           for service in "${services[@]}"; do
+  #             running=$(docker inspect --format='{{.State.Running}}' $service 2>/dev/null || echo "false")
+  #             if [ "$running" != "true" ]; then
+  #               echo "❌ Service $service is NOT running!"
+  #               failed=1
+  #             else
+  #               health=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}healthy{{end}}' $service 2>/dev/null || echo "healthy")
+  #               if [ "$health" = "unhealthy" ]; then
+  #                 echo "❌ Service $service is running but UNHEALTHY!"
+  #                 failed=1
+  #               else
+  #                 echo "✅ Service $service is running and healthy."
+  #               fi
+  #             fi
+  #           done
             
-            if [ $failed -eq 1 ]; then
-              echo "❌ Production health check failed!"
-              exit 1
-            fi
-            echo "🚀 All services verified healthy!"
+  #           if [ $failed -eq 1 ]; then
+  #             echo "❌ Production health check failed!"
+  #             exit 1
+  #           fi
+  #           echo "🚀 All services verified healthy!"
 
-      - name: Send Success Notification
-        if: success() && env.SLACK_WEBHOOK_URL != ''
-        run: |
-          payload=$(jq -n \
-            --arg title "🚀 Stock Intelligence SaaS Deployed Successfully!" \
-            --arg color "#2eb886" \
-            --arg commit "${{ github.event.head_commit.message }}" \
-            --arg author "${{ github.actor }}" \
-            --arg sha "sha-${{ github.sha }}" \
-            --arg env "Production" \
-            --arg repo "${{ github.repository }}" \
-            '{
-              attachments: [{
-                color: $color,
-                title: $title,
-                fields: [
-                  { title: "Commit Message", value: $commit, short: false },
-                  { title: "Author", value: $author, short: true },
-                  { title: "Version", value: $sha, short: true },
-                  { title: "Environment", value: $env, short: true },
-                  { title: "Repository", value: $repo, short: true }
-                ]
-              }]
-            }')
-          curl -H "Content-Type: application/json" -X POST -d "$payload" $SLACK_WEBHOOK_URL
+  #     - name: Send Success Notification
+  #       if: success() && env.SLACK_WEBHOOK_URL != ''
+  #       run: |
+  #         payload=$(jq -n \
+  #           --arg title "🚀 Stock Intelligence SaaS Deployed Successfully!" \
+  #           --arg color "#2eb886" \
+  #           --arg commit "${{ github.event.head_commit.message }}" \
+  #           --arg author "${{ github.actor }}" \
+  #           --arg sha "sha-${{ github.sha }}" \
+  #           --arg env "Production" \
+  #           --arg repo "${{ github.repository }}" \
+  #           '{
+  #             attachments: [{
+  #               color: $color,
+  #               title: $title,
+  #               fields: [
+  #                 { title: "Commit Message", value: $commit, short: false },
+  #                 { title: "Author", value: $author, short: true },
+  #                 { title: "Version", value: $sha, short: true },
+  #                 { title: "Environment", value: $env, short: true },
+  #                 { title: "Repository", value: $repo, short: true }
+  #               ]
+  #             }]
+  #           }')
+  #         curl -H "Content-Type: application/json" -X POST -d "$payload" $SLACK_WEBHOOK_URL
 
-      - name: Send Failure Notification
-        if: failure() && env.SLACK_WEBHOOK_URL != ''
-        run: |
-          payload=$(jq -n \
-            --arg title "❌ Production Deployment Failed!" \
-            --arg color "#a30200" \
-            --arg commit "${{ github.event.head_commit.message }}" \
-            --arg author "${{ github.actor }}" \
-            --arg env "Production" \
-            --arg run_url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            '{
-              attachments: [{
-                color: $color,
-                title: $title,
-                fields: [
-                  { title: "Commit Message", value: $commit, short: false },
-                  { title: "Author", value: $author, short: true },
-                  { title: "Environment", value: $env, short: true },
-                  { title: "Check Run", value: $run_url, short: false }
-                ]
-              }]
-            }')
-          curl -H "Content-Type: application/json" -X POST -d "$payload" $SLACK_WEBHOOK_URL
+  #     - name: Send Failure Notification
+  #       if: failure() && env.SLACK_WEBHOOK_URL != ''
+  #       run: |
+  #         payload=$(jq -n \
+  #           --arg title "❌ Production Deployment Failed!" \
+  #           --arg color "#a30200" \
+  #           --arg commit "${{ github.event.head_commit.message }}" \
+  #           --arg author "${{ github.actor }}" \
+  #           --arg env "Production" \
+  #           --arg run_url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+  #           '{
+  #             attachments: [{
+  #               color: $color,
+  #               title: $title,
+  #               fields: [
+  #                 { title: "Commit Message", value: $commit, short: false },
+  #                 { title: "Author", value: $author, short: true },
+  #                 { title: "Environment", value: $env, short: true },
+  #                 { title: "Check Run", value: $run_url, short: false }
+  #               ]
+  #             }]
+  #           }')
+  #         curl -H "Content-Type: application/json" -X POST -d "$payload" $SLACK_WEBHOOK_URL

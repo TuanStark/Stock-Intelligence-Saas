@@ -28,6 +28,7 @@ export function useStockWebSocket(
   const [bids, setBids] = useState<OrderBookRow[]>([]);
   const [asks, setAsks] = useState<OrderBookRow[]>([]);
   const [trades, setTrades] = useState<TradeLog[]>([]);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   // 1. Initial pre-population of Mock Depth & Trades History
   useEffect(() => {
@@ -124,7 +125,11 @@ export function useStockWebSocket(
   useEffect(() => {
     if (!symbol) return;
 
-    const socket: Socket = io("http://localhost:3001", {
+
+    const SOCKET_URL = API_URL?.replace("/api/v1", "");
+
+    const socket = io(SOCKET_URL, {
+      path: "/socket.io",
       transports: ["websocket", "polling"],
     });
 
