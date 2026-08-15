@@ -1,0 +1,387 @@
+# ─── Default Values for Stock Intelligence SaaS (K3s) ──────────────
+global:
+  environment: production
+  image:
+    registry: docker.io
+    tag: latest
+    pullPolicy: IfNotPresent
+  # Optional imagePullSecrets if pulling from private registry
+  imagePullSecrets: []
+  # Default storageClass on K3s is "local-path"
+  storageClass: "local-path"
+
+nameOverride: ""
+fullnameOverride: ""
+
+# ─── Application Configuration (ConfigMap) ──────────────────────────
+config:
+  nodeEnv: production
+  port: 3001
+  webUrl: "http://chungkhoanai.dpdns.org"
+  apiUrl: "http://chungkhoanai.dpdns.org/api/v1"
+  redisHost: "" # Left blank to auto-point to internal Redis service if stateful.redis.enabled
+  redisPort: 6379
+  jwtExpiresIn: "15m"
+  jwtRefreshExpiresIn: "7d"
+  openaiModel: "gpt-4o-mini"
+  litellmApiBase: ""
+
+# ─── Application Secrets (K8s Secret) ────────────────────────────────
+secrets:
+  # Set existingSecret if managed by ExternalSecrets / SealedSecrets / Vault
+  existingSecret: ""
+  databaseUrl: "postgresql://postgres:postgres@stock-intel-postgres:5432/stockintel?schema=public"
+  redisPassword: ""
+  jwtSecret: "change-this-super-secret-jwt-key-in-production-min-32-chars"
+  openaiApiKey: ""
+  marketDataApiKey: ""
+  minioAccessKey: "minioadmin"
+  minioSecretKey: "minioadmin"
+  payosWebhookSecret: ""
+  sepayWebhookSecret: ""
+
+# ─── Database Migration Job (Helm Pre-Upgrade Hook) ─────────────────
+migration:
+  enabled: true
+  hook: "pre-install,pre-upgrade"
+  hookDeletePolicy: "before-hook-creation,hook-succeeded"
+  backoffLimit: 3
+  image:
+    repository: tuanstark/stock-intel-api
+    tag: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ─── Frontend Next.js Web ────────────────────────────────────────────
+web:
+  enabled: true
+  image:
+    repository: tuanstark/stock-intel-web
+    tag: ""
+  replicas: 1
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 180Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  probes:
+    liveness:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 15
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    startup:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      failureThreshold: 12
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL
+  podAntiAffinity:
+    enabled: true
+    type: preferred
+
+# ─── Backend NestJS API ──────────────────────────────────────────────
+api:
+  enabled: true
+  image:
+    repository: tuanstark/stock-intel-api
+    tag: ""
+  replicas: 1
+  service:
+    type: ClusterIP
+    port: 3001
+  resources:
+    requests:
+      cpu: 150m
+      memory: 256Mi
+    limits:
+      cpu: 800m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  probes:
+    liveness:
+      httpGet:
+        path: /api/v1/health
+        port: 3001
+      initialDelaySeconds: 20
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      httpGet:
+        path: /api/v1/health
+        port: 3001
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    startup:
+      httpGet:
+        path: /api/v1/health
+        port: 3001
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      failureThreshold: 15
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL
+  podAntiAffinity:
+    enabled: true
+    type: preferred
+
+# ─── Background Workers ──────────────────────────────────────────────
+workers:
+  ingestion:
+    enabled: true
+    image:
+      repository: tuanstark/stock-intel-worker-ingestion
+      tag: ""
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+    terminationGracePeriodSeconds: 60
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 10001
+      runAsGroup: 10001
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+
+  processing:
+    enabled: true
+    image:
+      repository: tuanstark/stock-intel-worker-processing
+      tag: ""
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 800m
+        memory: 512Mi
+    terminationGracePeriodSeconds: 60
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 10001
+      runAsGroup: 10001
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+
+  ai:
+    enabled: true
+    image:
+      repository: tuanstark/stock-intel-worker-ai
+      tag: ""
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 384Mi
+    terminationGracePeriodSeconds: 60
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 10001
+      runAsGroup: 10001
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+
+  payment:
+    enabled: true
+    image:
+      repository: tuanstark/stock-intel-worker-payment
+      tag: ""
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+    terminationGracePeriodSeconds: 60
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 10001
+      runAsGroup: 10001
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+
+# ─── Stateful Workloads (In-Cluster) ─────────────────────────────────
+stateful:
+  postgres:
+    enabled: true
+    image:
+      registry: docker.io
+      repository: timescale/timescaledb
+      tag: latest-pg17
+    postgresDb: stockintel
+    postgresUser: postgres
+    postgresPassword: "postgrespassword"
+    service:
+      port: 5432
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "local-path"
+    resources:
+      requests:
+        cpu: 150m
+        memory: 384Mi
+      limits:
+        cpu: 1000m
+        memory: 1024Mi
+
+  redis:
+    enabled: true
+    image:
+      registry: docker.io
+      repository: redis
+      tag: 7-alpine
+    service:
+      port: 6379
+    maxmemory: 256mb
+    maxmemoryPolicy: allkeys-lru
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: "local-path"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+
+  minio:
+    enabled: true
+    image:
+      registry: docker.io
+      repository: minio/minio
+      tag: latest
+    rootUser: minioadmin
+    rootPassword: "minioadminpassword"
+    service:
+      apiPort: 9000
+      consolePort: 9001
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: "local-path"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+
+# ─── Ingress & Routing ───────────────────────────────────────────────
+ingress:
+  enabled: true
+  # "traefik" is K3s default built-in. Can also be "nginx".
+  className: "traefik"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # Nginx annotations if using ingress-nginx
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    # nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # Traefik annotations
+    traefik.ingress.kubernetes.io/router.entrypoints: "web,websecure"
+  hosts:
+    - host: chungkhoanai.dpdns.org
+      paths:
+        - path: /api/v1
+          pathType: Prefix
+          service: api
+          port: 3001
+        - path: /socket.io
+          pathType: Prefix
+          service: api
+          port: 3001
+        - path: /
+          pathType: Prefix
+          service: web
+          port: 3000
+  tls:
+    - secretName: stock-intel-tls
+      hosts:
+        - chungkhoanai.dpdns.org
+
+# ─── Zero-Trust Network Policies ─────────────────────────────────────
+networkPolicy:
+  enabled: false # Set true in production overlay to isolate workloads
+  allowExternalIngress: true

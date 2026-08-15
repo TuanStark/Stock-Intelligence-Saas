@@ -1,0 +1,31 @@
+========================================================================
+🚀 Stock Intelligence SaaS Platform deployed successfully via Helm!
+========================================================================
+
+Release Name: {{ .Release.Name }}
+Namespace:    {{ .Release.Namespace }}
+Environment:  {{ .Values.global.environment }}
+Version:      {{ .Chart.AppVersion }}
+
+1. Check the status of the rollout:
+   $ kubectl rollout status deployment/{{ include "stock-intel.fullname" . }}-api -n {{ .Release.Namespace }}
+   $ kubectl rollout status deployment/{{ include "stock-intel.fullname" . }}-web -n {{ .Release.Namespace }}
+
+2. View running pods:
+   $ kubectl get pods -n {{ .Release.Namespace }} -o wide
+
+3. Ingress endpoints:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+   - Host: https://{{ .host }}
+{{- end }}
+{{- else }}
+   Ingress is currently disabled. Access services internally or port-forward:
+   $ kubectl port-forward svc/{{ include "stock-intel.fullname" . }}-web 3000:3000 -n {{ .Release.Namespace }}
+   $ kubectl port-forward svc/{{ include "stock-intel.fullname" . }}-api 3001:3001 -n {{ .Release.Namespace }}
+{{- end }}
+
+4. View logs:
+   $ kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/component=api -f
+   $ kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/component=worker-processing -f
+========================================================================

@@ -10,11 +10,29 @@ permissions:
   id-token: write
 
 env:
-  AWS_REGION: ap-southeast-1
-  AWS_ROLE_TO_ASSUME: "" # Specify AWS IAM OIDC Role ARN here for passwordless auth (Optional)
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 jobs:
+  # ─── 1. Lint Helm Chart ───────────────────────────────────────
+  helm-lint:
+    name: Helm Lint & Template Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Lint Helm Chart
+        run: |
+          helm lint infra/k8s
+          helm template test-release infra/k8s -f infra/k8s/values-prod.yaml > /dev/null
+          echo "✅ Helm chart syntax and production templates validated successfully!"
+
+  # ─── 2. Build & Push Docker Images ────────────────────────────
   build-and-push:
     name: Build & Push Matrix
     runs-on: ubuntu-latest
@@ -58,20 +76,13 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-          audience: sts.amazonaws.com
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and Push Docker Image to ECR
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
@@ -79,136 +90,122 @@ jobs:
           build-args: ${{ matrix.build-args }}
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/stock-intel-${{ matrix.service }}:${{ github.sha }}
-            ${{ steps.login-ecr.outputs.registry }}/stock-intel-${{ matrix.service }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # deploy-production:
-  #   name: Deploy to Production
-  #   needs: build-and-push
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 20
-  #   environment:
-  #     name: production
-  #     url: http://chungkhoanai.dpdns.org # Replace with your production domain
+  # ─── 3. Deploy to K3s Production via Helm ─────────────────────
+  deploy-production:
+    name: Deploy to K3s Production (Helm)
+    needs: [helm-lint, build-and-push]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://chungkhoanai.dpdns.org
 
-  #   steps:
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-  #     - name: Lowercase Repository Name for Docker
-  #       run: |
-  #         echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+      - name: Deploy via SSH to K3s Server
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          DOCKER_REGISTRY_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MARKET_DATA_API_KEY: ${{ secrets.MARKET_DATA_API_KEY }}
+          PAYOS_WEBHOOK_SECRET: ${{ secrets.PAYOS_WEBHOOK_SECRET }}
+          SEPAY_WEBHOOK_SECRET: ${{ secrets.SEPAY_WEBHOOK_SECRET }}
+        with:
+          host: ${{ secrets.PRODUCTION_SSH_HOST }}
+          username: ${{ secrets.PRODUCTION_SSH_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          envs: IMAGE_TAG,DOCKER_REGISTRY_USER,DATABASE_URL,REDIS_PASSWORD,JWT_SECRET,OPENAI_API_KEY,MARKET_DATA_API_KEY,PAYOS_WEBHOOK_SECRET,SEPAY_WEBHOOK_SECRET
+          script: |
+            set -e
+            echo "==> Navigating to workspace on K3s node..."
+            cd /app/stock-intelligence || cd $HOME/stock-intelligence
+            git fetch origin main
+            git reset --hard origin/main
 
-  #     - name: Deploy to Server via SSH
-  #       uses: appleboy/ssh-action@v1.0.0
-  #       env:
-  #         DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  #         DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-  #       with:
-  #         host: ${{ secrets.PRODUCTION_SSH_HOST }}
-  #         username: ${{ secrets.PRODUCTION_SSH_USER }}
-  #         key: ${{ secrets.PRODUCTION_SSH_KEY }}
-  #         envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
-  #         script: |
-  #           pwd
-  #           whoami
-  #           ls -la
-  #           cd /app/stock-intelligence/production
-            
-  #           # Export production variables (Docker Hub Registry Prefix)
-  #           export IMAGE_TAG=${{ github.sha }}
-  #           export REGISTRY_PREFIX=${{ env.DOCKERHUB_USERNAME }}
-            
-  #           # Log in to Docker Hub on the server (if credentials are provided)
-  #           if [ ! -z "$DOCKERHUB_USERNAME" ] && [ ! -z "$DOCKERHUB_TOKEN" ]; then
-  #             echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-  #           fi
-            
-  #           # Pull latest built production images
-  #           docker compose -f docker-compose.yml pull api web worker-ingestion worker-processing worker-ai worker-payment
-            
-  #           # Run database migrations using the newly pulled api image
-  #           docker compose -f docker-compose.yml run --rm api npx prisma migrate deploy --schema=./packages/db/prisma/schema.prisma
-            
-  #           # Recreate container services gracefully
-  #           docker compose -f docker-compose.yml up -d --remove-orphans
-            
-  #           # Verification loop
-  #           echo "Waiting for services to initialize..."
-  #           sleep 10
-            
-  #           services=(stockintel-api stockintel-web stockintel-worker-ingestion stockintel-worker-processing stockintel-worker-ai stockintel-worker-payment)
-  #           failed=0
-  #           for service in "${services[@]}"; do
-  #             running=$(docker inspect --format='{{.State.Running}}' $service 2>/dev/null || echo "false")
-  #             if [ "$running" != "true" ]; then
-  #               echo "❌ Service $service is NOT running!"
-  #               failed=1
-  #             else
-  #               health=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}healthy{{end}}' $service 2>/dev/null || echo "healthy")
-  #               if [ "$health" = "unhealthy" ]; then
-  #                 echo "❌ Service $service is running but UNHEALTHY!"
-  #                 failed=1
-  #               else
-  #                 echo "✅ Service $service is running and healthy."
-  #               fi
-  #             fi
-  #           done
-            
-  #           if [ $failed -eq 1 ]; then
-  #             echo "❌ Production health check failed!"
-  #             exit 1
-  #           fi
-  #           echo "🚀 All services verified healthy!"
+            echo "==> Upgrading Helm release with --atomic..."
+            helm upgrade --install stock-intel ./infra/k8s \
+              -f ./infra/k8s/values-prod.yaml \
+              --namespace stock-prod \
+              --create-namespace \
+              --set global.image.tag=${IMAGE_TAG} \
+              --set global.image.registry="docker.io" \
+              --set secrets.databaseUrl="${DATABASE_URL}" \
+              --set secrets.redisPassword="${REDIS_PASSWORD}" \
+              --set secrets.jwtSecret="${JWT_SECRET}" \
+              --set secrets.openaiApiKey="${OPENAI_API_KEY}" \
+              --set secrets.marketDataApiKey="${MARKET_DATA_API_KEY}" \
+              --set secrets.payosWebhookSecret="${PAYOS_WEBHOOK_SECRET}" \
+              --set secrets.sepayWebhookSecret="${SEPAY_WEBHOOK_SECRET}" \
+              --atomic \
+              --cleanup-on-fail \
+              --timeout 8m
 
-  #     - name: Send Success Notification
-  #       if: success() && env.SLACK_WEBHOOK_URL != ''
-  #       run: |
-  #         payload=$(jq -n \
-  #           --arg title "🚀 Stock Intelligence SaaS Deployed Successfully!" \
-  #           --arg color "#2eb886" \
-  #           --arg commit "${{ github.event.head_commit.message }}" \
-  #           --arg author "${{ github.actor }}" \
-  #           --arg sha "sha-${{ github.sha }}" \
-  #           --arg env "Production" \
-  #           --arg repo "${{ github.repository }}" \
-  #           '{
-  #             attachments: [{
-  #               color: $color,
-  #               title: $title,
-  #               fields: [
-  #                 { title: "Commit Message", value: $commit, short: false },
-  #                 { title: "Author", value: $author, short: true },
-  #                 { title: "Version", value: $sha, short: true },
-  #                 { title: "Environment", value: $env, short: true },
-  #                 { title: "Repository", value: $repo, short: true }
-  #               ]
-  #             }]
-  #           }')
-  #         curl -H "Content-Type: application/json" -X POST -d "$payload" $SLACK_WEBHOOK_URL
+            echo "==> Verifying Rollout Status..."
+            kubectl rollout status deployment/stock-intel-api -n stock-prod --timeout=120s
+            kubectl rollout status deployment/stock-intel-web -n stock-prod --timeout=120s
+            kubectl rollout status deployment/stock-intel-worker-processing -n stock-prod --timeout=120s
+            
+            echo "==> Listing Production Pods..."
+            kubectl get pods -n stock-prod -o wide
+            echo "🚀 Helm deployment to K3s Production completed successfully!"
 
-  #     - name: Send Failure Notification
-  #       if: failure() && env.SLACK_WEBHOOK_URL != ''
-  #       run: |
-  #         payload=$(jq -n \
-  #           --arg title "❌ Production Deployment Failed!" \
-  #           --arg color "#a30200" \
-  #           --arg commit "${{ github.event.head_commit.message }}" \
-  #           --arg author "${{ github.actor }}" \
-  #           --arg env "Production" \
-  #           --arg run_url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-  #           '{
-  #             attachments: [{
-  #               color: $color,
-  #               title: $title,
-  #               fields: [
-  #                 { title: "Commit Message", value: $commit, short: false },
-  #                 { title: "Author", value: $author, short: true },
-  #                 { title: "Environment", value: $env, short: true },
-  #                 { title: "Check Run", value: $run_url, short: false }
-  #               ]
-  #             }]
-  #           }')
-  #         curl -H "Content-Type: application/json" -X POST -d "$payload" $SLACK_WEBHOOK_URL
+      - name: Send Success Notification
+        if: success() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          payload=$(jq -n \
+            --arg title "🚀 Stock Intelligence SaaS Deployed Successfully to K3s Production!" \
+            --arg color "#2eb886" \
+            --arg commit "${{ github.event.head_commit.message }}" \
+            --arg author "${{ github.actor }}" \
+            --arg sha "${{ github.sha }}" \
+            --arg env "Production (K3s)" \
+            --arg repo "${{ github.repository }}" \
+            '{
+              attachments: [{
+                color: $color,
+                title: $title,
+                fields: [
+                  { title: "Commit Message", value: $commit, short: false },
+                  { title: "Author", value: $author, short: true },
+                  { title: "Image Tag", value: $sha, short: true },
+                  { title: "Environment", value: $env, short: true },
+                  { title: "Repository", value: $repo, short: true }
+                ]
+              }]
+            }')
+          curl -H "Content-Type: application/json" -X POST -d "$payload" $SLACK_WEBHOOK_URL
+
+      - name: Send Failure Notification
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          payload=$(jq -n \
+            --arg title "❌ Production Deployment Failed (Auto-Rollback Triggered)!" \
+            --arg color "#a30200" \
+            --arg commit "${{ github.event.head_commit.message }}" \
+            --arg author "${{ github.actor }}" \
+            --arg env "Production (K3s)" \
+            --arg run_url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{
+              attachments: [{
+                color: $color,
+                title: $title,
+                fields: [
+                  { title: "Commit Message", value: $commit, short: false },
+                  { title: "Author", value: $author, short: true },
+                  { title: "Environment", value: $env, short: true },
+                  { title: "Check Run", value: $run_url, short: false }
+                ]
+              }]
+            }')
+          curl -H "Content-Type: application/json" -X POST -d "$payload" $SLACK_WEBHOOK_URL

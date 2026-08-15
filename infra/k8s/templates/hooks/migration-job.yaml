@@ -1,0 +1,38 @@
+{{- if .Values.migration.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-migration-{{ .Release.Revision }}
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    "helm.sh/hook": {{ .Values.migration.hook | quote }}
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": {{ .Values.migration.hookDeletePolicy | quote }}
+spec:
+  backoffLimit: {{ .Values.migration.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "stock-intel.labels" . | nindent 8 }}
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: prisma-migrate
+          image: {{ include "stock-intel.image" (dict "global" .Values.global.image "component" .Values.migration.image "defaultTag" .Chart.AppVersion) }}
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          command: ["npx", "prisma", "migrate", "deploy", "--schema=./packages/db/prisma/schema.prisma"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "stock-intel.configMapName" . }}
+            - secretRef:
+                name: {{ include "stock-intel.secretName" . }}
+          resources:
+            {{- toYaml .Values.migration.resources | nindent 12 }}
+{{- end }}

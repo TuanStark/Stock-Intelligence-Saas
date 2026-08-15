@@ -1,0 +1,122 @@
+{{- if .Values.stateful.redis.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-redis-config
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+data:
+  redis.conf: |
+    bind 0.0.0.0
+    port 6379
+    appendonly yes
+    appendfsync everysec
+    maxmemory {{ .Values.stateful.redis.maxmemory }}
+    maxmemory-policy {{ .Values.stateful.redis.maxmemoryPolicy }}
+    {{- if .Values.secrets.redisPassword }}
+    requirepass {{ .Values.secrets.redisPassword }}
+    {{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-redis
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  serviceName: {{ include "stock-intel.fullname" . }}-redis
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "stock-intel.selectorLabels" (dict "context" . "component" "redis") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "stock-intel.labels" . | nindent 8 }}
+        {{- include "stock-intel.selectorLabels" (dict "context" . "component" "redis") | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: redis
+          image: {{ printf "%s/%s:%s" .Values.stateful.redis.image.registry .Values.stateful.redis.image.repository .Values.stateful.redis.image.tag }}
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          command:
+            - redis-server
+            - /usr/local/etc/redis/redis.conf
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /usr/local/etc/redis
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.stateful.redis.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "stock-intel.fullname" . }}-redis-config
+  {{- if .Values.stateful.redis.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "stock-intel.labels" . | nindent 10 }}
+          app.kubernetes.io/component: redis
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- if .Values.stateful.redis.persistence.storageClass }}
+        storageClassName: {{ .Values.stateful.redis.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.stateful.redis.persistence.size | quote }}
+  {{- else }}
+        - name: data
+          emptyDir: {}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-redis
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "stock-intel.selectorLabels" (dict "context" . "component" "redis") | nindent 4 }}
+  ports:
+    - name: redis
+      port: {{ .Values.stateful.redis.service.port }}
+      targetPort: 6379
+      protocol: TCP
+{{- end }}

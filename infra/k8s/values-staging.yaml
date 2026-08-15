@@ -1,0 +1,64 @@
+# ─── Overrides for Staging Environment ──────────────────────────────
+global:
+  environment: staging
+  image:
+    tag: staging
+
+config:
+  nodeEnv: staging
+  webUrl: "https://staging.chungkhoanai.dpdns.org"
+  apiUrl: "https://staging.chungkhoanai.dpdns.org/api/v1"
+
+web:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 180Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+api:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 150m
+      memory: 256Mi
+    limits:
+      cpu: 800m
+      memory: 512Mi
+
+workers:
+  ingestion:
+    replicas: 1
+  processing:
+    replicas: 1
+  ai:
+    replicas: 1
+  payment:
+    replicas: 1
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+  hosts:
+    - host: staging.chungkhoanai.dpdns.org
+      paths:
+        - path: /api/v1
+          pathType: Prefix
+          service: api
+          port: 3001
+        - path: /socket.io
+          pathType: Prefix
+          service: api
+          port: 3001
+        - path: /
+          pathType: Prefix
+          service: web
+          port: 3000
+  tls:
+    - secretName: stock-intel-staging-tls
+      hosts:
+        - staging.chungkhoanai.dpdns.org

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "stock-intel.configMapName" . }}
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.config.nodeEnv | quote }}
+  PORT: {{ .Values.config.port | quote }}
+  WEB_URL: {{ .Values.config.webUrl | quote }}
+  API_URL: {{ .Values.config.apiUrl | quote }}
+  REDIS_HOST: {{ default (printf "%s-redis" (include "stock-intel.fullname" .)) .Values.config.redisHost | quote }}
+  REDIS_PORT: {{ .Values.config.redisPort | quote }}
+  JWT_EXPIRES_IN: {{ .Values.config.jwtExpiresIn | quote }}
+  JWT_REFRESH_EXPIRES_IN: {{ .Values.config.jwtRefreshExpiresIn | quote }}
+  OPENAI_MODEL: {{ .Values.config.openaiModel | quote }}
+  {{- if .Values.config.litellmApiBase }}
+  LITELLM_API_BASE: {{ .Values.config.litellmApiBase | quote }}
+  {{- end }}

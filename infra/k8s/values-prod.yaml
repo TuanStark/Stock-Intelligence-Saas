@@ -1,0 +1,183 @@
+# ─── Production Environment Overrides (High-Availability & Hardened) ──
+global:
+  environment: production
+  image:
+    tag: latest
+    pullPolicy: Always
+
+config:
+  nodeEnv: production
+  webUrl: "https://chungkhoanai.dpdns.org"
+  apiUrl: "https://chungkhoanai.dpdns.org/api/v1"
+
+# ─── Frontend Next.js Web ────────────────────────────────────────────
+web:
+  enabled: true
+  replicas: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 200Mi
+    limits:
+      cpu: 600m
+      memory: 400Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  podAntiAffinity:
+    enabled: true
+    type: preferred
+
+# ─── Backend NestJS API ──────────────────────────────────────────────
+api:
+  enabled: true
+  replicas: 2
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 600Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  podAntiAffinity:
+    enabled: true
+    type: preferred
+
+# ─── Background Workers ──────────────────────────────────────────────
+workers:
+  ingestion:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+
+  processing:
+    enabled: true
+    replicas: 2 # Scale to 2 for concurrent calculation jobs
+    resources:
+      requests:
+        cpu: 150m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 768Mi
+
+  ai:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 180Mi
+      limits:
+        cpu: 500m
+        memory: 384Mi
+
+  payment:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+
+# ─── Stateful Workloads ──────────────────────────────────────────────
+stateful:
+  postgres:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 25Gi
+      storageClass: "local-path"
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1500m
+        memory: 1536Mi
+
+  redis:
+    enabled: true
+    maxmemory: 256mb
+    maxmemoryPolicy: allkeys-lru
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: "local-path"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 400m
+        memory: 384Mi
+
+  minio:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 15Gi
+      storageClass: "local-path"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+
+# ─── Ingress & Automated TLS ─────────────────────────────────────────
+ingress:
+  enabled: true
+  className: "traefik" # or "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/router.entrypoints: "web,websecure"
+  hosts:
+    - host: chungkhoanai.dpdns.org
+      paths:
+        - path: /api/v1
+          pathType: Prefix
+          service: api
+          port: 3001
+        - path: /socket.io
+          pathType: Prefix
+          service: api
+          port: 3001
+        - path: /
+          pathType: Prefix
+          service: web
+          port: 3000
+  tls:
+    - secretName: stock-intel-production-tls
+      hosts:
+        - chungkhoanai.dpdns.org
+
+# ─── Zero-Trust Security Policies ─────────────────────────────────────
+networkPolicy:
+  enabled: true
+  allowExternalIngress: true

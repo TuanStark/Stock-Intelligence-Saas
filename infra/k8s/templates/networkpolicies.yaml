@@ -1,0 +1,136 @@
+{{- if .Values.networkPolicy.enabled }}
+# ─── 1. Allow Ingress Controller to Web and API ───────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-allow-ingress
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - web
+          - api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        {{- if .Values.networkPolicy.allowExternalIngress }}
+        - namespaceSelector: {} # Allow ingress from ingress controller namespace (traefik / ingress-nginx)
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 3001
+---
+# ─── 2. Allow API Access from Web Frontend (SSR calls) ─────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-allow-web-to-api
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "stock-intel.selectorLabels" (dict "context" . "component" "api") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "stock-intel.selectorLabels" (dict "context" . "component" "web") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 3001
+---
+# ─── 3. Restrict PostgreSQL Access to API, Workers, and Migration Job ──
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-allow-db-access
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "stock-intel.selectorLabels" (dict "context" . "component" "postgres") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - api
+                  - migration
+                  - worker-ingestion
+                  - worker-processing
+                  - worker-ai
+                  - worker-payment
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+# ─── 4. Restrict Redis Access to API and Workers ───────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-allow-redis-access
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "stock-intel.selectorLabels" (dict "context" . "component" "redis") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - api
+                  - worker-ingestion
+                  - worker-processing
+                  - worker-ai
+                  - worker-payment
+      ports:
+        - protocol: TCP
+          port: 6379
+---
+# ─── 5. Restrict MinIO Access to API and Workers ───────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-allow-minio-access
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "stock-intel.selectorLabels" (dict "context" . "component" "minio") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - api
+                  - worker-ai
+      ports:
+        - protocol: TCP
+          port: 9000
+{{- end }}

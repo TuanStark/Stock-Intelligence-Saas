@@ -1,0 +1,48 @@
+{{- range $workerName, $workerConfig := .Values.workers }}
+{{- if $workerConfig.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "stock-intel.fullname" $ }}-worker-{{ $workerName }}
+  labels:
+    {{- include "stock-intel.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: worker-{{ $workerName }}
+spec:
+  replicas: {{ $workerConfig.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "stock-intel.selectorLabels" (dict "context" $ "component" (printf "worker-%s" $workerName)) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "stock-intel.labels" $ | nindent 8 }}
+        {{- include "stock-intel.selectorLabels" (dict "context" $ "component" (printf "worker-%s" $workerName)) | nindent 8 }}
+    spec:
+      {{- with $.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ default 60 $workerConfig.terminationGracePeriodSeconds }}
+      containers:
+        - name: worker
+          image: {{ include "stock-intel.image" (dict "global" $.Values.global.image "component" $workerConfig.image "defaultTag" $.Chart.AppVersion) }}
+          imagePullPolicy: {{ $.Values.global.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "stock-intel.configMapName" $ }}
+            - secretRef:
+                name: {{ include "stock-intel.secretName" $ }}
+          resources:
+            {{- toYaml $workerConfig.resources | nindent 12 }}
+          {{- with $workerConfig.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+{{- end }}
+{{- end }}

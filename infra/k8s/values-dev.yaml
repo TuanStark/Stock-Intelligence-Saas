@@ -1,0 +1,103 @@
+# ─── Overrides for Development Environment (Single Node / Minimal Resources) ──
+global:
+  environment: development
+  image:
+    tag: dev
+
+config:
+  nodeEnv: development
+  webUrl: "http://localhost:3000"
+  apiUrl: "http://localhost:3001/api/v1"
+
+web:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+api:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 180Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+workers:
+  ingestion:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 150m
+        memory: 128Mi
+  processing:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+  ai:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 150m
+        memory: 128Mi
+  payment:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 150m
+        memory: 128Mi
+
+stateful:
+  postgres:
+    persistence:
+      size: 5Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  redis:
+    persistence:
+      size: 1Gi
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+  minio:
+    persistence:
+      size: 2Gi
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+ingress:
+  enabled: false

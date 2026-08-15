@@ -1,0 +1,111 @@
+{{- if .Values.stateful.minio.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-minio
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: minio
+spec:
+  serviceName: {{ include "stock-intel.fullname" . }}-minio
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "stock-intel.selectorLabels" (dict "context" . "component" "minio") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "stock-intel.labels" . | nindent 8 }}
+        {{- include "stock-intel.selectorLabels" (dict "context" . "component" "minio") | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: minio
+          image: {{ printf "%s/%s:%s" .Values.stateful.minio.image.registry .Values.stateful.minio.image.repository .Values.stateful.minio.image.tag }}
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          command:
+            - minio
+            - server
+            - /data
+            - --console-address
+            - ":9001"
+          ports:
+            - name: s3-api
+              containerPort: 9000
+              protocol: TCP
+            - name: console
+              containerPort: 9001
+              protocol: TCP
+          env:
+            - name: MINIO_ROOT_USER
+              value: {{ .Values.stateful.minio.rootUser | quote }}
+            - name: MINIO_ROOT_PASSWORD
+              value: {{ .Values.stateful.minio.rootPassword | quote }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.stateful.minio.resources | nindent 12 }}
+  {{- if .Values.stateful.minio.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "stock-intel.labels" . | nindent 10 }}
+          app.kubernetes.io/component: minio
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- if .Values.stateful.minio.persistence.storageClass }}
+        storageClassName: {{ .Values.stateful.minio.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.stateful.minio.persistence.size | quote }}
+  {{- else }}
+      volumes:
+        - name: data
+          emptyDir: {}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-minio
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: minio
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "stock-intel.selectorLabels" (dict "context" . "component" "minio") | nindent 4 }}
+  ports:
+    - name: s3-api
+      port: {{ .Values.stateful.minio.service.apiPort }}
+      targetPort: 9000
+      protocol: TCP
+    - name: console
+      port: {{ .Values.stateful.minio.service.consolePort }}
+      targetPort: 9001
+      protocol: TCP
+{{- end }}
