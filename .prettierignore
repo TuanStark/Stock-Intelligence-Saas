@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs & caches
+dist/
+.next/
+out/
+.turbo/
+build/
+coverage/
+
+# Helm Go Templates (contains Go template syntax not valid YAML for prettier)
+infra/k8s/templates/
+
+# Terraform (uses HCL syntax)
+infra/terraform/
+
+# Database migrations & artifacts
+packages/db/prisma/migrations/
+*.tsbuildinfo
+pnpm-lock.yaml
+package-lock.json
+
+# Environment
+.env*
+!.env.example
+
+# Git & System
+.git/
+.DS_Store
