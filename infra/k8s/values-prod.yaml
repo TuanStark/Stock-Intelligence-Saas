@@ -2,7 +2,7 @@
 global:
   environment: production
   image:
-    tag: "sha-d68d23cf6debc0821533bf7493cfc8c8beb54f9e"
+    tag: "sha-c4504ef567f37205bbe5df4f5695cf81da0bfc51"
     pullPolicy: Always
 
 config:
