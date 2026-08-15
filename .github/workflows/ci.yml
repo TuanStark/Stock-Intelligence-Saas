@@ -101,6 +101,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
 
       - name: Semgrep SAST Code Security Scan
         uses: returntocorp/semgrep-action@v1
@@ -180,7 +181,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
-      JWT_SECRET: "test-jwt-secret-key-must-be-at-least-32-chars"
+      JWT_SECRET: "mock_ci_jwt_test_secret_32_chars_long"
       DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/stockintel_test?schema=public"
       REDIS_HOST: "localhost"
       REDIS_PORT: "6379"

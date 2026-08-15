@@ -1,0 +1,17 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for CI workflows, test fixtures and mock secrets"
+paths = [
+  '''.github/workflows/.*''',
+  '''.*test.*''',
+  '''.*mock.*''',
+  '''.*values.*secrets\.example\.yaml''',
+  '''docs/.*'''
+]
+regexes = [
+  '''test-jwt-secret-key.*''',
+  '''ci-dummy-.*''',
+  '''mock_.*'''
+]

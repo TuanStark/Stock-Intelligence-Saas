@@ -1,7 +1,10 @@
 // Initialize test environment variables before AppModule is imported
 process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-key-must-be-at-least-32-chars';
-process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/stockintel_test?schema=public';
+process.env.JWT_SECRET =
+  process.env.JWT_SECRET || 'test-jwt-secret-key-must-be-at-least-32-chars';
+process.env.DATABASE_URL =
+  process.env.DATABASE_URL ||
+  'postgresql://postgres:postgres@localhost:5432/stockintel_test?schema=public';
 process.env.REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 process.env.REDIS_PORT = process.env.REDIS_PORT || '6379';
 
