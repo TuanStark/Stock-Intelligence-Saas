@@ -10,6 +10,10 @@ config:
   webUrl: "https://chungkhoanai.dpdns.org"
   apiUrl: "https://chungkhoanai.dpdns.org/api/v1"
 
+# ─── Secrets Management (GitOps ExistingSecret Pattern) ───────────────
+secrets:
+  existingSecret: "stock-intel-production-secrets"
+
 # ─── Frontend Next.js Web ────────────────────────────────────────────
 web:
   enabled: true

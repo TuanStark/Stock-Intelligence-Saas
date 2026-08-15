@@ -1,12 +1,16 @@
-name: Deploy Production
+name: Deploy Production (GitOps)
 
 on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'infra/k8s/argocd/**'
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 env:
@@ -35,6 +39,7 @@ jobs:
   # ─── 2. Build & Push Docker Images ────────────────────────────
   build-and-push:
     name: Build & Push Matrix
+    needs: [helm-lint]
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -90,86 +95,52 @@ jobs:
           build-args: ${{ matrix.build-args }}
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:sha-${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── 3. Deploy to K3s Production via Helm ─────────────────────
-  deploy-production:
-    name: Deploy to K3s Production (Helm)
-    needs: [helm-lint, build-and-push]
+  # ─── 3. GitOps Promotion (Write-Back to Git) ───────────────────
+  gitops-promote:
+    name: GitOps Promote to ArgoCD
+    needs: [build-and-push]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment:
-      name: production
-      url: https://chungkhoanai.dpdns.org
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Deploy via SSH to K3s Server
-        uses: appleboy/ssh-action@v1.0.0
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-          DOCKER_REGISTRY_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          MARKET_DATA_API_KEY: ${{ secrets.MARKET_DATA_API_KEY }}
-          PAYOS_WEBHOOK_SECRET: ${{ secrets.PAYOS_WEBHOOK_SECRET }}
-          SEPAY_WEBHOOK_SECRET: ${{ secrets.SEPAY_WEBHOOK_SECRET }}
         with:
-          host: ${{ secrets.PRODUCTION_SSH_HOST }}
-          username: ${{ secrets.PRODUCTION_SSH_USER }}
-          key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          envs: IMAGE_TAG,DOCKER_REGISTRY_USER,DATABASE_URL,REDIS_PASSWORD,JWT_SECRET,OPENAI_API_KEY,MARKET_DATA_API_KEY,PAYOS_WEBHOOK_SECRET,SEPAY_WEBHOOK_SECRET
-          script: |
-            set -e
-            echo "==> Navigating to workspace on K3s node..."
-            cd /app/stock-intelligence || cd $HOME/stock-intelligence
-            git fetch origin main
-            git reset --hard origin/main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
-            echo "==> Upgrading Helm release with --atomic..."
-            helm upgrade --install stock-intel ./infra/k8s \
-              -f ./infra/k8s/values-prod.yaml \
-              --namespace stock-prod \
-              --create-namespace \
-              --set global.image.tag=${IMAGE_TAG} \
-              --set global.image.registry="docker.io" \
-              --set secrets.databaseUrl="${DATABASE_URL}" \
-              --set secrets.redisPassword="${REDIS_PASSWORD}" \
-              --set secrets.jwtSecret="${JWT_SECRET}" \
-              --set secrets.openaiApiKey="${OPENAI_API_KEY}" \
-              --set secrets.marketDataApiKey="${MARKET_DATA_API_KEY}" \
-              --set secrets.payosWebhookSecret="${PAYOS_WEBHOOK_SECRET}" \
-              --set secrets.sepayWebhookSecret="${SEPAY_WEBHOOK_SECRET}" \
-              --atomic \
-              --cleanup-on-fail \
-              --timeout 8m
-
-            echo "==> Verifying Rollout Status..."
-            kubectl rollout status deployment/stock-intel-api -n stock-prod --timeout=120s
-            kubectl rollout status deployment/stock-intel-web -n stock-prod --timeout=120s
-            kubectl rollout status deployment/stock-intel-worker-processing -n stock-prod --timeout=120s
-            
-            echo "==> Listing Production Pods..."
-            kubectl get pods -n stock-prod -o wide
-            echo "🚀 Helm deployment to K3s Production completed successfully!"
+      - name: Update Image Tag in Production Helm Values
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Replace tag in values-prod.yaml with new sha tag
+          sed -i 's/tag: .*/tag: "sha-'${{ github.sha }}'"/' infra/k8s/values-prod.yaml
+          
+          git add infra/k8s/values-prod.yaml
+          
+          # Check if there are changes before committing
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore(gitops): promote production image to sha-${{ github.sha }} [skip ci]"
+            git push origin main
+            echo "🚀 New image tag pushed to Git repository for ArgoCD sync!"
+          fi
 
       - name: Send Success Notification
         if: success() && env.SLACK_WEBHOOK_URL != ''
         run: |
           payload=$(jq -n \
-            --arg title "🚀 Stock Intelligence SaaS Deployed Successfully to K3s Production!" \
+            --arg title "🚀 GitOps Promotion Triggered for ArgoCD!" \
             --arg color "#2eb886" \
             --arg commit "${{ github.event.head_commit.message }}" \
             --arg author "${{ github.actor }}" \
-            --arg sha "${{ github.sha }}" \
-            --arg env "Production (K3s)" \
+            --arg sha "sha-${{ github.sha }}" \
+            --arg env "Production (ArgoCD)" \
             --arg repo "${{ github.repository }}" \
             '{
               attachments: [{
@@ -179,7 +150,7 @@ jobs:
                   { title: "Commit Message", value: $commit, short: false },
                   { title: "Author", value: $author, short: true },
                   { title: "Image Tag", value: $sha, short: true },
-                  { title: "Environment", value: $env, short: true },
+                  { title: "Sync Engine", value: "ArgoCD", short: true },
                   { title: "Repository", value: $repo, short: true }
                 ]
               }]
@@ -190,11 +161,10 @@ jobs:
         if: failure() && env.SLACK_WEBHOOK_URL != ''
         run: |
           payload=$(jq -n \
-            --arg title "❌ Production Deployment Failed (Auto-Rollback Triggered)!" \
+            --arg title "❌ GitOps Promotion Failed!" \
             --arg color "#a30200" \
             --arg commit "${{ github.event.head_commit.message }}" \
             --arg author "${{ github.actor }}" \
-            --arg env "Production (K3s)" \
             --arg run_url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{
               attachments: [{
@@ -203,7 +173,6 @@ jobs:
                 fields: [
                   { title: "Commit Message", value: $commit, short: false },
                   { title: "Author", value: $author, short: true },
-                  { title: "Environment", value: $env, short: true },
                   { title: "Check Run", value: $run_url, short: false }
                 ]
               }]

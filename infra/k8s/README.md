@@ -74,47 +74,56 @@ graph TD
 
 ---
 
-## 3. 🚀 Hướng Dẫn Cài Đặt & Triển Khai Nhanh (Step-by-Step Quickstart)
+## 3. 🐙 Quy Trình Triển Khai GitOps với Standalone ArgoCD
 
-### Bước 1: Khởi tạo và Tối ưu K3s Server
-Đăng nhập SSH vào máy chủ Linux Production và chạy script bootstrap:
+Nếu bạn sử dụng **ArgoCD Server độc lập**, toàn bộ quá trình phát hành Production sẽ chạy tự động 100% qua GitOps:
+
+### Bước 1: Chuẩn bị Cluster K3s & Tạo Secret An Toàn (Chỉ làm 1 lần)
+1. Chạy script bootstrap K3s trên máy chủ Production:
+   ```bash
+   sudo bash infra/k8s/bootstrap/install-k3s.sh
+   sudo bash infra/k8s/bootstrap/setup-argocd-cluster.sh
+   ```
+2. Tạo Secret `stock-intel-production-secrets` trực tiếp trên K3s để ArgoCD không cần chứa raw secrets:
+   ```bash
+   kubectl create namespace stock-prod --dry-run=client -o yaml | kubectl apply -f -
+   
+   kubectl create secret generic stock-intel-production-secrets \
+     --from-literal=DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@stock-intel-postgres:5432/stockintel?schema=public" \
+     --from-literal=REDIS_PASSWORD="YOUR_REDIS_PASSWORD" \
+     --from-literal=JWT_SECRET="YOUR_JWT_SECRET_AT_LEAST_32_CHARACTERS" \
+     --from-literal=OPENAI_API_KEY="sk-proj-..." \
+     --from-literal=MARKET_DATA_API_KEY="your-key" \
+     --from-literal=PAYOS_WEBHOOK_SECRET="your-payos-secret" \
+     --from-literal=SEPAY_WEBHOOK_SECRET="your-sepay-secret" \
+     -n stock-prod
+   ```
+
+### Bước 2: Thêm Cụm K3s vào Standalone ArgoCD Server
+Trên máy chủ **ArgoCD**:
 ```bash
-sudo bash infra/k8s/bootstrap/install-k3s.sh
+# 1. Đăng nhập ArgoCD CLI
+argocd login <ARGOCD_SERVER_IP> --username admin --password <ARGOCD_ADMIN_PASSWORD>
+
+# 2. Add cụm K3s Production
+argocd cluster add <K3S_CONTEXT_NAME> --name k3s-production
 ```
 
-Kiểm tra trạng thái node:
+### Bước 3: Đăng Ký ArgoCD Application
+Trên máy chủ **ArgoCD**:
 ```bash
-kubectl get nodes -o wide
+kubectl apply -f infra/k8s/argocd/application-prod.yaml -n argocd
 ```
 
-### Bước 2: Cài đặt Cert-Manager & ClusterIssuer SSL
-Cài đặt `cert-manager` để tự động cấp phát chứng chỉ SSL Let's Encrypt:
-```bash
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.0/cert-manager.yaml
+### Bước 4: Vận Hành Phát Hành Tự Động (Day-to-Day GitOps)
+Khi Developer push code lên `main`:
+1. **GitHub Actions**: Tự động test, build Docker images, tag với `sha-${{ github.sha }}` và push lên Docker Hub.
+2. **GitOps Write-back**: Workflow tự động cập nhật `global.image.tag` trong `infra/k8s/values-prod.yaml` và commit lên Git (`[skip ci]`).
+3. **ArgoCD Sync**: ArgoCD phát hiện commit mới, chạy Prisma Migration PreSync hook, và thực hiện Rolling Update Zero-Downtime lên K3s.
 
-# Đợi cert-manager pods sẵn sàng
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s
+---
 
-# Áp dụng ClusterIssuer
-kubectl apply -f infra/k8s/bootstrap/cert-manager-cluster-issuer.yaml
-```
-
-### Bước 3: Chuẩn bị File Bí mật Production (`values-prod-secrets.yaml`)
-Tạo file secrets từ template mẫu:
-```bash
-cp infra/k8s/values-prod-secrets.example.yaml infra/k8s/values-prod-secrets.yaml
-```
-Chỉnh sửa mật khẩu DB, Redis, JWT Secret, và các API keys thật trong `values-prod-secrets.yaml`.
-
-### Bước 4: Triển khai Toàn diện qua Helm Chart
-Triển khai phiên bản Production với tính năng `--atomic` (tự động rollback nếu có lỗi):
-```bash
-helm upgrade --install stock-intel ./infra/k8s \
-  -f ./infra/k8s/values-prod.yaml \
-  -f ./infra/k8s/values-prod-secrets.yaml \
-  -n stock-prod --create-namespace \
-  --atomic --timeout 5m
-```
+## 4. 🚀 Hướng Dẫn Triển Khai Thủ Công Bằng Helm (Nếu Không Dùng ArgoCD)
 
 ---
 

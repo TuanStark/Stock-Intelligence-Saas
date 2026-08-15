@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: stock-intel-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/name: stock-intel-dev
+    app.kubernetes.io/part-of: stock-intelligence
+    environment: development
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/TuanStark/Stock-Intelligence-Saas.git'
+    targetRevision: main
+    path: infra/k8s
+    helm:
+      valueFiles:
+        - values-dev.yaml
+  destination:
+    name: k3s-production
+    namespace: stock-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
