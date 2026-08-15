@@ -8,6 +8,7 @@ on:
       - '**.md'
       - 'docs/**'
       - 'infra/k8s/argocd/**'
+      - 'infra/k8s/values-prod.yaml'
 
 permissions:
   contents: write

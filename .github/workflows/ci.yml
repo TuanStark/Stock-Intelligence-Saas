@@ -1,6 +1,14 @@
-name: CI Quality & Security Gates (PR Check)
+name: CI Quality & Security Gates
 
 on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'infra/k8s/values-prod.yaml'
   pull_request:
     branches: [main]
     paths-ignore:
@@ -236,7 +244,7 @@ jobs:
   # FINAL GATEWAY
   # ══════════════════════════════════════════════════════════════════
   ci-passed:
-    name: 🎯 All PR Quality & Security Gates Passed
+    name: 🎯 All Quality & Security Gates Passed
     needs:
       - lint-and-typecheck
       - sast-and-secret-scan
@@ -246,4 +254,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Success Summary
-        run: echo "🎉 All 5 PR Gates (Lint, Types, SAST, SCA, Unit, E2E) passed successfully in under 2 minutes!"
+        run: echo "🎉 All 5 Quality Gates (Lint, Types, SAST, SCA, Unit, E2E) passed successfully!"
