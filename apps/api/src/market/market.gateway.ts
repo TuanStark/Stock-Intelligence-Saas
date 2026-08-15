@@ -9,7 +9,8 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import type Redis from 'ioredis';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 
@@ -26,10 +27,13 @@ export class MarketGateway
     OnGatewayInit,
     OnGatewayConnection,
     OnGatewayDisconnect,
-    OnModuleInit
+    OnModuleInit,
+    OnModuleDestroy
 {
   @WebSocketServer()
   server!: Server;
+
+  private subClient?: Redis;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -75,12 +79,12 @@ export class MarketGateway
   // Initialize Redis subscription for real-time high frequency ticker stream on start
   async onModuleInit() {
     console.log('🔗 Connecting WebSocket Gateway to Redis Pub/Sub...');
-    const subClient = this.redis.getClient().duplicate();
+    this.subClient = this.redis.getClient().duplicate();
 
     // Subscribe to all instrument pubsub channels
-    await subClient.psubscribe('market:pubsub:*');
+    await this.subClient.psubscribe('market:pubsub:*');
 
-    subClient.on('pmessage', (pattern, channel, message) => {
+    this.subClient.on('pmessage', (pattern, channel, message) => {
       try {
         const tickData = JSON.parse(message);
 
@@ -109,5 +113,15 @@ export class MarketGateway
     console.log(
       '✅ WebSocket Gateway successfully listening to Redis Pub/Sub channels',
     );
+  }
+
+  async onModuleDestroy() {
+    if (this.subClient) {
+      try {
+        await this.subClient.quit();
+      } catch {
+        this.subClient.disconnect();
+      }
+    }
   }
 }

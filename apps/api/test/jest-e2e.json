@@ -6,6 +6,7 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
+  "forceExit": true,
   "moduleNameMapper": {
     "^@stock-intel/db$": "<rootDir>/../../../packages/db/src",
     "^@stock-intel/config$": "<rootDir>/../../../packages/config/src",
