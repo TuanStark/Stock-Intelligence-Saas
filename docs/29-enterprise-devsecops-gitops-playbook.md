@@ -7,6 +7,7 @@
 ---
 
 ## 📑 MỤC LỤC
+
 1. [Triết Lý Kiến Trúc & Vận Hành Thực Chiến](#1-triết-lý-kiến-trúc--vận-hành-thực-chiến)
 2. [Thiết Kế Kubernetes (K3s) Trên Hạ Tầng Hạn Chế Tài Nguyên](#2-thiết-kế-kubernetes-k3s-trên-hạ-tầng-hạn-chế-tài-nguyên)
 3. [Nghệ Thuật Đóng Gói Helm Chart Đa Môi Trường](#3-nghệ-thuật-đóng-gói-helm-chart-đa-môi-trường)
@@ -47,10 +48,12 @@ Sau 20 năm thực chiến xây dựng và vận hành các hệ thống phân t
 ## 2. THIẾT KẾ KUBERNETES (K3S) TRÊN HẠ TẦNG HẠN CHẾ TÀI NGUYÊN
 
 ### 2.1. Tại sao chọn K3s thay vì Vanilla Kubernetes?
+
 - **Tiết kiệm tài nguyên:** K3s thay thế `etcd` bằng SQLite/kine nhúng, lược bỏ các cloud provider driver dư thừa, giảm RAM của control plane từ ~2GB xuống chỉ còn **~500MB – 600MB**.
 - **Tích hợp sẵn (Batteries-Included):** Tích hợp sẵn `Traefik Ingress Controller`, `local-path-provisioner` (dynamic PVC storage), `CoreDNS`, và `Metrics-Server`.
 
 ### 2.2. Kỹ Thuật Chống Treo Máy Chủ (Kernel OOM Freeze Prevention)
+
 Trên các máy chủ VPS (4GB – 8GB RAM), khi RAM bị chạm ngưỡng 100%, Linux Kernel sẽ kích hoạt OOM-Killer hoặc rơi vào trạng thái swap thrashing gây treo cứng server. Để khắc phục triệt để:
 
 1. **Kích hoạt 4GB Swap Space + Tinh chỉnh Swappiness:**
@@ -68,23 +71,24 @@ Trên các máy chủ VPS (4GB – 8GB RAM), khi RAM bị chạm ngưỡng 100%,
      - "eviction-soft-grace-period=memory.available=1m"
      - "max-pods=110"
    ```
-   *Cơ chế:* Khi RAM khả dụng dưới 250MB, Kubernetes chủ động Evict (tắt) pod có độ ưu tiên thấp nhất theo chuẩn `QoS Class Burstable` thay vì để Linux Kernel crash toàn bộ máy chủ.
+   _Cơ chế:_ Khi RAM khả dụng dưới 250MB, Kubernetes chủ động Evict (tắt) pod có độ ưu tiên thấp nhất theo chuẩn `QoS Class Burstable` thay vì để Linux Kernel crash toàn bộ máy chủ.
 
 ### 2.3. Ma Trận Phân Bổ Tài Nguyên (Resource Sizing Matrix)
 
-| Thành phần | CPU Request/Limit | Memory Request/Limit | QoS Class | Vai trò kỹ thuật |
-| :--- | :--- | :--- | :--- | :--- |
-| **Web (Next.js)** | `100m` / `600m` | `200Mi` / `400Mi` | Burstable | Server-Side Rendering (SSR) & Static HTML |
-| **API (NestJS)** | `200m` / `1000m` | `256Mi` / `600Mi` | Burstable | REST API, WebSocket real-time stock quotes |
-| **Worker Ingestion** | `50m` / `300m` | `128Mi` / `256Mi` | Burstable | Thu thập giá thị trường qua API (I/O bound) |
-| **Worker Processing** | `150m` / `1000m` | `256Mi` / `768Mi` | Burstable | Tính toán chỉ báo kỹ thuật RSI, MACD, MA (CPU bound) |
-| **Worker AI** | `100m` / `500m` | `180Mi` / `384Mi` | Burstable | Prompt Engineering & tổng hợp báo cáo LLM |
-| **Worker Payment** | `50m` / `300m` | `128Mi` / `256Mi` | Burstable | Webhook Verify PayOS & Sepay |
-| **TimescaleDB (PG17)** | `200m` / `1500m` | `512Mi` / `1536Mi` | Burstable | CSDL quan hệ + Chuỗi thời gian nến giá |
-| **Redis 7** | `50m` / `400m` | `128Mi` / `384Mi` | Burstable | Hàng đợi BullMQ + Bộ nhớ đệm (LRU Policy) |
-| **MinIO** | `50m` / `300m` | `128Mi` / `256Mi` | Burstable | Lưu trữ đối tượng S3 (PDF báo cáo, avatar) |
+| Thành phần             | CPU Request/Limit | Memory Request/Limit | QoS Class | Vai trò kỹ thuật                                     |
+| :--------------------- | :---------------- | :------------------- | :-------- | :--------------------------------------------------- |
+| **Web (Next.js)**      | `100m` / `600m`   | `200Mi` / `400Mi`    | Burstable | Server-Side Rendering (SSR) & Static HTML            |
+| **API (NestJS)**       | `200m` / `1000m`  | `256Mi` / `600Mi`    | Burstable | REST API, WebSocket real-time stock quotes           |
+| **Worker Ingestion**   | `50m` / `300m`    | `128Mi` / `256Mi`    | Burstable | Thu thập giá thị trường qua API (I/O bound)          |
+| **Worker Processing**  | `150m` / `1000m`  | `256Mi` / `768Mi`    | Burstable | Tính toán chỉ báo kỹ thuật RSI, MACD, MA (CPU bound) |
+| **Worker AI**          | `100m` / `500m`   | `180Mi` / `384Mi`    | Burstable | Prompt Engineering & tổng hợp báo cáo LLM            |
+| **Worker Payment**     | `50m` / `300m`    | `128Mi` / `256Mi`    | Burstable | Webhook Verify PayOS & Sepay                         |
+| **TimescaleDB (PG17)** | `200m` / `1500m`  | `512Mi` / `1536Mi`   | Burstable | CSDL quan hệ + Chuỗi thời gian nến giá               |
+| **Redis 7**            | `50m` / `400m`    | `128Mi` / `384Mi`    | Burstable | Hàng đợi BullMQ + Bộ nhớ đệm (LRU Policy)            |
+| **MinIO**              | `50m` / `300m`    | `128Mi` / `256Mi`    | Burstable | Lưu trữ đối tượng S3 (PDF báo cáo, avatar)           |
 
 ### 2.4. Zero-Downtime Deployment & Graceful Shutdown
+
 1. **Lắng nghe tín hiệu SIGTERM:** Container không bị kill đột ngột.
 2. **`preStop` Hook (10s delay):**
    ```yaml
@@ -93,7 +97,7 @@ Trên các máy chủ VPS (4GB – 8GB RAM), khi RAM bị chạm ngưỡng 100%,
        exec:
          command: ["/bin/sh", "-c", "sleep 10"]
    ```
-   *Tác dụng:* Khi pod chuẩn bị tắt, nó tạm dừng 10 giây để Ingress Controller gỡ IP của nó ra khỏi Endpoint pool, tránh tình trạng user gửi request trúng pod đang tắt gây lỗi 502/504.
+   _Tác dụng:_ Khi pod chuẩn bị tắt, nó tạm dừng 10 giây để Ingress Controller gỡ IP của nó ra khỏi Endpoint pool, tránh tình trạng user gửi request trúng pod đang tắt gây lỗi 502/504.
 3. **`terminationGracePeriodSeconds: 40-60s`:** Cho phép các background job đang xử lý dở dang (BullMQ jobs, Webhook payments) hoàn tất trước khi bị force kill.
 4. **Bộ 3 Probes:**
    - `startupProbe`: Cho pod thời gian khởi động (đặc biệt là NestJS boot module hoặc Next.js compile).
@@ -130,6 +134,7 @@ infra/k8s/
 ## 4. KIẾN TRÚC GITOPS VỚI STANDALONE ARGOCD (2-SERVER PATTERN)
 
 ### 4.1. Mô Hình Phân Tách 2 Máy Chủ (Control Plane vs Workload Plane)
+
 - **Server A (ArgoCD Server):** Chuyên trách làm Control Plane, giám sát Git repo, so sánh trạng thái mong muốn (Desired State) với trạng thái thực tế (Live State).
 - **Server B (K3s Production Server):** Chuyên chạy Workloads, không cần cài đặt ArgoCD để tiết kiệm RAM. Chỉ mở port API `6443/tcp` cho Server A truy cập.
 
@@ -154,7 +159,9 @@ graph LR
 ```
 
 ### 4.2. Khai Báo ArgoCD Application Chuẩn Doanh Nghiệp
+
 File `infra/k8s/argocd/application-prod.yaml`:
+
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -166,7 +173,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/TuanStark/Stock-Intelligence-Saas.git'
+    repoURL: "https://github.com/TuanStark/Stock-Intelligence-Saas.git"
     targetRevision: main
     path: infra/k8s
     helm:
@@ -177,8 +184,8 @@ spec:
     namespace: stock-prod
   syncPolicy:
     automated:
-      prune: true       # Xóa các resource không còn khai báo trên Git
-      selfHeal: true    # Tự động ghi đè nếu có ai sửa pod thủ công
+      prune: true # Xóa các resource không còn khai báo trên Git
+      selfHeal: true # Tự động ghi đè nếu có ai sửa pod thủ công
     syncOptions:
       - CreateNamespace=true
       - ApplyOutOfSyncOnly=true
@@ -191,20 +198,24 @@ spec:
 ```
 
 ### 4.3. Helm PreSync Hook (Prisma Migration Lifecycle)
+
 Trong `templates/hooks/migration-job.yaml`:
+
 ```yaml
 annotations:
   "helm.sh/hook": "pre-install,pre-upgrade"
   "helm.sh/hook-weight": "-5"
   "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
 ```
-*Cơ chế:* Khi ArgoCD đồng bộ bản mới, nó sẽ chạy Job `prisma migrate deploy` trước tiên. **Chỉ khi Job hoàn thành thành công (Exit Code 0)**, ArgoCD mới tiến hành cập nhật image cho các Pod API/Workers. Điều này loại bỏ hoàn toàn lỗi 500 do lệch schema database giữa code mới và DB cũ.
+
+_Cơ chế:_ Khi ArgoCD đồng bộ bản mới, nó sẽ chạy Job `prisma migrate deploy` trước tiên. **Chỉ khi Job hoàn thành thành công (Exit Code 0)**, ArgoCD mới tiến hành cập nhật image cho các Pod API/Workers. Điều này loại bỏ hoàn toàn lỗi 500 do lệch schema database giữa code mới và DB cũ.
 
 ---
 
 ## 5. TỐI ƯU CHI PHÍ & TỐC ĐỘ CI/CD (FINOPS & 8 CỔNG DEVSECOPS)
 
 ### 5.1. Bài Toán Chi Phí & Năng Suất (FinOps Metrics)
+
 - **Chi phí điện toán (Compute Cost):** GitHub tính tiền theo số phút chạy của Runner. Giảm thời gian CI từ 15 phút xuống 2.5 phút giúp cắt giảm **80% chi phí hóa đơn CI**.
 - **Chi phí cơ hội (Developer Velocity):** Giảm thời gian chờ đợi giúp lập trình viên không bị ngắt mạch tư duy (context switching).
 
@@ -261,13 +272,16 @@ graph TD
 ## 6. QUẢN TRỊ BÍ MẬT (SECRETS MANAGEMENT) AN TOÀN TRONG GITOPS
 
 ### 6.1. Nguyên Tắc Vàng
+
 > **"Không bao giờ commit mật khẩu, Private Key, JWT Secret hoặc API Key thô lên Git repository, kể cả là repo private."**
 
 ### 6.2. Pattern `ExistingSecret`
+
 1. Trên cụm K3s Production, tạo Secret một lần duy nhất:
+
    ```bash
    kubectl create namespace stock-prod --dry-run=client -o yaml | kubectl apply -f -
-   
+
    kubectl create secret generic stock-intel-production-secrets \
      --from-literal=DATABASE_URL="postgresql://postgres:PASSWORD@stock-intel-postgres:5432/stockintel?schema=public" \
      --from-literal=REDIS_PASSWORD="PASSWORD" \
@@ -278,6 +292,7 @@ graph TD
      --from-literal=SEPAY_WEBHOOK_SECRET="SECRET" \
      -n stock-prod
    ```
+
 2. Trong `infra/k8s/values-prod.yaml`:
    ```yaml
    secrets:
@@ -291,15 +306,16 @@ graph TD
 
 ### 7.1. Bảng Tra Cứu Xử Lý Sự Cố Nhanh
 
-| Hiện tượng | Nguyên nhân gốc rễ (Root Cause) | Lệnh chẩn đoán & Cách xử lý |
-| :--- | :--- | :--- |
-| **Pod bị `OOMKilled`** | RAM tiêu thụ vượt quá `resources.limits.memory` | `kubectl describe pod <pod-name> -n stock-prod`<br>$\rightarrow$ Tăng `memory.limits` trong `values-prod.yaml` và commit Git. |
-| **Pod bị `CrashLoopBackOff`** | Lỗi runtime (kết nối DB thất bại, thiếu biến môi trường) | `kubectl logs <pod-name> -n stock-prod --previous`<br>$\rightarrow$ Kiểm tra log khởi động để fix bug hoặc bổ sung env. |
-| **Migration Job bị Timeout** | PostgreSQL chưa sẵn sàng hoặc connection string sai | `kubectl logs job/stock-intel-migration-<rev> -n stock-prod`<br>$\rightarrow$ Kiểm tra trạng thái pod `postgres` và `DATABASE_URL`. |
-| **SSL Certificate chưa cấp phát** | DNS chưa trỏ đúng IP hoặc cert-manager bị rate-limit | `kubectl describe certificate stock-intel-production-tls -n stock-prod`<br>`kubectl describe challenge -n stock-prod`<br>$\rightarrow$ Kiểm tra A-Record DNS. |
-| **ArgoCD báo trạng thái `OutOfSync`** | Có ai đó chỉnh sửa pod thủ công bằng lệnh `kubectl edit` | Trên giao diện ArgoCD bấm **Sync** (hoặc `selfHeal: true` sẽ tự động ghi đè về trạng thái Git). |
+| Hiện tượng                            | Nguyên nhân gốc rễ (Root Cause)                          | Lệnh chẩn đoán & Cách xử lý                                                                                                                                   |
+| :------------------------------------ | :------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Pod bị `OOMKilled`**                | RAM tiêu thụ vượt quá `resources.limits.memory`          | `kubectl describe pod <pod-name> -n stock-prod`<br>$\rightarrow$ Tăng `memory.limits` trong `values-prod.yaml` và commit Git.                                 |
+| **Pod bị `CrashLoopBackOff`**         | Lỗi runtime (kết nối DB thất bại, thiếu biến môi trường) | `kubectl logs <pod-name> -n stock-prod --previous`<br>$\rightarrow$ Kiểm tra log khởi động để fix bug hoặc bổ sung env.                                       |
+| **Migration Job bị Timeout**          | PostgreSQL chưa sẵn sàng hoặc connection string sai      | `kubectl logs job/stock-intel-migration-<rev> -n stock-prod`<br>$\rightarrow$ Kiểm tra trạng thái pod `postgres` và `DATABASE_URL`.                           |
+| **SSL Certificate chưa cấp phát**     | DNS chưa trỏ đúng IP hoặc cert-manager bị rate-limit     | `kubectl describe certificate stock-intel-production-tls -n stock-prod`<br>`kubectl describe challenge -n stock-prod`<br>$\rightarrow$ Kiểm tra A-Record DNS. |
+| **ArgoCD báo trạng thái `OutOfSync`** | Có ai đó chỉnh sửa pod thủ công bằng lệnh `kubectl edit` | Trên giao diện ArgoCD bấm **Sync** (hoặc `selfHeal: true` sẽ tự động ghi đè về trạng thái Git).                                                               |
 
 ### 7.2. Lệnh Khôi Phục Khẩn Cấp (Emergency Rollback)
+
 Nếu bản build mới gặp lỗi logic nghiêm trọng sau khi deploy:
 
 1. **Cách 1 (Chuẩn GitOps):**
@@ -314,6 +330,7 @@ Nếu bản build mới gặp lỗi logic nghiêm trọng sau khi deploy:
    ```
 
 ### 7.3. Sao Lưu & Phục Hồi Dữ Liệu Thảm Họa (Disaster Recovery)
+
 ```bash
 # 1. Backup PostgreSQL TimescaleDB
 kubectl exec -it -n stock-prod stock-intel-postgres-0 -- pg_dump -U postgres stockintel > backup_$(date +%F).sql

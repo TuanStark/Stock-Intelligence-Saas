@@ -179,6 +179,11 @@ jobs:
     name: 🔗 Integration & E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    env:
+      JWT_SECRET: "test-jwt-secret-key-must-be-at-least-32-chars"
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/stockintel_test?schema=public"
+      REDIS_HOST: "localhost"
+      REDIS_PORT: "6379"
     services:
       postgres:
         image: timescale/timescaledb:latest-pg17
@@ -222,8 +227,11 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
       - name: Apply Database Migrations (Prisma Test DB)
-        run: pnpm --filter @stock-intel/db exec prisma db push --schema=./prisma/schema.prisma
+        run: pnpm --filter @stock-intel/db exec prisma db push --schema=./prisma/schema.prisma --accept-data-loss
 
       - name: Run API E2E Integration Tests
         run: |

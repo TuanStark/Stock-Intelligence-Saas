@@ -56,18 +56,18 @@ graph TD
 
 Được tối ưu đặc biệt cho các máy chủ Production có tài nguyên vừa và nhỏ (ví dụ VPS 4GB – 8GB RAM):
 
-| Workload | Replicas | CPU Request / Limit | Memory Request / Limit | QoS Class | Ghi chú vận hành |
-| :--- | :---: | :--- | :--- | :--- | :--- |
-| **Web (Next.js)** | 2 | `100m` / `600m` | `200Mi` / `400Mi` | Burstable | Phục vụ SSR & Static assets |
-| **API (NestJS)** | 2 | `200m` / `1000m` | `256Mi` / `600Mi` | Burstable | Core REST API, WebSocket real-time quotes |
-| **Worker Ingestion** | 1 | `50m` / `300m` | `128Mi` / `256Mi` | Burstable | Lấy dữ liệu giá chứng khoán (I/O-bound) |
-| **Worker Processing** | 2 | `150m` / `1000m` | `256Mi` / `768Mi` | Burstable | Tính toán chỉ báo kỹ thuật RSI, MACD, MA (CPU-bound) |
-| **Worker AI** | 1 | `100m` / `500m` | `180Mi` / `384Mi` | Burstable | Giao tiếp OpenAI/Litellm phân tích cổ phiếu |
-| **Worker Payment** | 1 | `50m` / `300m` | `128Mi` / `256Mi` | Burstable | Xác thực webhook PayOS / Sepay |
-| **TimescaleDB (PG17)** | 1 | `200m` / `1500m` | `512Mi` / `1536Mi` | Burstable | Lưu trữ quan hệ & dữ liệu chuỗi thời gian nến giá |
-| **Redis 7** | 1 | `50m` / `400m` | `128Mi` / `384Mi` | Burstable | Hàng đợi BullMQ + Cache (Maxmemory 256MB LRU) |
-| **MinIO** | 1 | `50m` / `300m` | `128Mi` / `256Mi` | Burstable | Lưu trữ PDF báo cáo AI và avatar |
-| **K3s Control Plane + OS** | - | `200m` / - | ~`600Mi` | - | K3s Core, Containerd, Flannel CNI, Traefik |
+| Workload                   | Replicas | CPU Request / Limit | Memory Request / Limit | QoS Class | Ghi chú vận hành                                     |
+| :------------------------- | :------: | :------------------ | :--------------------- | :-------- | :--------------------------------------------------- |
+| **Web (Next.js)**          |    2     | `100m` / `600m`     | `200Mi` / `400Mi`      | Burstable | Phục vụ SSR & Static assets                          |
+| **API (NestJS)**           |    2     | `200m` / `1000m`    | `256Mi` / `600Mi`      | Burstable | Core REST API, WebSocket real-time quotes            |
+| **Worker Ingestion**       |    1     | `50m` / `300m`      | `128Mi` / `256Mi`      | Burstable | Lấy dữ liệu giá chứng khoán (I/O-bound)              |
+| **Worker Processing**      |    2     | `150m` / `1000m`    | `256Mi` / `768Mi`      | Burstable | Tính toán chỉ báo kỹ thuật RSI, MACD, MA (CPU-bound) |
+| **Worker AI**              |    1     | `100m` / `500m`     | `180Mi` / `384Mi`      | Burstable | Giao tiếp OpenAI/Litellm phân tích cổ phiếu          |
+| **Worker Payment**         |    1     | `50m` / `300m`      | `128Mi` / `256Mi`      | Burstable | Xác thực webhook PayOS / Sepay                       |
+| **TimescaleDB (PG17)**     |    1     | `200m` / `1500m`    | `512Mi` / `1536Mi`     | Burstable | Lưu trữ quan hệ & dữ liệu chuỗi thời gian nến giá    |
+| **Redis 7**                |    1     | `50m` / `400m`      | `128Mi` / `384Mi`      | Burstable | Hàng đợi BullMQ + Cache (Maxmemory 256MB LRU)        |
+| **MinIO**                  |    1     | `50m` / `300m`      | `128Mi` / `256Mi`      | Burstable | Lưu trữ PDF báo cáo AI và avatar                     |
+| **K3s Control Plane + OS** |    -     | `200m` / -          | ~`600Mi`               | -         | K3s Core, Containerd, Flannel CNI, Traefik           |
 
 > [!IMPORTANT]
 > Để chống treo máy chủ (Kernel OOM Freeze) khi tải đột biến, script cài đặt K3s tự động kích hoạt **4GB Swap Space** và tinh chỉnh `vm.swappiness=10` cùng ngưỡng `eviction-hard=memory.available<250Mi`.
@@ -79,15 +79,17 @@ graph TD
 Nếu bạn sử dụng **ArgoCD Server độc lập**, toàn bộ quá trình phát hành Production sẽ chạy tự động 100% qua GitOps:
 
 ### Bước 1: Chuẩn bị Cluster K3s & Tạo Secret An Toàn (Chỉ làm 1 lần)
+
 1. Chạy script bootstrap K3s trên máy chủ Production:
    ```bash
    sudo bash infra/k8s/bootstrap/install-k3s.sh
    sudo bash infra/k8s/bootstrap/setup-argocd-cluster.sh
    ```
 2. Tạo Secret `stock-intel-production-secrets` trực tiếp trên K3s để ArgoCD không cần chứa raw secrets:
+
    ```bash
    kubectl create namespace stock-prod --dry-run=client -o yaml | kubectl apply -f -
-   
+
    kubectl create secret generic stock-intel-production-secrets \
      --from-literal=DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@stock-intel-postgres:5432/stockintel?schema=public" \
      --from-literal=REDIS_PASSWORD="YOUR_REDIS_PASSWORD" \
@@ -100,7 +102,9 @@ Nếu bạn sử dụng **ArgoCD Server độc lập**, toàn bộ quá trình p
    ```
 
 ### Bước 2: Thêm Cụm K3s vào Standalone ArgoCD Server
+
 Trên máy chủ **ArgoCD**:
+
 ```bash
 # 1. Đăng nhập ArgoCD CLI
 argocd login <ARGOCD_SERVER_IP> --username admin --password <ARGOCD_ADMIN_PASSWORD>
@@ -110,13 +114,17 @@ argocd cluster add <K3S_CONTEXT_NAME> --name k3s-production
 ```
 
 ### Bước 3: Đăng Ký ArgoCD Application
+
 Trên máy chủ **ArgoCD**:
+
 ```bash
 kubectl apply -f infra/k8s/argocd/application-prod.yaml -n argocd
 ```
 
 ### Bước 4: Vận Hành Phát Hành Tự Động (Day-to-Day GitOps)
+
 Khi Developer push code lên `main`:
+
 1. **GitHub Actions**: Tự động test, build Docker images, tag với `sha-${{ github.sha }}` và push lên Docker Hub.
 2. **GitOps Write-back**: Workflow tự động cập nhật `global.image.tag` trong `infra/k8s/values-prod.yaml` và commit lên Git (`[skip ci]`).
 3. **ArgoCD Sync**: ArgoCD phát hiện commit mới, chạy Prisma Migration PreSync hook, và thực hiện Rolling Update Zero-Downtime lên K3s.
@@ -130,6 +138,7 @@ Khi Developer push code lên `main`:
 ## 4. 🔄 Quản lý Vòng đời & Vận hành (Day-2 Operations)
 
 ### Kiểm tra Trạng thái Rollout
+
 ```bash
 kubectl get all -n stock-prod
 kubectl get ingress -n stock-prod
@@ -137,18 +146,22 @@ kubectl get certificates -n stock-prod
 ```
 
 ### Xem Lịch sử Phát hành (Release History)
+
 ```bash
 helm history stock-intel -n stock-prod
 ```
 
 ### Rollback Tức thì khi Có Sự Cố
+
 Nếu phát hiện bản build mới gặp lỗi logic sau khi deploy, rollback về phiên bản trước đó:
+
 ```bash
 # Rollback về revision 2
 helm rollback stock-intel 2 -n stock-prod
 ```
 
 ### Xem Logs Thời gian Thực
+
 ```bash
 # Xem log API
 kubectl logs -n stock-prod -l app.kubernetes.io/component=api -f --tail=100
@@ -165,16 +178,19 @@ kubectl logs -n stock-prod -l app.kubernetes.io/component=worker-ai -f --tail=10
 ## 5. 💾 Kế hoạch Sao Lưu & Khôi Phục Dữ Liệu (Backup & Disaster Recovery)
 
 ### Sao lưu TimescaleDB thủ công
+
 ```bash
 kubectl exec -it -n stock-prod stock-intel-postgres-0 -- pg_dump -U postgres stockintel > backup_$(date +%F_%H%M%S).sql
 ```
 
 ### Khôi phục TimescaleDB từ file backup
+
 ```bash
 cat backup_2026-08-15_120000.sql | kubectl exec -i -n stock-prod stock-intel-postgres-0 -- psql -U postgres -d stockintel
 ```
 
 ### Sao lưu Redis RDB
+
 ```bash
 kubectl exec -it -n stock-prod stock-intel-redis-0 -- redis-cli bgsave
 kubectl cp stock-prod/stock-intel-redis-0:/data/dump.rdb ./redis_dump_$(date +%F).rdb
@@ -185,19 +201,22 @@ kubectl cp stock-prod/stock-intel-redis-0:/data/dump.rdb ./redis_dump_$(date +%F
 ## 6. 🛠️ Xử Lý Sự Cố Thường Gặp (Troubleshooting)
 
 ### 1. Pod bị `CrashLoopBackOff` hoặc `OOMKilled`
+
 - **Triệu chứng:** `kubectl get pods -n stock-prod` hiển thị pod restart nhiều lần hoặc trạng thái `OOMKilled`.
-- **Cách xử lý:** 
+- **Cách xử lý:**
   1. Kiểm tra nguyên nhân: `kubectl describe pod <pod-name> -n stock-prod`.
   2. Xem log trước khi crash: `kubectl logs <pod-name> -n stock-prod --previous`.
   3. Tăng `memory.limits` trong `values-prod.yaml` và chạy `helm upgrade`.
 
 ### 2. Migration Job bị treo (`Pending` hoặc `Error`)
+
 - **Triệu chứng:** Lệnh `helm upgrade` bị timeout ở bước Pre-Upgrade Hook.
 - **Cách xử lý:**
   1. Kiểm tra log migration: `kubectl logs job/stock-intel-migration-<revision> -n stock-prod`.
   2. Đảm bảo Pod PostgreSQL đang `Running` và `DATABASE_URL` trong secrets chính xác.
 
 ### 3. Ingress không nhận được chứng chỉ SSL HTTPS
+
 - **Triệu chứng:** Truy cập web báo lỗi "Certificate Not Secure".
 - **Cách xử lý:**
   1. Kiểm tra trạng thái Certificate: `kubectl describe certificate stock-intel-production-tls -n stock-prod`.

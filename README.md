@@ -16,6 +16,7 @@
 </div>
 
 ---
+
 ## INFRA IN CLOUD
 
 ![AWS Cloud Architecture](docs/images/aws-architecture.jpg)

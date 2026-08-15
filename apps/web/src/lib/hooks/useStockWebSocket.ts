@@ -125,7 +125,6 @@ export function useStockWebSocket(
   useEffect(() => {
     if (!symbol) return;
 
-
     const SOCKET_URL = API_URL?.replace("/api/v1", "");
 
     const socket = io(SOCKET_URL, {

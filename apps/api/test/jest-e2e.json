@@ -5,5 +5,11 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@stock-intel/db$": "<rootDir>/../../../packages/db/src",
+    "^@stock-intel/config$": "<rootDir>/../../../packages/config/src",
+    "^@stock-intel/contracts$": "<rootDir>/../../../packages/contracts/src",
+    "^@stock-intel/utils$": "<rootDir>/../../../packages/utils/src"
   }
 }
