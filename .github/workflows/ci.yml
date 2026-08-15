@@ -1,4 +1,4 @@
-name: CI/CD DevSecOps Quality & Security Gates
+name: CI Quality & Security Gates (PR Check)
 
 on:
   pull_request:
@@ -8,29 +8,19 @@ on:
       - 'docs/**'
       - '.gitignore'
       - 'LICENSE'
-  push:
-    branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
 
 concurrency:
   group: ci-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true # Tự động hủy job cũ khi dev push commit mới -> Tiết kiệm 100% runner phút cho commit rác
+  cancel-in-progress: true # Tự động hủy job của commit cũ khi có commit mới trên PR
 
 env:
   NODE_VERSION: "22"
   PNPM_VERSION: "11.2.2"
-  DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/stockintel_test?schema=public"
-  REDIS_HOST: "localhost"
-  REDIS_PORT: "6379"
   TURBO_CACHE_DIR: ".turbo"
 
 jobs:
   # ══════════════════════════════════════════════════════════════════
-  # 1 & 2. LINT, FORMAT, STATIC TYPECHECK & HELM LINT
+  # 1. LINT, FORMAT, STATIC TYPECHECK & HELM LINT
   # ══════════════════════════════════════════════════════════════════
   lint-and-typecheck:
     name: 🔍 Lint, Format & TypeCheck
@@ -85,7 +75,7 @@ jobs:
           helm template test-release infra/k8s -f infra/k8s/values-prod.yaml > /dev/null
 
   # ══════════════════════════════════════════════════════════════════
-  # 5. SAST & SECRET LEAK SCANNING (Non-blocking / Parallel)
+  # 2. SAST & SECRET LEAK SCANNING (Non-blocking / Parallel)
   # ══════════════════════════════════════════════════════════════════
   sast-and-secret-scan:
     name: 🛡️ SAST & Secret Leak Scan
@@ -115,7 +105,7 @@ jobs:
         continue-on-error: true
 
   # ══════════════════════════════════════════════════════════════════
-  # 6. DEPENDENCY SCAN (Software Composition Analysis - SCA)
+  # 3. DEPENDENCY SCAN (Software Composition Analysis - SCA)
   # ══════════════════════════════════════════════════════════════════
   dependency-scan:
     name: 📦 Dependency Vulnerability Scan (SCA)
@@ -135,7 +125,7 @@ jobs:
           exit-code: "0"
 
   # ══════════════════════════════════════════════════════════════════
-  # 3. UNIT TESTS & COVERAGE
+  # 4. UNIT TESTS & COVERAGE
   # ══════════════════════════════════════════════════════════════════
   unit-tests:
     name: 🧪 Unit Tests & Code Coverage
@@ -174,7 +164,7 @@ jobs:
         run: pnpm test
 
   # ══════════════════════════════════════════════════════════════════
-  # 4. INTEGRATION & E2E TESTS (With ephemeral DB/Redis Services)
+  # 5. INTEGRATION & E2E TESTS (With ephemeral DB/Redis Services)
   # ══════════════════════════════════════════════════════════════════
   integration-tests:
     name: 🔗 Integration & E2E Tests
@@ -243,74 +233,17 @@ jobs:
           fi
 
   # ══════════════════════════════════════════════════════════════════
-  # 7 & 8. DOCKER BUILD & CONTAINER IMAGE SCAN (Triggers only if Code/Dockerfile changes)
-  # ══════════════════════════════════════════════════════════════════
-  docker-build-and-image-scan:
-    name: 🐳 Docker Build & Security Scan Matrix
-    needs: [lint-and-typecheck, sast-and-secret-scan, unit-tests]
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - service: api
-            file: infra/docker/Dockerfile.api
-            context: .
-            build-args: ""
-          - service: web
-            file: infra/docker/Dockerfile.web
-            context: .
-            build-args: ""
-          - service: worker-processing
-            file: infra/docker/Dockerfile.worker
-            context: .
-            build-args: "WORKER=processing"
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker Image (Layer Caching via GHA - No Push)
-        uses: docker/build-push-action@v5
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.file }}
-          build-args: ${{ matrix.build-args }}
-          push: false
-          load: true
-          tags: stock-intel-${{ matrix.service }}:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: 🛡️ Trivy Container Image Vulnerability Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: "stock-intel-${{ matrix.service }}:test"
-          format: "table"
-          exit-code: "0"
-          ignore-unfixed: true
-          severity: "CRITICAL,HIGH"
-
-  # ══════════════════════════════════════════════════════════════════
   # FINAL GATEWAY
   # ══════════════════════════════════════════════════════════════════
   ci-passed:
-    name: 🎯 All DevSecOps Quality & Security Gates Passed
+    name: 🎯 All PR Quality & Security Gates Passed
     needs:
       - lint-and-typecheck
       - sast-and-secret-scan
       - dependency-scan
       - unit-tests
       - integration-tests
-      - docker-build-and-image-scan
     runs-on: ubuntu-latest
     steps:
       - name: Success Summary
-        run: echo "🎉 All 8 DevSecOps gates passed successfully with maximum cache acceleration!"
+        run: echo "🎉 All 5 PR Gates (Lint, Types, SAST, SCA, Unit, E2E) passed successfully in under 2 minutes!"

@@ -100,6 +100,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: 🛡️ Trivy Container Image Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:sha-${{ github.sha }}"
+          format: "table"
+          exit-code: "0"
+          ignore-unfixed: true
+          severity: "CRITICAL,HIGH"
+
   # ─── 3. GitOps Promotion (Write-Back to Git) ───────────────────
   gitops-promote:
     name: GitOps Promote to ArgoCD

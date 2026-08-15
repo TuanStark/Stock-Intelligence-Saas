@@ -249,22 +249,27 @@ _Cơ chế:_ Khi ArgoCD đồng bộ bản mới, nó sẽ chạy Job `prisma mi
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.3. 8 Cổng Kiểm Soát DevSecOps Toàn Diện (`.github/workflows/ci.yml`)
+### 5.3. Mô Hình Phân Tầng Tuyệt Đối: PR Gates (< 2 Phút) vs Mainline Delivery
 
 ```mermaid
 graph TD
-    PR[Pull Request Event] --> Parallel_Stage
-
-    subgraph Parallel_Stage [Stage 1: Chạy Song Song - Hoàn tất trong 45s]
-        Gate1["1 & 2. 🔍 Lint, Format, Types, Helm Lint"]
-        Gate5["5. 🛡️ SAST (Semgrep) & Secret Scan (Gitleaks)"]
-        Gate6["6. 📦 Dependency Vulnerability Scan (Trivy SCA)"]
-        Gate3["3. 🧪 Unit Tests (Jest + Turbo Cache)"]
+    subgraph PR_Flow [Giai Đoạn 1: PR Check - Lightning Fast < 2 Phút]
+        PR[Pull Request Event] --> Gate1["1. 🔍 Lint, Format, Types, Helm Lint"]
+        PR --> Gate2["2. 🛡️ SAST (Semgrep) & Secret Scan (Gitleaks)"]
+        PR --> Gate3["3. 📦 Dependency Vulnerability Scan (Trivy SCA)"]
+        PR --> Gate4["4. 🧪 Unit Tests (Jest + Turbo Cache)"]
+        Gate1 & Gate4 --> Gate5["5. 🔗 Integration & E2E Tests (RAM Postgres/Redis)"]
+        Gate1 & Gate2 & Gate3 & Gate4 & Gate5 --> PR_OK["🎯 PR Quality Gates Passed -> Ready for Merge"]
     end
 
-    Parallel_Stage --> Gate4["4. 🔗 Integration & E2E Tests (RAM Postgres/Redis)"]
-    Gate4 --> Gate7_8["7 & 8. 🐳 Docker Buildx Test & Image Scan (Trivy)"]
-    Gate7_8 --> Gateway["🎯 All DevSecOps Gates Passed -> Merge to Main"]
+    subgraph Main_Flow [Giai Đoạn 2: Production Delivery - Khi Merge vào main]
+        Merge[Merge to main] --> CD_Lint["1. Helm Template Validation"]
+        CD_Lint --> CD_Build["2. Multi-stage Docker Build (6 Services Matrix)"]
+        CD_Build --> CD_Scan["3. 🛡️ Trivy Container Image Vulnerability Scan"]
+        CD_Scan --> CD_Push["4. Push Images to Docker Hub"]
+        CD_Push --> CD_GitOps["5. GitOps Write-Back to values-prod.yaml"]
+        CD_GitOps --> ArgoCD["🚀 ArgoCD Auto-Sync to K3s Production"]
+    end
 ```
 
 ---
