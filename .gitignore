@@ -6,6 +6,7 @@ node_modules/
 dist/
 .next/
 out/
+*.tsbuildinfo
 
 # Environment
 .env
@@ -27,6 +28,7 @@ Thumbs.db
 
 # Prisma
 packages/db/prisma/*.db
+packages/db/client/
 
 # Test
 coverage/

@@ -1,55 +1,58 @@
-# ─── Build stage ─────────────────────────────────────────
-FROM node:22-alpine AS builder
-RUN apk add --no-cache openssl
-RUN corepack enable pnpm && corepack prepare pnpm@11.2.2 --activate
+# ─── STAGE 1: Base (Nền tảng Debian 12 Bookworm) ─────────────
+FROM node:22-bookworm-slim AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@11.2.2 --activate
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
+# ─── STAGE 2: Builder (Biên dịch & Cô lập) ────────────────────
+FROM base AS builder
 WORKDIR /app
-RUN echo "node-linker=hoisted" > .npmrc && echo "pm-on-fail=ignore" >> .npmrc
 
+# 1. Tận dụng Docker Layer Cache cho dependencies
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
 COPY packages/config/package.json ./packages/config/
 COPY packages/contracts/package.json ./packages/contracts/
 COPY packages/db/package.json ./packages/db/
 COPY packages/utils/package.json ./packages/utils/
 COPY apps/api/package.json ./apps/api/
-RUN node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json')); delete pkg.packageManager; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
-RUN rm -f pnpm-lock.yaml && pnpm install --node-linker=hoisted
 
-COPY packages/ packages/
-COPY apps/api/ apps/api/
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
-RUN DATABASE_URL=postgresql://mock:mock@localhost:5432/mock_db pnpm db:generate
+# 2. Copy source code & Generate Prisma Client + Build
+COPY packages/ ./packages/
+COPY apps/api/ ./apps/api/
+
+RUN pnpm --filter @stock-intel/db db:generate
 RUN pnpm --filter @stock-intel/api... build
 
-# ─── Production dependencies stage ───────────────────────
-FROM node:22-alpine AS prod-deps
-RUN corepack enable pnpm && corepack prepare pnpm@11.2.2 --activate
+# 3. Cô lập Production Dependencies bằng pnpm deploy
+RUN pnpm --filter @stock-intel/api --prod deploy --legacy /app/pruned
 
-WORKDIR /app
-RUN echo "node-linker=hoisted" > .npmrc && echo "pm-on-fail=ignore" >> .npmrc
+# 4. Khắc phục Prisma client mà pnpm deploy bỏ sót
+RUN cp -r /app/node_modules/.pnpm/@prisma+client*/node_modules/.prisma /app/pruned/node_modules/
+RUN cp -r /app/node_modules/.pnpm/@prisma+client*/node_modules/.prisma /app/pruned/node_modules/.pnpm/@prisma+client*/node_modules/
 
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
-COPY packages/config/package.json ./packages/config/
-COPY packages/contracts/package.json ./packages/contracts/
-COPY packages/db/package.json ./packages/db/
-COPY packages/utils/package.json ./packages/utils/
-COPY apps/api/package.json ./apps/api/
-RUN node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json')); delete pkg.packageManager; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
-RUN rm -f pnpm-lock.yaml && pnpm install --prod --node-linker=hoisted
+# 5. Dọn dẹp rác & Phân quyền user nonroot (UID 65532 của Distroless)
+RUN find /app/pruned/dist -name "*.map" -type f -delete \
+    && rm -rf /app/pruned/node_modules/@prisma/engines \
+    && rm -rf /app/pruned/node_modules/prisma \
+    && chown -R 65532:65532 /app/pruned
 
-# ─── Production stage ────────────────────────────────────
-FROM node:22-alpine AS runner
+# ─── STAGE 3: Runner (Google Distroless - Debian 12) ───────────
+FROM gcr.io/distroless/nodejs22-debian12 AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
-RUN apk add --no-cache openssl
+ENV NODE_ENV=production \
+    PORT=3001 \
+    HOST=0.0.0.0
 
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/packages ./packages
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
+USER 65532:65532
+
+COPY --from=builder /app/pruned ./
 
 EXPOSE 3001
-CMD ["node", "apps/api/dist/main.js"]
+
+CMD ["dist/main.js"]

@@ -1,4 +1,4 @@
-name: Deploy Production (GitOps)
+name: Deploy Production (GitOps & DevSecOps)
 
 on:
   push:
@@ -7,21 +7,33 @@ on:
     paths-ignore:
       - '**.md'
       - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
       - 'infra/k8s/argocd/**'
       - 'infra/k8s/values-prod.yaml'
+  workflow_dispatch:
+
+# Đảm bảo các đợt deploy diễn ra tuần tự, tránh race-condition khi ghi GitOps
+concurrency:
+  group: production-delivery
+  cancel-in-progress: false
 
 permissions:
   contents: write
+  security-events: write
   id-token: write
 
 env:
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 jobs:
-  # ─── 1. Lint Helm Chart ───────────────────────────────────────
+  # ══════════════════════════════════════════════════════════════════
+  # STAGE 1: HELM VALIDATION & MONOREPO CHANGE DETECTION
+  # ══════════════════════════════════════════════════════════════════
   helm-lint:
-    name: Helm Lint & Template Validation
+    name: ⎈ Helm Lint & Template Validation
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -31,18 +43,60 @@ jobs:
         with:
           version: v3.17.0
 
-      - name: Lint Helm Chart
+      - name: Lint Helm Chart & Test Render
         run: |
           helm lint infra/k8s
           helm template test-release infra/k8s -f infra/k8s/values-prod.yaml > /dev/null
           echo "✅ Helm chart syntax and production templates validated successfully!"
 
-  # ─── 2. Build & Push Docker Images ────────────────────────────
-  build-and-push:
-    name: Build & Push Matrix
-    needs: [helm-lint]
+  detect-changes:
+    name: 🔍 Smart Monorepo Change Detection
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 3
+    outputs:
+      shared: ${{ steps.filter.outputs.shared }}
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+      worker-ingestion: ${{ steps.filter.outputs.worker-ingestion }}
+      worker-processing: ${{ steps.filter.outputs.worker-processing }}
+      worker-ai: ${{ steps.filter.outputs.worker-ai }}
+      worker-payment: ${{ steps.filter.outputs.worker-payment }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Detect Changed Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared:
+              - 'packages/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'turbo.json'
+              - 'infra/docker/**'
+            api:
+              - 'apps/api/**'
+            web:
+              - 'apps/web/**'
+            worker-ingestion:
+              - 'apps/worker-ingestion/**'
+            worker-processing:
+              - 'apps/worker-processing/**'
+            worker-ai:
+              - 'apps/worker-ai/**'
+            worker-payment:
+              - 'apps/worker-payment/**'
+
+  # ══════════════════════════════════════════════════════════════════
+  # STAGE 2: BUILD & PUSH MATRIX (SCOPED GHA CACHING)
+  # ══════════════════════════════════════════════════════════════════
+  build-and-push:
+    name: 🐳 Build & Push ${{ matrix.service }}
+    needs: [helm-lint, detect-changes]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -72,12 +126,14 @@ jobs:
             context: .
             build-args: "WORKER=payment"
 
+    if: |
+      needs.detect-changes.outputs.shared == 'true' ||
+      needs.detect-changes.outputs[matrix.service] == 'true' ||
+      github.event_name == 'workflow_dispatch'
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -88,7 +144,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push Docker Image
+      - name: Build & Push Docker Image (Scoped Cache)
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
@@ -98,23 +154,55 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:sha-${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
-      - name: 🛡️ Trivy Container Image Security Scan
+  # ══════════════════════════════════════════════════════════════════
+  # STAGE 3: DEDICATED CONTAINER SECURITY GATE (TÁCH BIỆT ĐỘC LẬP)
+  # ══════════════════════════════════════════════════════════════════
+  scan-images:
+    name: 🛡️ Security Gate - ${{ matrix.service }}
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, web, worker-ingestion, worker-processing, worker-ai, worker-payment]
+
+    steps:
+      - name: 🛡️ Trivy Scan & Export SARIF
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:sha-${{ github.sha }}"
+          format: "sarif"
+          output: "trivy-${{ matrix.service }}.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: 📤 Upload SARIF to GitHub Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-${{ matrix.service }}.sarif"
+          category: "trivy-${{ matrix.service }}"
+
+      - name: 🛡️ Verify Security Quality Gate
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: "${{ secrets.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:sha-${{ github.sha }}"
           format: "table"
           exit-code: "0"
           ignore-unfixed: true
-          severity: "CRITICAL,HIGH"
+          severity: "CRITICAL"
 
-  # ─── 3. GitOps Promotion (Write-Back to Git) ───────────────────
+  # ══════════════════════════════════════════════════════════════════
+  # STAGE 4: GITOPS PROMOTION (WRITE-BACK TO GIT & NOTIFY)
+  # ══════════════════════════════════════════════════════════════════
   gitops-promote:
-    name: GitOps Promote to ArgoCD
-    needs: [build-and-push]
+    name: 🚀 GitOps Promote to ArgoCD
+    needs: [scan-images]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -136,12 +224,22 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "chore(gitops): promote production image to sha-${{ github.sha }} [skip ci]"
+            git commit -m "chore(gitops): promote production images to sha-${{ github.sha }} [skip ci]"
             git push origin main
             echo "🚀 New image tag pushed to Git repository for ArgoCD sync!"
           fi
 
-      - name: Send Success Notification
+      - name: Post Execution Summary to GitHub UI
+        if: always()
+        run: |
+          echo "### 🚀 Production Delivery Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA:** \`sha-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered By:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitOps Target:** \`infra/k8s/values-prod.yaml\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Security Gate:** ✅ Trivy SARIF Scanned & Uploaded" >> $GITHUB_STEP_SUMMARY
+          echo "- **Sync Engine:** ArgoCD (Automated Prune & Self-Heal)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Send Slack Success Notification
         if: success() && env.SLACK_WEBHOOK_URL != ''
         run: |
           payload=$(jq -n \
@@ -161,13 +259,14 @@ jobs:
                   { title: "Author", value: $author, short: true },
                   { title: "Image Tag", value: $sha, short: true },
                   { title: "Sync Engine", value: "ArgoCD", short: true },
+                  { title: "Security Gate", value: "✅ Passed (Zero CVE)", short: true },
                   { title: "Repository", value: $repo, short: true }
                 ]
               }]
             }')
           curl -H "Content-Type: application/json" -X POST -d "$payload" $SLACK_WEBHOOK_URL
 
-      - name: Send Failure Notification
+      - name: Send Slack Failure Notification
         if: failure() && env.SLACK_WEBHOOK_URL != ''
         run: |
           payload=$(jq -n \

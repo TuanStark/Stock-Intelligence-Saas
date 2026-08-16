@@ -109,8 +109,8 @@ web:
       failureThreshold: 12
   securityContext:
     runAsNonRoot: true
-    runAsUser: 10001
-    runAsGroup: 10001
+    runAsUser: 65532
+    runAsGroup: 65532
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: false
     capabilities:
@@ -172,8 +172,8 @@ api:
       failureThreshold: 15
   securityContext:
     runAsNonRoot: true
-    runAsUser: 10001
-    runAsGroup: 10001
+    runAsUser: 65532
+    runAsGroup: 65532
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: false
     capabilities:
@@ -201,8 +201,8 @@ workers:
     terminationGracePeriodSeconds: 60
     securityContext:
       runAsNonRoot: true
-      runAsUser: 10001
-      runAsGroup: 10001
+      runAsUser: 65532
+      runAsGroup: 65532
       allowPrivilegeEscalation: false
       capabilities:
         drop:
@@ -224,8 +224,8 @@ workers:
     terminationGracePeriodSeconds: 60
     securityContext:
       runAsNonRoot: true
-      runAsUser: 10001
-      runAsGroup: 10001
+      runAsUser: 65532
+      runAsGroup: 65532
       allowPrivilegeEscalation: false
       capabilities:
         drop:
@@ -247,8 +247,8 @@ workers:
     terminationGracePeriodSeconds: 60
     securityContext:
       runAsNonRoot: true
-      runAsUser: 10001
-      runAsGroup: 10001
+      runAsUser: 65532
+      runAsGroup: 65532
       allowPrivilegeEscalation: false
       capabilities:
         drop:
@@ -270,8 +270,8 @@ workers:
     terminationGracePeriodSeconds: 60
     securityContext:
       runAsNonRoot: true
-      runAsUser: 10001
-      runAsGroup: 10001
+      runAsUser: 65532
+      runAsGroup: 65532
       allowPrivilegeEscalation: false
       capabilities:
         drop:
