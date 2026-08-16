@@ -14,9 +14,15 @@ config:
 secrets:
   existingSecret: "stock-intel-production-secrets"
 
+# ─── Database Migration Job (Disabled: DB already fully restored) ─────
+migration:
+  enabled: false
+
 # ─── Frontend Next.js Web ────────────────────────────────────────────
 web:
   enabled: true
+  image:
+    tag: "latest"
   replicas: 2
   resources:
     requests:
@@ -112,6 +118,7 @@ workers:
 stateful:
   postgres:
     enabled: true
+    postgresPassword: "stockintel_secure_pass_2026"
     persistence:
       enabled: true
       size: 25Gi
@@ -142,6 +149,8 @@ stateful:
 
   minio:
     enabled: true
+    rootUser: minioadmin
+    rootPassword: "minioadmin"
     persistence:
       enabled: true
       size: 15Gi
