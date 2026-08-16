@@ -1,4 +1,10 @@
+import path from "path";
+import { config } from "dotenv";
 import { PrismaClient } from "@prisma/client";
+
+// Ensure root .env is loaded
+config({ path: path.resolve(__dirname, "../../../.env") });
+config({ path: path.resolve(__dirname, "../.env") });
 
 const prisma = new PrismaClient();
 

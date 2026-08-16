@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 
 export interface OrderBookRow {
@@ -28,7 +28,15 @@ export function useStockWebSocket(
   const [bids, setBids] = useState<OrderBookRow[]>([]);
   const [asks, setAsks] = useState<OrderBookRow[]>([]);
   const [trades, setTrades] = useState<TradeLog[]>([]);
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+  // Keep latest onTick callback in ref without re-triggering socket reconnection
+  const onTickRef = useRef(onTick);
+  useEffect(() => {
+    onTickRef.current = onTick;
+  }, [onTick]);
+
+  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+  const SOCKET_URL = rawApiUrl.replace(/\/api\/v1\/?$/, "");
 
   // 1. Initial pre-population of Mock Depth & Trades History
   useEffect(() => {
@@ -125,8 +133,6 @@ export function useStockWebSocket(
   useEffect(() => {
     if (!symbol) return;
 
-    const SOCKET_URL = API_URL?.replace("/api/v1", "");
-
     const socket = io(SOCKET_URL, {
       path: "/socket.io",
       transports: ["websocket", "polling"],
@@ -139,8 +145,8 @@ export function useStockWebSocket(
 
     socket.on("instrument_tick", (tick) => {
       // Invoke tick callback to update parent state (Quotes & Candlesticks)
-      if (onTick) {
-        onTick({
+      if (onTickRef.current) {
+        onTickRef.current({
           price: tick.price,
           change: tick.change,
           changePercent: tick.changePercent,
@@ -176,7 +182,7 @@ export function useStockWebSocket(
       socket.emit("unsubscribe_instrument", { symbol });
       socket.disconnect();
     };
-  }, [symbol, onTick]);
+  }, [symbol, SOCKET_URL]);
 
   return { bids, asks, trades };
 }
