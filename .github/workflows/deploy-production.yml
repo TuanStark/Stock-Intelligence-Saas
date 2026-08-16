@@ -49,52 +49,12 @@ jobs:
           helm template test-release infra/k8s -f infra/k8s/values-prod.yaml > /dev/null
           echo "✅ Helm chart syntax and production templates validated successfully!"
 
-  detect-changes:
-    name: 🔍 Smart Monorepo Change Detection
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    outputs:
-      shared: ${{ steps.filter.outputs.shared }}
-      api: ${{ steps.filter.outputs.api }}
-      web: ${{ steps.filter.outputs.web }}
-      worker-ingestion: ${{ steps.filter.outputs.worker-ingestion }}
-      worker-processing: ${{ steps.filter.outputs.worker-processing }}
-      worker-ai: ${{ steps.filter.outputs.worker-ai }}
-      worker-payment: ${{ steps.filter.outputs.worker-payment }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Detect Changed Paths
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            shared:
-              - 'packages/**'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - 'turbo.json'
-              - 'infra/docker/**'
-            api:
-              - 'apps/api/**'
-            web:
-              - 'apps/web/**'
-            worker-ingestion:
-              - 'apps/worker-ingestion/**'
-            worker-processing:
-              - 'apps/worker-processing/**'
-            worker-ai:
-              - 'apps/worker-ai/**'
-            worker-payment:
-              - 'apps/worker-payment/**'
-
   # ══════════════════════════════════════════════════════════════════
   # STAGE 2: BUILD & PUSH MATRIX (SCOPED GHA CACHING)
   # ══════════════════════════════════════════════════════════════════
   build-and-push:
     name: 🐳 Build & Push ${{ matrix.service }}
-    needs: [helm-lint, detect-changes]
+    needs: [helm-lint]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -125,11 +85,6 @@ jobs:
             file: infra/docker/Dockerfile.worker
             context: .
             build-args: "WORKER=payment"
-
-    if: |
-      needs.detect-changes.outputs.shared == 'true' ||
-      needs.detect-changes.outputs[matrix.service] == 'true' ||
-      github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout Code
