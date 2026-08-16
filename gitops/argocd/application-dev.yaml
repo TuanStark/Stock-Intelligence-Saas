@@ -10,7 +10,7 @@ metadata:
     app.kubernetes.io/part-of: stock-intelligence
     environment: development
 spec:
-  project: default
+  project: stock-intelligence
   source:
     repoURL: 'https://github.com/TuanStark/Stock-Intelligence-Saas.git'
     targetRevision: main

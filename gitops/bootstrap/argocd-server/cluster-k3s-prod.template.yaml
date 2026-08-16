@@ -1,0 +1,23 @@
+# ==============================================================================
+# Declarative Cluster Registration Secret for ArgoCD (Apply on Server A)
+# Usage: kubectl apply -f gitops/bootstrap/argocd-server/cluster-k3s-prod.yaml -n argocd
+# ==============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-k3s-production
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+type: Opaque
+stringData:
+  name: k3s-production
+  server: https://YOUR_SERVER_B_IP:6443
+  config: |
+    {
+      "bearerToken": "PASTE_YOUR_BEARER_TOKEN_HERE",
+      "tlsClientConfig": {
+        "insecure": false,
+        "caData": "PASTE_YOUR_BASE64_CA_DATA_HERE"
+      }
+    }

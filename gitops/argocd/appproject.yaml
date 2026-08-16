@@ -1,0 +1,34 @@
+# ==============================================================================
+# Declarative ArgoCD AppProject: stock-intelligence
+# Usage: kubectl apply -f gitops/argocd/appproject.yaml -n argocd
+# ==============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: stock-intelligence
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: "Stock Intelligence SaaS Production & Development Project"
+  sourceRepos:
+    - "https://github.com/TuanStark/Stock-Intelligence-Saas.git"
+  destinations:
+    - namespace: "stock-prod"
+      name: "k3s-production"
+    - namespace: "stock-dev"
+      name: "k3s-production"
+    - namespace: "stock-staging"
+      name: "k3s-production"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: "rbac.authorization.k8s.io"
+      kind: ClusterRole
+    - group: "rbac.authorization.k8s.io"
+      kind: ClusterRoleBinding
+    - group: "cert-manager.io"
+      kind: ClusterIssuer
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

@@ -1,0 +1,18 @@
+# ==============================================================================
+# Declarative GitHub Repository Connection Secret for ArgoCD (Apply on Server A)
+# Usage: kubectl apply -f gitops/bootstrap/argocd-server/repo-stock-intel.yaml -n argocd
+# ==============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-stock-intelligence-saas
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  type: git
+  url: https://github.com/TuanStark/Stock-Intelligence-Saas.git
+  # Nếu repository là Private, cấu hình username và GitHub Personal Access Token (PAT):
+  username: TuanStark
+  password: YOUR_GITHUB_PERSONAL_ACCESS_TOKEN
