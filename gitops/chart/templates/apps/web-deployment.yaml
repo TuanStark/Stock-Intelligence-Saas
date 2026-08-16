@@ -66,6 +66,9 @@ spec:
                     content = content.replace(/([a-zA-Z0-9_$]+)\.default\.env\.NEXT_PUBLIC_API_URL/g, "($1.default.env.NEXT_PUBLIC_API_URL||\"https://chungkhoanai.dpdns.org/api/v1\")");
                     content = content.replace(/([a-zA-Z0-9_$]+)\.env\.NEXT_PUBLIC_API_URL/g, "($1.env.NEXT_PUBLIC_API_URL||\"https://chungkhoanai.dpdns.org/api/v1\")");
                     content = content.replace(/process\.env\.NEXT_PUBLIC_API_URL/g, "\"https://chungkhoanai.dpdns.org/api/v1\"");
+                    content = content.replace("let t=await (0,tf.getSession)();", "let t=await Promise.race([(0,tf.getSession)(),new Promise(r=>setTimeout(()=>r(null),300))]);");
+                    content = content.replaceAll("timeout:1e4", "timeout:3e4");
+                    content = content.replaceAll("timeout: 10000", "timeout: 30000");
                     content = content.replaceAll("http://localhost:3001", "https://chungkhoanai.dpdns.org");
                     content = content.replaceAll("ws://localhost:3001", "wss://chungkhoanai.dpdns.org");
                     if (content !== original) {
@@ -76,7 +79,7 @@ spec:
               }
               try {
                 replaceInDir("/app/apps/web/.next");
-                console.log("🚀 Next.js client bundles deep patched successfully!");
+                console.log("🚀 Next.js client bundles deep patched successfully with non-blocking session & 30s timeout!");
               } catch (e) {
                 console.error("Patching error:", e);
               }
