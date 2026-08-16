@@ -87,5 +87,5 @@ echo "   3. Chạy lệnh: argocd cluster add default --name k3s-production --se
 echo ""
 echo "🚀 BƯỚC TIẾP THEO TRÊN MÁY CHỦ ARGOCD:"
 echo "   Tạo Application trên máy chủ ArgoCD:"
-echo "   $ kubectl apply -f infra/k8s/argocd/application-prod.yaml -n argocd"
+echo "   $ kubectl apply -f gitops/argocd/application-prod.yaml -n argocd"
 echo "=============================================================================="

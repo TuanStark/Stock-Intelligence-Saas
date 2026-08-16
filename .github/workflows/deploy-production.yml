@@ -9,8 +9,7 @@ on:
       - 'docs/**'
       - '.gitignore'
       - 'LICENSE'
-      - 'infra/k8s/argocd/**'
-      - 'infra/k8s/values-prod.yaml'
+      - 'gitops/**'
   workflow_dispatch:
 
 # Đảm bảo các đợt deploy diễn ra tuần tự, tránh race-condition khi ghi GitOps
@@ -45,8 +44,8 @@ jobs:
 
       - name: Lint Helm Chart & Test Render
         run: |
-          helm lint infra/k8s
-          helm template test-release infra/k8s -f infra/k8s/values-prod.yaml > /dev/null
+          helm lint gitops/chart
+          helm template test-release gitops/chart -f gitops/envs/prod/values.yaml > /dev/null
           echo "✅ Helm chart syntax and production templates validated successfully!"
 
   # ══════════════════════════════════════════════════════════════════
@@ -170,10 +169,10 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Replace tag in values-prod.yaml with new sha tag
-          sed -i 's/tag: .*/tag: "sha-'${{ github.sha }}'"/' infra/k8s/values-prod.yaml
+          # Replace tag in values.yaml with new sha tag
+          sed -i 's/tag: .*/tag: "sha-'${{ github.sha }}'"/' gitops/envs/prod/values.yaml
           
-          git add infra/k8s/values-prod.yaml
+          git add gitops/envs/prod/values.yaml
           
           # Check if there are changes before committing
           if git diff --staged --quiet; then
@@ -190,7 +189,7 @@ jobs:
           echo "### 🚀 Production Delivery Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit SHA:** \`sha-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Triggered By:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **GitOps Target:** \`infra/k8s/values-prod.yaml\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitOps Target:** \`gitops/envs/prod/values.yaml\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Security Gate:** ✅ Trivy SARIF Scanned & Uploaded" >> $GITHUB_STEP_SUMMARY
           echo "- **Sync Engine:** ArgoCD (Automated Prune & Self-Heal)" >> $GITHUB_STEP_SUMMARY
 

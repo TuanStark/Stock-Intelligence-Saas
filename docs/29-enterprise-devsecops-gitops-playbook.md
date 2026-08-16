@@ -108,25 +108,39 @@ Trên các máy chủ VPS (4GB – 8GB RAM), khi RAM bị chạm ngưỡng 100%,
 
 ## 3. NGHỆ THUẬT ĐÓNG GÓI HELM CHART ĐA MÔI TRƯỜNG
 
-Toàn bộ manifests được quản lý duy nhất tại thư mục `infra/k8s/`:
+Toàn bộ manifests được quản lý duy nhất tại thư mục chuyên biệt `gitops/`:
 
 ```
-infra/k8s/
-├── Chart.yaml                     # Metadata Chart API v2
-├── values.yaml                    # Base values mặc định
-├── values-dev.yaml                # Môi trường Dev (Tiết kiệm tối đa)
-├── values-staging.yaml            # Môi trường Staging (Giống prod)
-├── values-prod.yaml               # Môi trường Production (Multi-replicas, PDB, HPA)
-├── values-prod-secrets.example.yaml # Template secrets
-├── templates/
-│   ├── _helpers.tpl               # Helper naming & labeling chuẩn
-│   ├── hooks/
-│   │   └── migration-job.yaml     # Helm Pre-Upgrade Hook chạy Prisma Migration
-│   ├── apps/                      # Web, API, 4 Workers (Deployment, Service, PDB, HPA)
-│   ├── stateful/                  # TimescaleDB, Redis, MinIO (StatefulSets + local-path PVCs)
-│   ├── ingress.yaml               # Routing + Traefik/Nginx + Cert-Manager SSL
-│   └── networkpolicies.yaml       # Zero-Trust Network Segmentation
-└── bootstrap/                     # Scripts khởi tạo ban đầu (install-k3s, setup-argocd)
+gitops/
+├── README.md                      # Hướng dẫn chi tiết vận hành GitOps & K3s
+├── argocd/                        # ArgoCD Declarative Applications (CRDs)
+│   ├── application-dev.yaml
+│   └── application-prod.yaml
+├── bootstrap/                     # Scripts & manifests khởi tạo cụm K3s
+│   ├── cert-manager-cluster-issuer.yaml
+│   ├── install-k3s.sh
+│   └── setup-argocd-cluster.sh
+├── chart/                         # Base Helm Chart chuẩn hóa
+│   ├── .helmignore
+│   ├── Chart.yaml
+│   ├── templates/
+│   │   ├── _helpers.tpl
+│   │   ├── apps/
+│   │   ├── configmap.yaml
+│   │   ├── ingress.yaml
+│   │   ├── networkpolicies.yaml
+│   │   ├── secrets.yaml
+│   │   ├── stateful/
+│   │   └── hooks/
+│   └── values.yaml                # Base default values
+└── envs/                          # Cấu hình độc lập theo từng môi trường
+    ├── dev/
+    │   └── values.yaml
+    ├── staging/
+    │   └── values.yaml
+    └── prod/
+        ├── values.yaml            # GitOps Bot chỉ cập nhật image tag vào đây
+        └── values-secrets.example.yaml
 ```
 
 ---
@@ -141,7 +155,7 @@ infra/k8s/
 ```mermaid
 graph LR
     subgraph Git_Repository [GitHub Repository]
-        Git[Git Commits: infra/k8s]
+        Git[Git Commits: gitops/]
     end
 
     subgraph Server_A [Server A: Standalone ArgoCD]
@@ -160,7 +174,7 @@ graph LR
 
 ### 4.2. Khai Báo ArgoCD Application Chuẩn Doanh Nghiệp
 
-File `infra/k8s/argocd/application-prod.yaml`:
+File `gitops/argocd/application-prod.yaml`:
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -175,10 +189,10 @@ spec:
   source:
     repoURL: "https://github.com/TuanStark/Stock-Intelligence-Saas.git"
     targetRevision: main
-    path: infra/k8s
+    path: gitops/chart
     helm:
       valueFiles:
-        - values-prod.yaml
+        - ../envs/prod/values.yaml
   destination:
     name: k3s-production
     namespace: stock-prod
@@ -267,7 +281,7 @@ graph TD
         CD_Lint --> CD_Build["2. Multi-stage Docker Build (6 Services Matrix)"]
         CD_Build --> CD_Scan["3. 🛡️ Trivy Container Image Vulnerability Scan"]
         CD_Scan --> CD_Push["4. Push Images to Docker Hub"]
-        CD_Push --> CD_GitOps["5. GitOps Write-Back to values-prod.yaml"]
+        CD_Push --> CD_GitOps["5. GitOps Write-Back to gitops/envs/prod/values.yaml"]
         CD_GitOps --> ArgoCD["🚀 ArgoCD Auto-Sync to K3s Production"]
     end
 ```
@@ -298,7 +312,7 @@ graph TD
      -n stock-prod
    ```
 
-2. Trong `infra/k8s/values-prod.yaml`:
+2. Trong `gitops/envs/prod/values.yaml`:
    ```yaml
    secrets:
      existingSecret: "stock-intel-production-secrets"

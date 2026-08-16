@@ -8,7 +8,7 @@ on:
       - 'docs/**'
       - '.gitignore'
       - 'LICENSE'
-      - 'infra/k8s/values-prod.yaml'
+      - 'gitops/**'
   pull_request:
     branches: [main]
     paths-ignore:
@@ -16,6 +16,7 @@ on:
       - 'docs/**'
       - '.gitignore'
       - 'LICENSE'
+      - 'gitops/**'
 
 concurrency:
   group: ci-${{ github.head_ref || github.run_id }}
@@ -79,8 +80,8 @@ jobs:
 
       - name: Helm Chart Lint & Template Check
         run: |
-          helm lint infra/k8s
-          helm template test-release infra/k8s -f infra/k8s/values-prod.yaml > /dev/null
+          helm lint gitops/chart
+          helm template test-release gitops/chart -f gitops/envs/prod/values.yaml > /dev/null
 
   # ══════════════════════════════════════════════════════════════════
   # 2. SAST & SECRET LEAK SCANNING (Non-blocking / Parallel)

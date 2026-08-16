@@ -82,8 +82,8 @@ Nếu bạn sử dụng **ArgoCD Server độc lập**, toàn bộ quá trình p
 
 1. Chạy script bootstrap K3s trên máy chủ Production:
    ```bash
-   sudo bash infra/k8s/bootstrap/install-k3s.sh
-   sudo bash infra/k8s/bootstrap/setup-argocd-cluster.sh
+   sudo bash gitops/bootstrap/install-k3s.sh
+   sudo bash gitops/bootstrap/setup-argocd-cluster.sh
    ```
 2. Tạo Secret `stock-intel-production-secrets` trực tiếp trên K3s để ArgoCD không cần chứa raw secrets:
 
@@ -118,7 +118,7 @@ argocd cluster add <K3S_CONTEXT_NAME> --name k3s-production
 Trên máy chủ **ArgoCD**:
 
 ```bash
-kubectl apply -f infra/k8s/argocd/application-prod.yaml -n argocd
+kubectl apply -f gitops/argocd/application-prod.yaml -n argocd
 ```
 
 ### Bước 4: Vận Hành Phát Hành Tự Động (Day-to-Day GitOps)
@@ -126,7 +126,7 @@ kubectl apply -f infra/k8s/argocd/application-prod.yaml -n argocd
 Khi Developer push code lên `main`:
 
 1. **GitHub Actions**: Tự động test, build Docker images, tag với `sha-${{ github.sha }}` và push lên Docker Hub.
-2. **GitOps Write-back**: Workflow tự động cập nhật `global.image.tag` trong `infra/k8s/values-prod.yaml` và commit lên Git (`[skip ci]`).
+2. **GitOps Write-back**: Workflow tự động cập nhật `global.image.tag` trong `gitops/envs/prod/values.yaml` và commit lên Git (`[skip ci]`).
 3. **ArgoCD Sync**: ArgoCD phát hiện commit mới, chạy Prisma Migration PreSync hook, và thực hiện Rolling Update Zero-Downtime lên K3s.
 
 ---

@@ -1,27 +1,26 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: stock-intel-production
+  name: stock-intel-dev
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   labels:
-    app.kubernetes.io/name: stock-intel-production
+    app.kubernetes.io/name: stock-intel-dev
     app.kubernetes.io/part-of: stock-intelligence
-    environment: production
+    environment: development
 spec:
   project: default
   source:
     repoURL: 'https://github.com/TuanStark/Stock-Intelligence-Saas.git'
     targetRevision: main
-    path: infra/k8s
+    path: gitops/chart
     helm:
       valueFiles:
-        - values-prod.yaml
+        - ../envs/dev/values.yaml
   destination:
-    # Set to your K3s cluster server URL as registered in ArgoCD (e.g., https://192.168.1.100:6443 or in-cluster)
     name: k3s-production
-    namespace: stock-prod
+    namespace: stock-dev
   syncPolicy:
     automated:
       prune: true
@@ -29,10 +28,3 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ApplyOutOfSyncOnly=true
-      - PruneLast=true
-    retry:
-      limit: 5
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m
