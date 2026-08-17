@@ -53,6 +53,7 @@ if (process.env.NODE_ENV !== "production") {
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV || "development",
+  PORT: parseInt(process.env.WORKER_AI_PORT || process.env.PORT || "3009", 10),
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
   LITELLM_API_BASE: process.env.LITELLM_API_BASE || "",
   OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",

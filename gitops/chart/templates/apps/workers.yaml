@@ -27,11 +27,21 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "stock-intel.selectorLabels" (dict "context" $ "component" (printf "worker-%s" $workerName)) | nindent 14 }}
       terminationGracePeriodSeconds: {{ default 60 $workerConfig.terminationGracePeriodSeconds }}
       containers:
         - name: worker
           image: {{ include "stock-intel.image" (dict "global" $.Values.global.image "component" $workerConfig.image "defaultTag" $.Chart.AppVersion) }}
           imagePullPolicy: {{ $.Values.global.image.pullPolicy }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           envFrom:
             - configMapRef:
                 name: {{ include "stock-intel.configMapName" $ }}
@@ -39,10 +49,14 @@ spec:
                 name: {{ include "stock-intel.secretName" $ }}
           resources:
             {{- toYaml $workerConfig.resources | nindent 12 }}
-          {{- with $workerConfig.securityContext }}
           securityContext:
+            readOnlyRootFilesystem: true
+            {{- with $workerConfig.securityContext }}
             {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 {{- end }}
 {{- end }}

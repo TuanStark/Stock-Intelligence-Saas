@@ -19,6 +19,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.ENV = {
+                NEXT_PUBLIC_API_URL: "${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3006/api/v1"}"
+              };
+            `,
+          }}
+        />
+      </head>
       <body>
         <SessionProviderWrapper>
           <I18nProvider>{children}</I18nProvider>

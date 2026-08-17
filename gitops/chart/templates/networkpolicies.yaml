@@ -1,4 +1,33 @@
 {{- if .Values.networkPolicy.enabled }}
+# ─── 0. Default Deny All & Essential Egress ────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-default-deny
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - api
+                  - postgres
+                  - redis
+                  - minio
+---
 # ─── 1. Allow Ingress Controller to Web and API ───────────────────────
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

@@ -1,9 +1,10 @@
 import axios from "axios";
 import { getSession } from "next-auth/react";
+import { getApiUrl } from "../env";
 
 // Centrally configured Axios HTTP client for StockIntel
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1",
+  baseURL: getApiUrl(),
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
@@ -76,6 +77,7 @@ async function generateSignature(
 // Automatic request interceptor to inject bearer token and HMAC signature headers
 apiClient.interceptors.request.use(
   async (config) => {
+    config.baseURL = getApiUrl();
     // Only attempt to retrieve session in browser environments
     if (typeof window !== "undefined") {
       const session = await getSession();
@@ -259,8 +261,7 @@ apiClient.interceptors.response.use(
         if (refreshToken) {
           // Perform silent token rotation on the backend API
           const res = await axios.post(
-            (process.env.NEXT_PUBLIC_API_URL ||
-              "http://localhost:3001/api/v1") + "/auth/refresh",
+            getApiUrl() + "/auth/refresh",
             { refreshToken },
             { headers: { "Content-Type": "application/json" } },
           );

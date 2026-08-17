@@ -6,6 +6,7 @@ import { useTranslation } from "@/lib/i18n/i18n-context";
 import { Search, ChevronRight, Loader2, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { io } from "socket.io-client";
+import { getApiUrl } from "@/lib/env";
 
 // Centralized Axios API Helpers
 import { marketApi } from "@/lib/api/market.api";
@@ -347,7 +348,9 @@ export default function Dashboard() {
 
   // 1.5 Real-time dynamic WebSocket price stream updates
   useEffect(() => {
-    const socket = io("http://localhost:3001", {
+    const rawApiUrl = getApiUrl();
+    const socketUrl = rawApiUrl.replace(/\/api\/v1\/?$/, "");
+    const socket = io(socketUrl, {
       transports: ["websocket", "polling"],
     });
 

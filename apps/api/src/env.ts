@@ -61,7 +61,7 @@ if (process.env.NODE_ENV !== 'production') {
 // ─── 2. Strongly-Typed Config Object ────────────────────────
 export const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: parseInt(process.env.PORT || '3001', 10),
+  PORT: parseInt(process.env.API_PORT || process.env.PORT || '3006', 10),
   DATABASE_URL: process.env.DATABASE_URL || '',
 
   // Redis
@@ -75,8 +75,8 @@ export const env = {
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
 
   // URLs
-  WEB_URL: process.env.WEB_URL || 'http://localhost:3000',
-  API_URL: process.env.API_URL || 'http://localhost:3001',
+  WEB_URL: process.env.WEB_URL || 'http://localhost:3005',
+  API_URL: process.env.API_URL || 'http://localhost:3006',
 
   // Developer toggles
   DISABLE_AI_RATE_LIMIT: process.env.DISABLE_AI_RATE_LIMIT === 'true',

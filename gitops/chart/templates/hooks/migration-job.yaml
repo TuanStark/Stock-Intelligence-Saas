@@ -27,7 +27,7 @@ spec:
         - name: prisma-migrate
           image: {{ include "stock-intel.image" (dict "global" .Values.global.image "component" .Values.migration.image "defaultTag" .Chart.AppVersion) }}
           imagePullPolicy: {{ .Values.global.image.pullPolicy }}
-          command: ["npx", "prisma", "migrate", "deploy", "--schema=./packages/db/prisma/schema.prisma"]
+          command: ["node", "gitops/scripts/migrate.js"]
           envFrom:
             - configMapRef:
                 name: {{ include "stock-intel.configMapName" . }}

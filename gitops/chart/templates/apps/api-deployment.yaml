@@ -25,7 +25,7 @@ spec:
         {{- include "stock-intel.selectorLabels" (dict "context" . "component" "api") | nindent 8 }}
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "3001"
+        prometheus.io/port: "{{ .Values.api.service.port }}"
         prometheus.io/path: "/api/v1/metrics"
     spec:
       {{- with .Values.global.imagePullSecrets }}
@@ -46,6 +46,13 @@ spec:
                         - api
                 topologyKey: "kubernetes.io/hostname"
       {{- end }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "stock-intel.selectorLabels" (dict "context" . "component" "api") | nindent 14 }}
       terminationGracePeriodSeconds: 40
       containers:
         - name: api
@@ -53,35 +60,38 @@ spec:
           imagePullPolicy: {{ .Values.global.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 3001
+              containerPort: {{ .Values.api.service.port }}
               protocol: TCP
           envFrom:
             - configMapRef:
                 name: {{ include "stock-intel.configMapName" . }}
             - secretRef:
                 name: {{ include "stock-intel.secretName" . }}
-          lifecycle:
-            preStop:
-              exec:
-                command: ["/bin/sh", "-c", "sleep 10"]
-          {{- if .Values.api.startupProbe }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          {{- if .Values.api.probes.startup }}
           startupProbe:
             {{- toYaml .Values.api.probes.startup | nindent 12 }}
           {{- end }}
-          {{- if .Values.api.livenessProbe }}
+          {{- if .Values.api.probes.liveness }}
           livenessProbe:
             {{- toYaml .Values.api.probes.liveness | nindent 12 }}
           {{- end }}
-          {{- if .Values.api.readinessProbe }}
+          {{- if .Values.api.probes.readiness }}
           readinessProbe:
             {{- toYaml .Values.api.probes.readiness | nindent 12 }}
           {{- end }}
           resources:
             {{- toYaml .Values.api.resources | nindent 12 }}
-          {{- with .Values.api.securityContext }}
           securityContext:
+            readOnlyRootFilesystem: true
+            {{- with .Values.api.securityContext }}
             {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -97,7 +107,7 @@ spec:
   ports:
     - name: http
       port: {{ .Values.api.service.port }}
-      targetPort: 3001
+      targetPort: {{ .Values.api.service.port }}
       protocol: TCP
 {{- if .Values.api.podDisruptionBudget.enabled }}
 ---

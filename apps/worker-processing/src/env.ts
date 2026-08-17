@@ -55,6 +55,7 @@ if (process.env.NODE_ENV !== "production") {
 // ─── 2. Strongly-Typed Config Object ────────────────────────
 export const env = {
   NODE_ENV: process.env.NODE_ENV || "development",
+  PORT: parseInt(process.env.WORKER_PROCESSING_PORT || process.env.PORT || "3008", 10),
   DATABASE_URL: process.env.DATABASE_URL || "",
 
   // Redis

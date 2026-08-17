@@ -42,51 +42,24 @@ spec:
                         - web
                 topologyKey: "kubernetes.io/hostname"
       {{- end }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "stock-intel.selectorLabels" (dict "context" . "component" "web") | nindent 14 }}
       terminationGracePeriodSeconds: 30
       containers:
         - name: web
           image: {{ include "stock-intel.image" (dict "global" .Values.global.image "component" .Values.web.image "defaultTag" .Chart.AppVersion) }}
           imagePullPolicy: {{ .Values.global.image.pullPolicy }}
-          args:
-            - -e
-            - |
-              const fs = require("fs");
-              const path = require("path");
-              function replaceInDir(dir) {
-                if (!fs.existsSync(dir)) return;
-                const files = fs.readdirSync(dir);
-                for (const file of files) {
-                  const fullPath = path.join(dir, file);
-                  const stat = fs.statSync(fullPath);
-                  if (stat.isDirectory()) {
-                    replaceInDir(fullPath);
-                  } else if (file.endsWith(".js") || file.endsWith(".json") || file.endsWith(".html")) {
-                    let content = fs.readFileSync(fullPath, "utf8");
-                    let original = content;
-                    content = content.replace(/([a-zA-Z0-9_$]+)\.default\.env\.NEXT_PUBLIC_API_URL/g, "($1.default.env.NEXT_PUBLIC_API_URL||\"https://chungkhoanai.dpdns.org/api/v1\")");
-                    content = content.replace(/([a-zA-Z0-9_$]+)\.env\.NEXT_PUBLIC_API_URL/g, "($1.env.NEXT_PUBLIC_API_URL||\"https://chungkhoanai.dpdns.org/api/v1\")");
-                    content = content.replace(/process\.env\.NEXT_PUBLIC_API_URL/g, "\"https://chungkhoanai.dpdns.org/api/v1\"");
-                    content = content.replace("let t=await (0,tf.getSession)();", "let t=await Promise.race([(0,tf.getSession)(),new Promise(r=>setTimeout(()=>r(null),300))]);");
-                    content = content.replaceAll("timeout:1e4", "timeout:3e4");
-                    content = content.replaceAll("timeout: 10000", "timeout: 30000");
-                    content = content.replaceAll("http://localhost:3001", "https://chungkhoanai.dpdns.org");
-                    content = content.replaceAll("ws://localhost:3001", "wss://chungkhoanai.dpdns.org");
-                    if (content !== original) {
-                      fs.writeFileSync(fullPath, content, "utf8");
-                    }
-                  }
-                }
-              }
-              try {
-                replaceInDir("/app/apps/web/.next");
-                console.log("🚀 Next.js client bundles deep patched successfully with non-blocking session & 30s timeout!");
-              } catch (e) {
-                console.error("Patching error:", e);
-              }
-              require("/app/apps/web/server.js");
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - name: http
-              containerPort: 3000
+              containerPort: {{ .Values.web.service.port }}
               protocol: TCP
           envFrom:
             - configMapRef:
@@ -95,27 +68,31 @@ spec:
                 name: {{ include "stock-intel.secretName" . }}
           env:
             - name: PORT
-              value: "3000"
+              value: "{{ .Values.web.service.port }}"
             - name: NEXT_PUBLIC_API_URL
               value: {{ .Values.config.apiUrl | quote }}
-          {{- if .Values.web.startupProbe }}
+          {{- if .Values.web.probes.startup }}
           startupProbe:
             {{- toYaml .Values.web.probes.startup | nindent 12 }}
           {{- end }}
-          {{- if .Values.web.livenessProbe }}
+          {{- if .Values.web.probes.liveness }}
           livenessProbe:
             {{- toYaml .Values.web.probes.liveness | nindent 12 }}
           {{- end }}
-          {{- if .Values.web.readinessProbe }}
+          {{- if .Values.web.probes.readiness }}
           readinessProbe:
             {{- toYaml .Values.web.probes.readiness | nindent 12 }}
           {{- end }}
           resources:
             {{- toYaml .Values.web.resources | nindent 12 }}
-          {{- with .Values.web.securityContext }}
           securityContext:
+            readOnlyRootFilesystem: true
+            {{- with .Values.web.securityContext }}
             {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -131,7 +108,7 @@ spec:
   ports:
     - name: http
       port: {{ .Values.web.service.port }}
-      targetPort: 3000
+      targetPort: {{ .Values.web.service.port }}
       protocol: TCP
 {{- if .Values.web.podDisruptionBudget.enabled }}
 ---

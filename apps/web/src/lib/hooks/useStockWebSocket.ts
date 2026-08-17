@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
+import { getApiUrl } from "../env";
 
 export interface OrderBookRow {
   price: number;
@@ -35,7 +36,7 @@ export function useStockWebSocket(
     onTickRef.current = onTick;
   }, [onTick]);
 
-  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+  const rawApiUrl = getApiUrl();
   const SOCKET_URL = rawApiUrl.replace(/\/api\/v1\/?$/, "");
 
   // 1. Initial pre-population of Mock Depth & Trades History
