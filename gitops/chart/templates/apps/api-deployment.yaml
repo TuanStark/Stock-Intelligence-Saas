@@ -15,6 +15,7 @@ spec:
     rollingUpdate:
       maxSurge: 1
       maxUnavailable: 0
+  minReadySeconds: 20    # Chờ 20s sau khi readinessProbe pass trước route traffic
   selector:
     matchLabels:
       {{- include "stock-intel.selectorLabels" (dict "context" . "component" "api") | nindent 6 }}

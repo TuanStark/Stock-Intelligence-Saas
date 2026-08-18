@@ -1,0 +1,56 @@
+# ─── ArgoCD Application — Monitoring Stack ───────────────────────────────
+# Deploy kube-prometheus-stack + Loki vào namespace monitoring
+# Tách biệt hoàn toàn với stock-prod — không ảnh hưởng app stack
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: stock-intel-monitoring
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: stock-intelligence
+    environment: production
+    component: monitoring
+spec:
+  project: stock-intelligence
+  sources:
+    # kube-prometheus-stack (Prometheus + Grafana + Alertmanager + NodeExporter)
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: "61.3.2"
+      helm:
+        releaseName: monitoring
+        valueFiles:
+          - $values/gitops/monitoring/values-prometheus.yaml
+
+    # Loki Stack (Loki + Promtail)
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: loki-stack
+      targetRevision: "2.10.2"
+      helm:
+        releaseName: loki
+        valueFiles:
+          - $values/gitops/monitoring/values-loki.yaml
+
+    # Values files từ Git repo (reference source)
+    - repoURL: 'https://github.com/TuanStark/Stock-Intelligence-Saas.git'
+      targetRevision: main
+      ref: values
+
+  destination:
+    name: k3s-production
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true     # Bắt buộc cho CRDs lớn của kube-prometheus-stack
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

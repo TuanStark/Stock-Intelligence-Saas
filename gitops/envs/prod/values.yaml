@@ -118,7 +118,8 @@ workers:
 stateful:
   postgres:
     enabled: true
-    postgresPassword: "stockintel_secure_pass_2026"
+    # postgresPassword: managed via external Secret "stock-intel-production-secrets"
+    # key: POSTGRES_PASSWORD
     persistence:
       enabled: true
       size: 25Gi
@@ -150,7 +151,8 @@ stateful:
   minio:
     enabled: true
     rootUser: minioadmin
-    rootPassword: "minioadmin"
+    # rootPassword: managed via external Secret "stock-intel-production-secrets"
+    # key: MINIO_ROOT_PASSWORD
     persistence:
       enabled: true
       size: 15Gi
@@ -194,3 +196,22 @@ ingress:
 networkPolicy:
   enabled: true
   allowExternalIngress: true
+
+# ─── Database Backup — Enabled in Production ──────────────────────────
+backup:
+  enabled: true
+  schedule: "0 19 * * *"   # 02:00 AM UTC+7 = 19:00 UTC hàng ngày
+  minioBucket: "stockintel-backups"
+  retentionDays: 30
+
+# ─── Namespace Resource Quota ─────────────────────────────────────────
+resourceQuota:
+  enabled: true
+  requests:
+    cpu: "4000m"
+    memory: "6Gi"
+  limits:
+    cpu: "8000m"
+    memory: "12Gi"
+  maxPods: "50"
+  storage: "120Gi"

@@ -1,0 +1,272 @@
+# ════════════════════════════════════════════════════════════════════════
+# PrometheusRule — Alert Rules cho Stock Intelligence SaaS
+# Áp dụng: namespace monitoring, được Prometheus tự động pickup
+# ════════════════════════════════════════════════════════════════════════
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: stock-intel-alerts
+  namespace: monitoring
+  labels:
+    # Label này phải match với prometheusSpec.ruleSelector
+    release: monitoring
+    app: kube-prometheus-stack
+spec:
+  groups:
+    # ── Availability & Uptime ──────────────────────────────────────────
+    - name: stock-intel.availability
+      interval: 30s
+      rules:
+        - alert: ApiHighErrorRate
+          expr: |
+            (
+              sum(rate(http_request_duration_seconds_count{
+                namespace="stock-prod",
+                status=~"5.."
+              }[5m])) /
+              sum(rate(http_request_duration_seconds_count{
+                namespace="stock-prod"
+              }[5m]))
+            ) > 0.01
+          for: 2m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "🚨 API Error Rate vượt 1%"
+            description: "Tỷ lệ lỗi HTTP 5xx = {{ $value | humanizePercentage }} trong 2 phút vừa qua"
+            runbook: "kubectl logs -n stock-prod -l app.kubernetes.io/component=api --tail=100"
+
+        - alert: PodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{
+              namespace="stock-prod"
+            }[15m]) > 3
+          for: 0m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "🔄 Pod đang CrashLoopBackOff"
+            description: "Pod {{ $labels.pod }} (container: {{ $labels.container }}) đã restart {{ $value | humanize }} lần trong 15 phút"
+            runbook: "kubectl describe pod -n stock-prod {{ $labels.pod }}"
+
+        - alert: PodNotReady
+          expr: |
+            kube_pod_status_ready{
+              namespace="stock-prod",
+              condition="true"
+            } == 0
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "⚠️ Pod không ở trạng thái Ready"
+            description: "Pod {{ $labels.pod }} chưa Ready trong 5 phút liên tục"
+
+        - alert: DeploymentReplicasMismatch
+          expr: |
+            kube_deployment_spec_replicas{namespace="stock-prod"} !=
+            kube_deployment_status_available_replicas{namespace="stock-prod"}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "⚠️ Deployment không đủ replicas"
+            description: "Deployment {{ $labels.deployment }} có {{ $value }} replicas available, expected {{ $labels.spec_replicas }}"
+
+    # ── Resource Usage ─────────────────────────────────────────────────
+    - name: stock-intel.resources
+      interval: 60s
+      rules:
+        - alert: HighMemoryUsage
+          expr: |
+            (
+              container_memory_working_set_bytes{
+                namespace="stock-prod",
+                container!="",
+                container!="POD"
+              } /
+              container_spec_memory_limit_bytes{
+                namespace="stock-prod",
+                container!="",
+                container!="POD"
+              }
+            ) > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "⚠️ Memory usage > 85%"
+            description: "Container {{ $labels.container }} trong pod {{ $labels.pod }} đang dùng {{ $value | humanizePercentage }} RAM"
+
+        - alert: ContainerOOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{
+              namespace="stock-prod",
+              reason="OOMKilled"
+            } == 1
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "💥 Container bị OOMKilled"
+            description: "Container {{ $labels.container }} trong pod {{ $labels.pod }} bị kill vì hết memory"
+            runbook: "Tăng memory limit hoặc investigate memory leak"
+
+        - alert: NodeDiskCritical
+          expr: |
+            (
+              node_filesystem_avail_bytes{mountpoint="/"} /
+              node_filesystem_size_bytes{mountpoint="/"}
+            ) < 0.15
+          for: 5m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "💾 Disk sắp đầy — còn dưới 15%"
+            description: "Node chỉ còn {{ $value | humanizePercentage }} dung lượng. Cần dọn dẹp ngay!"
+            runbook: "kubectl exec -n stock-prod <pod> -- df -h; docker system prune"
+
+        - alert: NodeDiskWarning
+          expr: |
+            (
+              node_filesystem_avail_bytes{mountpoint="/"} /
+              node_filesystem_size_bytes{mountpoint="/"}
+            ) < 0.25
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "⚠️ Disk sắp đầy — còn dưới 25%"
+            description: "Node còn {{ $value | humanizePercentage }} dung lượng đĩa"
+
+        - alert: HighCPUSustained
+          expr: |
+            (
+              sum(rate(container_cpu_usage_seconds_total{
+                namespace="stock-prod",
+                container!="",
+                container!="POD"
+              }[5m])) by (pod, container) /
+              sum(container_spec_cpu_quota{
+                namespace="stock-prod",
+                container!="",
+                container!="POD"
+              } / container_spec_cpu_period{
+                namespace="stock-prod"
+              }) by (pod, container)
+            ) > 0.90
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "⚠️ CPU usage > 90% trong 10 phút"
+            description: "Container {{ $labels.container }} pod {{ $labels.pod }} đang throttled"
+
+    # ── Database ────────────────────────────────────────────────────────
+    - name: stock-intel.database
+      interval: 60s
+      rules:
+        - alert: PostgresPodDown
+          expr: |
+            kube_pod_status_phase{
+              namespace="stock-prod",
+              pod=~".*postgres.*",
+              phase!="Running"
+            } == 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "🔴 PostgreSQL pod không chạy"
+            description: "PostgreSQL pod {{ $labels.pod }} đang ở trạng thái {{ $labels.phase }}"
+
+        - alert: RedisPodDown
+          expr: |
+            kube_pod_status_phase{
+              namespace="stock-prod",
+              pod=~".*redis.*",
+              phase!="Running"
+            } == 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "🔴 Redis pod không chạy"
+            description: "Redis pod {{ $labels.pod }} đang ở trạng thái {{ $labels.phase }}"
+
+        - alert: PVCDiskUsageHigh
+          expr: |
+            (
+              kubelet_volume_stats_used_bytes{namespace="stock-prod"} /
+              kubelet_volume_stats_capacity_bytes{namespace="stock-prod"}
+            ) > 0.80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "⚠️ PVC disk usage > 80%"
+            description: "Volume {{ $labels.persistentvolumeclaim }} trong namespace {{ $labels.namespace }} đã dùng {{ $value | humanizePercentage }}"
+
+    # ── Backup Monitoring ───────────────────────────────────────────────
+    - name: stock-intel.backup
+      rules:
+        - alert: BackupJobFailed
+          expr: |
+            kube_job_status_failed{
+              namespace="stock-prod",
+              job_name=~".*pg-backup.*"
+            } > 0
+          for: 0m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "🚨 Database backup job THẤT BẠI"
+            description: "Backup job {{ $labels.job_name }} đã thất bại! Dữ liệu có thể không được backup hôm nay."
+            runbook: "kubectl logs -n stock-prod job/{{ $labels.job_name }}"
+
+        - alert: BackupNotRunIn36h
+          expr: |
+            (time() - kube_job_status_completion_time{
+              namespace="stock-prod",
+              job_name=~".*pg-backup.*"
+            }) > 129600
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "⚠️ Không có backup thành công trong 36 giờ"
+            description: "Backup CronJob có thể bị skip hoặc lỗi schedule. Kiểm tra ngay!"
+
+    # ── HPA & Scaling ───────────────────────────────────────────────────
+    - name: stock-intel.scaling
+      rules:
+        - alert: HPAMaxReplicasReached
+          expr: |
+            kube_horizontalpodautoscaler_status_current_replicas{namespace="stock-prod"} ==
+            kube_horizontalpodautoscaler_spec_max_replicas{namespace="stock-prod"}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "⚠️ HPA đã đạt maxReplicas"
+            description: "HPA {{ $labels.horizontalpodautoscaler }} đang chạy ở maxReplicas = {{ $value }}. Có thể cần tăng limit."
+
+        - alert: HPAScalingFailed
+          expr: |
+            kube_horizontalpodautoscaler_status_condition{
+              namespace="stock-prod",
+              condition="ScalingActive",
+              status="false"
+            } == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "⚠️ HPA không thể scale"
+            description: "HPA {{ $labels.horizontalpodautoscaler }} không hoạt động — có thể metrics-server bị lỗi"

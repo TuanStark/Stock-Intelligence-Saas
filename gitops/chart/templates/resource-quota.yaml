@@ -1,0 +1,61 @@
+{{- if .Values.resourceQuota.enabled }}
+# ─── ResourceQuota — Tổng giới hạn tài nguyên namespace ──────────────────
+# Ngăn một pod bị leak memory/CPU chiếm toàn bộ tài nguyên node.
+# Mọi workload mới tạo đều bị kiểm tra quota trước khi schedule.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-quota
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  hard:
+    # ── Compute ─────────────────────────────────────────────────────────
+    requests.cpu: {{ .Values.resourceQuota.requests.cpu | quote }}
+    requests.memory: {{ .Values.resourceQuota.requests.memory | quote }}
+    limits.cpu: {{ .Values.resourceQuota.limits.cpu | quote }}
+    limits.memory: {{ .Values.resourceQuota.limits.memory | quote }}
+    # ── Object Counts ───────────────────────────────────────────────────
+    count/pods: {{ .Values.resourceQuota.maxPods | quote }}
+    count/services: "20"
+    count/secrets: "40"
+    count/configmaps: "20"
+    count/persistentvolumeclaims: "15"
+    count/jobs.batch: "20"
+    count/cronjobs.batch: "10"
+    # ── Storage ─────────────────────────────────────────────────────────
+    requests.storage: {{ .Values.resourceQuota.storage | quote }}
+
+---
+# ─── LimitRange — Default requests/limits cho container không khai báo ───
+# Áp dụng fallback nếu pod không set requests/limits.
+# Ngăn pod "naked" (không có limit) bị schedule và chiếm tài nguyên không giới hạn.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-limitrange
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  limits:
+    # ── Container defaults ───────────────────────────────────────────────
+    - type: Container
+      default:           # Limit mặc định nếu không khai báo
+        cpu: "500m"
+        memory: "512Mi"
+      defaultRequest:    # Request mặc định nếu không khai báo
+        cpu: "50m"
+        memory: "128Mi"
+      max:               # Không được vượt quá giá trị này
+        cpu: "2000m"
+        memory: "2Gi"
+      min:               # Phải đặt tối thiểu giá trị này
+        cpu: "10m"
+        memory: "32Mi"
+    # ── PVC storage bounds ──────────────────────────────────────────────
+    - type: PersistentVolumeClaim
+      max:
+        storage: "30Gi"
+      min:
+        storage: "100Mi"
+{{- end }}

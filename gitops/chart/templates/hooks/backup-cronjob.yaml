@@ -1,0 +1,128 @@
+{{- if .Values.backup.enabled }}
+# ─── PostgreSQL Daily Backup CronJob ────────────────────────────────────
+# Strategy : pg_dump → gzip → upload MinIO nội bộ bucket "stockintel-backups"
+# Schedule : Mặc định 02:00 AM UTC+7 = 19:00 UTC
+# Retention: 30 ngày gần nhất (auto-cleanup cũ hơn)
+# Monitoring: Alert khi job fail → xem alertmanager-rules.yaml
+# ─────────────────────────────────────────────────────────────────────────
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-pg-backup
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  concurrencyPolicy: Forbid          # Không chạy 2 backup song song
+  successfulJobsHistoryLimit: 7      # Giữ log 7 lần thành công gần nhất
+  failedJobsHistoryLimit: 3          # Giữ log 3 lần thất bại gần nhất
+  startingDeadlineSeconds: 3600      # Bỏ qua nếu bắt đầu trễ quá 1h
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600    # Tổng thời gian tối đa 1 job = 1h
+      template:
+        metadata:
+          labels:
+            {{- include "stock-intel.labels" . | nindent 12 }}
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: {{ include "stock-intel.serviceAccountName.api" . }}
+          automountServiceAccountToken: false
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+            runAsNonRoot: true
+            runAsUser: 70            # uid=70 (postgres) trong postgres:alpine image
+            runAsGroup: 70
+            fsGroup: 70
+          containers:
+            - name: pg-backup
+              image: {{ .Values.backup.image }}
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: [ALL]
+                readOnlyRootFilesystem: false  # Cần ghi file dump vào /tmp
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -e
+
+                  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+                  BACKUP_FILE="pg-backup-${TIMESTAMP}.sql.gz"
+                  BACKUP_PATH="/tmp/${BACKUP_FILE}"
+
+                  echo "🔄 [$(date '+%Y-%m-%d %H:%M:%S UTC')] Starting PostgreSQL backup..."
+
+                  # 1. Dump và nén database
+                  echo "📦 Dumping database..."
+                  pg_dump "${DATABASE_URL}" | gzip > "${BACKUP_PATH}"
+                  BACKUP_SIZE=$(du -h "${BACKUP_PATH}" | cut -f1)
+                  echo "✅ Dump completed: ${BACKUP_FILE} (${BACKUP_SIZE})"
+
+                  # 2. Cài MinIO Client
+                  MC_PATH="/tmp/mc"
+                  if [ ! -f "${MC_PATH}" ]; then
+                    echo "⬇️  Downloading MinIO client..."
+                    wget -q -O "${MC_PATH}" \
+                      "https://dl.min.io/client/mc/release/linux-amd64/mc"
+                    chmod +x "${MC_PATH}"
+                  fi
+
+                  # 3. Cấu hình kết nối MinIO nội bộ
+                  MINIO_URL="http://{{ include "stock-intel.fullname" . }}-minio:{{ .Values.stateful.minio.service.apiPort }}"
+                  ${MC_PATH} alias set minio "${MINIO_URL}" \
+                    "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}" --quiet
+
+                  # 4. Tạo bucket backup nếu chưa có (idempotent)
+                  ${MC_PATH} mb --ignore-existing \
+                    "minio/{{ .Values.backup.minioBucket }}" || true
+
+                  # 5. Upload backup
+                  echo "☁️  Uploading to MinIO: minio/{{ .Values.backup.minioBucket }}/${BACKUP_FILE}..."
+                  ${MC_PATH} cp "${BACKUP_PATH}" \
+                    "minio/{{ .Values.backup.minioBucket }}/${BACKUP_FILE}"
+                  echo "✅ Upload successful"
+
+                  # 6. Cleanup — xóa backup cũ hơn retentionDays ngày
+                  echo "🧹 Removing backups older than {{ .Values.backup.retentionDays }} days..."
+                  ${MC_PATH} rm --recursive --force \
+                    --older-than {{ .Values.backup.retentionDays }}d \
+                    "minio/{{ .Values.backup.minioBucket }}/" 2>/dev/null || true
+
+                  echo "🎉 [$(date '+%Y-%m-%d %H:%M:%S UTC')] Backup completed successfully!"
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "stock-intel.secretName" . }}
+                      key: DATABASE_URL
+                - name: MINIO_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "stock-intel.secretName" . }}
+                      key: MINIO_ACCESS_KEY
+                - name: MINIO_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "stock-intel.secretName" . }}
+                      key: MINIO_SECRET_KEY
+              resources:
+                requests:
+                  cpu: {{ .Values.backup.resources.requests.cpu }}
+                  memory: {{ .Values.backup.resources.requests.memory }}
+                limits:
+                  cpu: {{ .Values.backup.resources.limits.cpu }}
+                  memory: {{ .Values.backup.resources.limits.memory }}
+              volumeMounts:
+                - name: tmp-backup
+                  mountPath: /tmp
+          volumes:
+            - name: tmp-backup
+              emptyDir:
+                sizeLimit: {{ .Values.backup.tmpSizeLimit }}  # Giới hạn disk tmp
+{{- end }}

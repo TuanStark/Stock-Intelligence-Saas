@@ -1,0 +1,37 @@
+# ─── Namespace — Pod Security Standards + Governance Labels ──────────────
+# Tạo namespace tường minh thay vì để ArgoCD CreateNamespace=true tự tạo.
+# Cho phép gắn PSS labels, annotations và Velero backup scope.
+#
+# Pod Security Standards (PSS) — restricted profile:
+#   - Containers phải chạy non-root
+#   - Không được escalate privilege
+#   - seccompProfile bắt buộc
+#   - readOnlyRootFilesystem khuyến khích
+# ─────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    # ── Pod Security Standards (PSS) — Kubernetes 1.25+ ────────────────
+    # enforce: Reject bất kỳ pod nào vi phạm profile restricted
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    # audit: Log vi phạm vào audit log (không reject)
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+    # warn: Hiển thị warning khi apply manifest vi phạm
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+    # ── Standard Labels ─────────────────────────────────────────────────
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: stock-intelligence
+    environment: production
+  annotations:
+    # Mô tả mục đích namespace
+    description: "Stock Intelligence SaaS — Production Namespace"
+    # Velero backup scope — tự động backup toàn bộ namespace này
+    # (Khi deploy Velero ở Sprint P3)
+    backup.velero.io/backup-volumes: "true"
+    # Owner contact
+    contact: "platform-team@chungkhoanai.dpdns.org"

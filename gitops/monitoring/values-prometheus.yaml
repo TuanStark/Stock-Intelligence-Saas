@@ -1,0 +1,230 @@
+# ════════════════════════════════════════════════════════════════════════
+# kube-prometheus-stack — Tuned cho K3s Single-Node
+# RAM-efficient configuration: tổng ~800MB cho stack monitoring
+# ════════════════════════════════════════════════════════════════════════
+
+# ─── Prometheus ──────────────────────────────────────────────────────────
+prometheus:
+  prometheusSpec:
+    retention: 15d              # Giữ metrics 15 ngày
+    retentionSize: "8GB"        # Hard limit dung lượng Prometheus
+    scrapeInterval: "30s"       # Scrape interval mặc định
+    evaluationInterval: "30s"
+
+    resources:
+      requests:
+        memory: 300Mi
+        cpu: 100m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 10Gi
+
+    # Tự động scrape tất cả ServiceMonitor trong mọi namespace
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleNamespaceSelector: {}
+    serviceMonitorNamespaceSelector: {}
+    podMonitorNamespaceSelector: {}
+
+    # Scrape stock-prod namespace trực tiếp (cho pods dùng annotation)
+    additionalScrapeConfigs:
+      - job_name: 'stock-intel-api'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [stock-prod]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
+
+# ─── Alertmanager ────────────────────────────────────────────────────────
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        memory: 64Mi
+        cpu: 20m
+      limits:
+        memory: 128Mi
+        cpu: 100m
+
+  config:
+    global:
+      resolve_timeout: 5m
+
+    # Routing: nhóm alert theo alertname + namespace
+    route:
+      group_by: ['alertname', 'namespace', 'severity']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h       # Nhắc lại alert mỗi 4h nếu chưa resolve
+      receiver: 'default'
+      routes:
+        # Critical alerts → báo ngay không delay
+        - match:
+            severity: critical
+          receiver: 'critical'
+          group_wait: 10s
+          repeat_interval: 1h
+        # Warning alerts → route về default
+        - match:
+            severity: warning
+          receiver: 'default'
+
+    receivers:
+      # Default receiver — cấu hình Telegram webhook sau
+      - name: 'default'
+        webhook_configs:
+          - url: 'http://telegram-bot-alertmanager.monitoring:8080/alert'
+            send_resolved: true
+            http_config:
+              follow_redirects: true
+      # Critical receiver — cùng webhook nhưng ưu tiên
+      - name: 'critical'
+        webhook_configs:
+          - url: 'http://telegram-bot-alertmanager.monitoring:8080/alert/critical'
+            send_resolved: true
+
+    inhibit_rules:
+      # Nếu đã có critical alert → suppress warning alert cùng namespace
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['namespace', 'alertname']
+
+# ─── Grafana ─────────────────────────────────────────────────────────────
+grafana:
+  adminPassword: "REPLACE_WITH_STRONG_PASSWORD"   # Đổi trước khi deploy!
+  
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 50m
+    limits:
+      memory: 256Mi
+      cpu: 200m
+
+  persistence:
+    enabled: true
+    storageClassName: local-path
+    size: 2Gi
+
+  # Grafana Ingress — truy cập qua subdomain (configure tùy môi trường)
+  ingress:
+    enabled: false   # Bật khi cần public access, hoặc dùng kubectl port-forward
+
+  # Tự động import dashboards từ grafana.com
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'stock-intel'
+          orgId: 1
+          folder: 'Stock Intelligence SaaS'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/stock-intel
+
+  dashboards:
+    stock-intel:
+      # Node.js Application Dashboard
+      nodejs-app:
+        gnetId: 14565
+        revision: 1
+        datasource: Prometheus
+      # NestJS Metrics Dashboard
+      nestjs-metrics:
+        gnetId: 17371
+        revision: 1
+        datasource: Prometheus
+      # K3s Cluster Overview
+      k3s-cluster:
+        gnetId: 16450
+        revision: 1
+        datasource: Prometheus
+      # PostgreSQL Database Dashboard
+      postgresql:
+        gnetId: 9628
+        revision: 7
+        datasource: Prometheus
+      # Kubernetes Pods Overview
+      k8s-pods:
+        gnetId: 6417
+        revision: 1
+        datasource: Prometheus
+
+  # Cấu hình datasource tự động
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://monitoring-kube-prometheus-prometheus:9090
+          isDefault: true
+        - name: Loki
+          type: loki
+          url: http://loki:3100
+
+# ─── Node Exporter — thu thập metrics từ node ────────────────────────────
+nodeExporter:
+  enabled: true
+  resources:
+    requests:
+      memory: 32Mi
+      cpu: 10m
+    limits:
+      memory: 64Mi
+      cpu: 100m
+
+# ─── Kube State Metrics ───────────────────────────────────────────────────
+kubeStateMetrics:
+  enabled: true
+
+# ─── Disable components không có trên K3s ────────────────────────────────
+kubeEtcd:
+  enabled: false              # K3s dùng SQLite thay vì etcd
+kubeScheduler:
+  enabled: false              # K3s scheduler không expose metrics port mặc định
+kubeControllerManager:
+  enabled: false              # Tương tự
+
+# ─── Prometheus Operator ─────────────────────────────────────────────────
+prometheusOperator:
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 20m
+    limits:
+      memory: 128Mi
+      cpu: 100m

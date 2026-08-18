@@ -27,7 +27,7 @@ config:
   minioBucket: "stockintel"
   minioUseSsl: "false"
   jwtExpiresIn: "15m"
-  jwtRefreshExpiresIn: "7d"
+  jwtRefreshExpiresIn: "1d"    # Giảm từ 7d → 1d: limit exposure window nếu bị leak
   openaiModel: "gpt-4o-mini"
   litellmApiBase: ""
 
@@ -415,3 +415,31 @@ ingress:
 networkPolicy:
   enabled: false # Set true in production overlay to isolate workloads
   allowExternalIngress: true
+
+# ─── Namespace Resource Quota & LimitRange ───────────────────────────
+resourceQuota:
+  enabled: true
+  requests:
+    cpu: "4000m"       # Tổng CPU requests tối đa toàn namespace
+    memory: "6Gi"      # Tổng RAM requests tối đa toàn namespace
+  limits:
+    cpu: "8000m"       # Tổng CPU limits tối đa toàn namespace
+    memory: "12Gi"     # Tổng RAM limits tối đa toàn namespace
+  maxPods: "50"        # Số pod tối đa trong namespace
+  storage: "120Gi"     # Tổng storage PVC tối đa
+
+# ─── Database Backup Strategy ────────────────────────────────────────
+backup:
+  enabled: false    # Override true trong prod values
+  schedule: "0 19 * * *"     # 02:00 AM UTC+7 = 19:00 UTC, hàng ngày
+  minioBucket: "stockintel-backups"  # Bucket MinIO chứa backup files
+  retentionDays: 30           # Giữ backup tối đa 30 ngày
+  image: "postgres:17-alpine" # Image chạy pg_dump
+  tmpSizeLimit: "2Gi"        # Giới hạn emptyDir /tmp cho backup file
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"

@@ -1,0 +1,128 @@
+# ════════════════════════════════════════════════════════════════════════
+# Loki Stack — Log Aggregation cho K3s
+# Loki: nhận và lưu logs
+# Promtail: DaemonSet scrape logs từ tất cả pods (stdout/stderr)
+# ════════════════════════════════════════════════════════════════════════
+
+loki:
+  enabled: true
+
+  persistence:
+    enabled: true
+    storageClassName: local-path
+    size: 10Gi
+
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 50m
+    limits:
+      memory: 512Mi
+      cpu: 200m
+
+  config:
+    auth_enabled: false     # Single-tenant mode (không cần auth trong cluster)
+
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+
+    ingester:
+      chunk_idle_period: 3m
+      max_chunk_age: 1h
+      chunk_target_size: 1048576
+      chunk_retain_period: 30s
+
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+
+    storage_config:
+      boltdb_shipper:
+        active_index_directory: /data/loki/boltdb-shipper-active
+        cache_location: /data/loki/boltdb-shipper-cache
+        cache_ttl: 24h
+      filesystem:
+        directory: /data/loki/chunks
+
+    limits_config:
+      retention_period: 168h    # Giữ logs 7 ngày
+      ingestion_rate_mb: 16
+      ingestion_burst_size_mb: 32
+      max_streams_per_user: 10000
+      max_line_size: 256KB
+
+    compactor:
+      working_directory: /data/loki/boltdb-shipper-compactor
+      shared_store: filesystem
+      retention_enabled: true   # Tự động xóa logs cũ theo retention_period
+
+# ─── Promtail — Log Collector DaemonSet ──────────────────────────────────
+promtail:
+  enabled: true
+
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 20m
+    limits:
+      memory: 128Mi
+      cpu: 100m
+
+  config:
+    # Pipeline stages để parse log format của Node.js/NestJS
+    snippets:
+      pipelineStages:
+        # Parse container runtime log format (CRI-O / containerd)
+        - cri: {}
+        # Cố gắng parse JSON logs (NestJS, Next.js đều log JSON)
+        - json:
+            expressions:
+              level: level
+              message: message
+              context: context
+              service: service
+              timestamp: timestamp
+        # Gắn label từ fields JSON
+        - labels:
+            level:
+            service:
+            context:
+        # Drop debug logs để giảm volume (chỉ giữ warn, error, log)
+        - drop:
+            expression: '.*"level":"debug".*'
+
+    # Cấu hình job scrape cho stock-prod namespace
+    extraScrapeConfigs: |
+      - job_name: stock-prod
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [stock-prod]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: __host__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container
+          - replacement: /var/log/pods/*$1/*.log
+            separator: /
+            source_labels:
+              - __meta_kubernetes_pod_uid
+              - __meta_kubernetes_pod_container_name
+            target_label: __path__
+
+# ─── Grafana (đã cấu hình trong values-prometheus.yaml) ─────────────────
+grafana:
+  enabled: false    # Dùng grafana từ kube-prometheus-stack, không duplicate

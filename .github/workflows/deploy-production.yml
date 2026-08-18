@@ -42,11 +42,27 @@ jobs:
         with:
           version: v3.17.0
 
-      - name: Lint Helm Chart & Test Render
+      - name: Lint Helm Chart & Test Render with Mock Secrets
         run: |
           helm lint gitops/chart
-          helm template test-release gitops/chart -f gitops/envs/prod/values.yaml > /dev/null
-          echo "✅ Helm chart syntax and production templates validated successfully!"
+
+          # Render với mock secrets — catch lỗi template thực, không dùng values rỗng
+          helm template test-release gitops/chart \
+            -f gitops/envs/prod/values.yaml \
+            --set secrets.existingSecret="" \
+            --set secrets.databaseUrl="postgresql://postgres:ci-test@localhost:5432/test" \
+            --set secrets.postgresPassword="ci-mock-pg-password-32chars" \
+            --set secrets.nextauthSecret="ci-mock-nextauth-32-chars-minimum" \
+            --set secrets.googleClientId="ci-mock-google-client-id" \
+            --set secrets.googleClientSecret="ci-mock-google-secret" \
+            --set secrets.apiSignSecret="ci-mock-sign-secret-min-32-chars!" \
+            --set secrets.apiEncryptionKey="ci-mock-encrypt-key-32-chars-min" \
+            --set secrets.minioAccessKey="ci-mock-access" \
+            --set secrets.minioSecretKey="ci-mock-secret" \
+            --set secrets.paymentBankId="vcb" \
+            --set secrets.paymentBankAccount="0000000000" \
+            --set secrets.paymentBankName="CI-MOCK" \
+            > /dev/null && echo "✅ Helm chart syntax and production templates validated successfully!"
 
   # ══════════════════════════════════════════════════════════════════
   # STAGE 2: BUILD & PUSH MATRIX (SCOPED GHA CACHING)
