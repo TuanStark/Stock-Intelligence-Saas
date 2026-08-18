@@ -1,9 +1,24 @@
 {{- if .Values.networkPolicy.enabled }}
-# ─── 0. Default Deny All & Essential Egress ────────────────────────────
+# ════════════════════════════════════════════════════════════════════════
+# Zero-Trust Network Policy — Stock Intelligence SaaS
+#
+# Kiến trúc:
+#   Policy 0  : Default Deny ALL Ingress + Egress (baseline namespace)
+#   Policy 1a : web     — Ingress từ Traefik
+#   Policy 1b : web     — Egress  → api nội bộ + external HTTPS (OAuth)
+#   Policy 2a : api     — Ingress từ Traefik + web
+#   Policy 2b : api     — Egress  → postgres, redis, minio, external
+#   Policy 3  : workers — Egress  → postgres, redis, minio, external AI
+#   Policy 4  : postgres— Ingress từ api, workers, migration
+#   Policy 5  : redis   — Ingress từ api, workers
+#   Policy 6  : minio   — Ingress từ api, worker-ai (port 9000 only)
+# ════════════════════════════════════════════════════════════════════════
+
+# ─── 0. Default Deny All ─────────────────────────────────────────────────
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "stock-intel.fullname" . }}-default-deny
+  name: {{ include "stock-intel.fullname" . }}-default-deny-all
   labels:
     {{- include "stock-intel.labels" . | nindent 4 }}
 spec:
@@ -11,56 +26,81 @@ spec:
   policyTypes:
     - Ingress
     - Egress
+
+---
+# ─── 1a. WEB — Ingress ───────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-web-ingress
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "stock-intel.selectorLabels" (dict "context" . "component" "web") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    {{- if .Values.networkPolicy.allowExternalIngress }}
+    # Từ Traefik Ingress Controller (kube-system hoặc traefik namespace)
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3000
+    {{- end }}
+
+---
+# ─── 1b. WEB — Egress ────────────────────────────────────────────────────
+# web → api nội bộ (INTERNAL_API_URL, NextAuth SSR)
+# web → internet HTTPS (Google OAuth accounts.google.com)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-web-egress
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "stock-intel.selectorLabels" (dict "context" . "component" "web") | nindent 6 }}
+  policyTypes:
+    - Egress
   egress:
+    # DNS
     - ports:
         - protocol: UDP
           port: 53
         - protocol: TCP
           port: 53
+    # API service nội bộ (SSR + NextAuth authorize callback)
     - to:
         - podSelector:
-            matchExpressions:
-              - key: app.kubernetes.io/component
-                operator: In
-                values:
-                  - api
-                  - postgres
-                  - redis
-                  - minio
----
-# ─── 1. Allow Ingress Controller to Web and API ───────────────────────
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: {{ include "stock-intel.fullname" . }}-allow-ingress
-  labels:
-    {{- include "stock-intel.labels" . | nindent 4 }}
-spec:
-  podSelector:
-    matchExpressions:
-      - key: app.kubernetes.io/component
-        operator: In
-        values:
-          - web
-          - api
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        {{- if .Values.networkPolicy.allowExternalIngress }}
-        - namespaceSelector: {} # Allow ingress from ingress controller namespace (traefik / ingress-nginx)
-        {{- end }}
+            matchLabels:
+              {{- include "stock-intel.selectorLabels" (dict "context" . "component" "api") | nindent 14 }}
       ports:
         - protocol: TCP
-          port: 3000
+          port: {{ .Values.api.service.port }}
+    # Internet: Google OAuth, NextAuth providers (HTTPS only)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
         - protocol: TCP
-          port: 3001
+          port: 443
+
 ---
-# ─── 2. Allow API Access from Web Frontend (SSR calls) ─────────────────
+# ─── 2a. API — Ingress ───────────────────────────────────────────────────
+# Nhận từ Traefik (/api/v1, /socket.io) và web (SSR internal calls)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "stock-intel.fullname" . }}-allow-web-to-api
+  name: {{ include "stock-intel.fullname" . }}-api-ingress
   labels:
     {{- include "stock-intel.labels" . | nindent 4 }}
 spec:
@@ -70,19 +110,165 @@ spec:
   policyTypes:
     - Ingress
   ingress:
+    {{- if .Values.networkPolicy.allowExternalIngress }}
+    # Từ Traefik Ingress Controller
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.api.service.port }}
+    {{- end }}
+    # Từ web pods (NextAuth authorize & SSR via INTERNAL_API_URL)
     - from:
         - podSelector:
             matchLabels:
               {{- include "stock-intel.selectorLabels" (dict "context" . "component" "web") | nindent 14 }}
       ports:
         - protocol: TCP
-          port: 3001
+          port: {{ .Values.api.service.port }}
+
 ---
-# ─── 3. Restrict PostgreSQL Access to API, Workers, and Migration Job ──
+# ─── 2b. API — Egress ────────────────────────────────────────────────────
+# api → postgres (Prisma ORM)
+# api → redis   (cache, sessions, BullMQ publish)
+# api → minio   (S3 API port 9000)
+# api → internet (OpenAI, market data, Google token verify, payment GW)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "stock-intel.fullname" . }}-allow-db-access
+  name: {{ include "stock-intel.fullname" . }}-api-egress
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "stock-intel.selectorLabels" (dict "context" . "component" "api") | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "stock-intel.selectorLabels" (dict "context" . "component" "postgres") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.stateful.postgres.service.port }}
+    # Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "stock-intel.selectorLabels" (dict "context" . "component" "redis") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.stateful.redis.service.port }}
+    # MinIO S3 API only (port 9001 console intentionally excluded)
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "stock-intel.selectorLabels" (dict "context" . "component" "minio") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.stateful.minio.service.apiPort }}
+    # Internet: OpenAI, market data, Google OAuth verify, payment gateways
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+
+---
+# ─── 3. WORKERS — Egress (shared cho tất cả worker types) ────────────────
+# Workers không expose HTTP → không cần Ingress rule.
+# worker-ingestion : redis (consume queue), postgres (write), external market data
+# worker-processing: redis (consume queue), postgres (read/write)
+# worker-ai        : redis (consume queue), postgres, minio (artifacts), OpenAI
+# worker-payment   : redis (consume queue), postgres, external payment APIs
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-workers-egress
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - worker-ingestion
+          - worker-processing
+          - worker-ai
+          - worker-payment
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "stock-intel.selectorLabels" (dict "context" . "component" "postgres") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.stateful.postgres.service.port }}
+    # Redis (BullMQ queues)
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "stock-intel.selectorLabels" (dict "context" . "component" "redis") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.stateful.redis.service.port }}
+    # MinIO S3 API (worker-ai upload/download model artifacts)
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "stock-intel.selectorLabels" (dict "context" . "component" "minio") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.stateful.minio.service.apiPort }}
+    # Internet: OpenAI (worker-ai), market data feeds (worker-ingestion),
+    #           payment callbacks (worker-payment)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+
+---
+# ─── 4. POSTGRES — Ingress ───────────────────────────────────────────────
+# Chỉ nhận từ: api, workers, migration job.
+# Postgres không initiate outbound → không có Egress rule (default deny).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-postgres-ingress
   labels:
     {{- include "stock-intel.labels" . | nindent 4 }}
 spec:
@@ -106,13 +292,15 @@ spec:
                   - worker-payment
       ports:
         - protocol: TCP
-          port: 5432
+          port: {{ .Values.stateful.postgres.service.port }}
+
 ---
-# ─── 4. Restrict Redis Access to API and Workers ───────────────────────
+# ─── 5. REDIS — Ingress ──────────────────────────────────────────────────
+# Chỉ nhận từ: api, workers.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "stock-intel.fullname" . }}-allow-redis-access
+  name: {{ include "stock-intel.fullname" . }}-redis-ingress
   labels:
     {{- include "stock-intel.labels" . | nindent 4 }}
 spec:
@@ -135,13 +323,17 @@ spec:
                   - worker-payment
       ports:
         - protocol: TCP
-          port: 6379
+          port: {{ .Values.stateful.redis.service.port }}
+
 ---
-# ─── 5. Restrict MinIO Access to API and Workers ───────────────────────
+# ─── 6. MINIO — Ingress ──────────────────────────────────────────────────
+# S3 API port 9000: api + worker-ai.
+# Console port 9001: KHÔNG được allow từ bất kỳ pod nào.
+#   → Truy cập admin console: kubectl port-forward svc/minio 9001:9001
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "stock-intel.fullname" . }}-allow-minio-access
+  name: {{ include "stock-intel.fullname" . }}-minio-ingress
   labels:
     {{- include "stock-intel.labels" . | nindent 4 }}
 spec:
@@ -151,6 +343,7 @@ spec:
   policyTypes:
     - Ingress
   ingress:
+    # Port 9000 S3 API only — port 9001 (console) intentionally NOT listed
     - from:
         - podSelector:
             matchExpressions:
@@ -161,5 +354,39 @@ spec:
                   - worker-ai
       ports:
         - protocol: TCP
-          port: 9000
+          port: {{ .Values.stateful.minio.service.apiPort }}
+
+---
+# ─── 7. STATEFUL — DNS-only Egress ──────────────────────────────────────
+# postgres, redis, minio không initiate TCP connections ra ngoài.
+# Nhưng PHẢI có DNS egress (UDP/TCP 53) để:
+#   - Kubernetes CoreDNS hoạt động (pod startup, service discovery)
+#   - pg_isready dùng hostname thay vì IP
+#   - MinIO internal bucket resolution
+# Nếu thiếu rule này → default-deny-all block DNS → silent startup failures.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-stateful-dns-egress
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - postgres
+          - redis
+          - minio
+  policyTypes:
+    - Egress
+  egress:
+    # DNS only — no other outbound connections permitted
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
 {{- end }}

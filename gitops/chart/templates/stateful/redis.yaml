@@ -14,9 +14,8 @@ data:
     appendfsync everysec
     maxmemory {{ .Values.stateful.redis.maxmemory }}
     maxmemory-policy {{ .Values.stateful.redis.maxmemoryPolicy }}
-    {{- if .Values.secrets.redisPassword }}
-    requirepass {{ .Values.secrets.redisPassword }}
-    {{- end }}
+    # Password is injected via REDIS_PASSWORD env var at container startup
+    # See: command override in StatefulSet that reads $REDIS_PASSWORD
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -46,9 +45,24 @@ spec:
         - name: redis
           image: {{ printf "%s/%s:%s" .Values.stateful.redis.image.registry .Values.stateful.redis.image.repository .Values.stateful.redis.image.tag }}
           imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "stock-intel.secretName" . }}
+                  key: REDIS_PASSWORD
+                  optional: true   # Allow empty password in dev
           command:
-            - redis-server
-            - /usr/local/etc/redis/redis.conf
+            - sh
+            - -c
+            - |
+              ARGS="--appendonly yes --appendfsync everysec \
+                    --maxmemory {{ .Values.stateful.redis.maxmemory }} \
+                    --maxmemory-policy {{ .Values.stateful.redis.maxmemoryPolicy }}"
+              if [ -n "$REDIS_PASSWORD" ]; then
+                ARGS="$ARGS --requirepass $REDIS_PASSWORD"
+              fi
+              exec redis-server $ARGS
           ports:
             - name: redis
               containerPort: 6379

@@ -19,8 +19,13 @@ config:
   port: 3001
   webUrl: "http://chungkhoanai.dpdns.org"
   apiUrl: "http://chungkhoanai.dpdns.org/api/v1"
-  redisHost: "" # Left blank to auto-point to internal Redis service if stateful.redis.enabled
+  redisHost: "" # Left blank to auto-point to internal Redis service
   redisPort: 6379
+  # MinIO — left blank to auto-resolve to in-cluster service name
+  minioEndpoint: ""
+  minioPort: "9000"
+  minioBucket: "stockintel"
+  minioUseSsl: "false"
   jwtExpiresIn: "15m"
   jwtRefreshExpiresIn: "7d"
   openaiModel: "gpt-4o-mini"
@@ -31,14 +36,31 @@ secrets:
   # Set existingSecret if managed by ExternalSecrets / SealedSecrets / Vault
   existingSecret: ""
   databaseUrl: "postgresql://postgres:postgres@stock-intel-postgres:5432/stockintel?schema=public"
+  postgresPassword: "change-this-postgres-password-in-production"
   redisPassword: ""
   jwtSecret: "change-this-super-secret-jwt-key-in-production-min-32-chars"
+  # NextAuth
+  nextauthSecret: "change-this-nextauth-secret-key-in-production-min-32"
+  # Google OAuth
+  googleClientId: ""
+  googleClientSecret: ""
+  # AI
   openaiApiKey: ""
+  # Market Data
   marketDataApiKey: ""
+  # MinIO
   minioAccessKey: "minioadmin"
   minioSecretKey: "minioadmin"
+  # API Request Signing & Encryption (shared between BE and FE browser bundle)
+  apiSignSecret: "stockintel-signing-secret-key-prod-2026-very-secure-random-12345"
+  apiEncryptionKey: "stockintel-encryption-aes-key-prod-2026-very-secure-random-12345"
+  # Payment Gateways
   payosWebhookSecret: ""
   sepayWebhookSecret: ""
+  # Payment Bank (for QR generation)
+  paymentBankId: ""
+  paymentBankAccount: ""
+  paymentBankName: ""
 
 # ─── Database Migration Job (Helm Pre-Upgrade Hook) ─────────────────
 migration:
@@ -284,10 +306,10 @@ stateful:
     image:
       registry: docker.io
       repository: timescale/timescaledb
-      tag: latest-pg17
+      tag: "2.17.2-pg17"   # Pinned — DO NOT use latest on stateful workloads
     postgresDb: stockintel
     postgresUser: postgres
-    postgresPassword: "postgrespassword"
+    # postgresPassword: sourced from Secret via secretKeyRef (see secrets.yaml)
     service:
       port: 5432
     persistence:
@@ -307,7 +329,7 @@ stateful:
     image:
       registry: docker.io
       repository: redis
-      tag: 7-alpine
+      tag: "7.4.4-alpine"   # Pinned — DO NOT use latest or floating minor tags
     service:
       port: 6379
     maxmemory: 256mb
@@ -329,9 +351,9 @@ stateful:
     image:
       registry: docker.io
       repository: minio/minio
-      tag: latest
+      tag: "RELEASE.2025-07-12T14-22-43Z"   # Pinned — CRITICAL: MinIO changes storage format across releases
     rootUser: minioadmin
-    rootPassword: "minioadminpassword"
+    # rootPassword: sourced from Secret via secretKeyRef (see secrets.yaml)
     service:
       apiPort: 9000
       consolePort: 9001
@@ -380,6 +402,14 @@ ingress:
     - secretName: stock-intel-tls
       hosts:
         - chungkhoanai.dpdns.org
+  # ── Rate Limiting (Traefik Middleware) ────────────────────────────────
+  rateLimit:
+    api:
+      average: 100    # req/s per source IP for /api/v1/*
+      burst: 200
+    auth:
+      average: 10     # strict limit for /api/auth/* brute force protection
+      burst: 20
 
 # ─── Zero-Trust Network Policies ─────────────────────────────────────
 networkPolicy:

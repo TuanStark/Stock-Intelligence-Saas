@@ -816,9 +816,8 @@ export default function Dashboard() {
 
       {/* ─── MAIN CONTENT CONTAINER ─── */}
       <main
-        className={`sidebar-transition pr-6 py-6 min-h-screen flex flex-col w-full ${
-          isSidebarCollapsed ? "pl-6 md:pl-[100px]" : "pl-6 md:pl-[300px]"
-        }`}
+        className={`sidebar-transition pr-6 py-6 min-h-screen flex flex-col w-full ${isSidebarCollapsed ? "pl-6 md:pl-[100px]" : "pl-6 md:pl-[300px]"
+          }`}
       >
         {/* ─── TOP HEADER BAR with SEARCH ─── */}
         <header className="flex items-center justify-between gap-4 pb-4 border-b border-board-border">

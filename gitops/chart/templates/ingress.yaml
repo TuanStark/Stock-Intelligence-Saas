@@ -1,14 +1,46 @@
 {{- if .Values.ingress.enabled }}
+# ── Ingress — Traefik Routing Layer ────────────────────────────────────────
+#
+# Routes:
+#   /api/v1   → api service  (REST API)
+#   /socket.io → api service  (WebSocket / Socket.IO)
+#   /         → web service  (Next.js frontend)
+#
+# Security layers enforced at Traefik level:
+#   - TLS termination + HSTS
+#   - HTTP → HTTPS redirect
+#   - WebSocket upgrade for /socket.io
+#   - Security headers (X-Frame-Options, CSP, etc.)
+#
+# Rate limiting is applied via Traefik Middleware (see traefik-middlewares.yaml).
+# ───────────────────────────────────────────────────────────────────────────
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "stock-intel.fullname" . }}
   labels:
     {{- include "stock-intel.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
   annotations:
+    # ── TLS & Cert Management ─────────────────────────────────────────
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # ── Traefik Entrypoints ───────────────────────────────────────────
+    traefik.ingress.kubernetes.io/router.entrypoints: "web,websecure"
+
+    # ── HTTP → HTTPS Redirect ─────────────────────────────────────────
+    traefik.ingress.kubernetes.io/router.middlewares: >-
+      {{ .Release.Namespace }}-redirect-https@kubernetescrd
+
+    # ── WebSocket Support (required for Socket.IO) ────────────────────
+    # Traefik handles WebSocket upgrades automatically for HTTP/1.1.
+    # The router detects Upgrade: websocket header natively.
+
+    # ── Security Headers ──────────────────────────────────────────────
+    # Applied via SecurityHeadersMiddleware (see traefik-middlewares.yaml).
+
+    {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}

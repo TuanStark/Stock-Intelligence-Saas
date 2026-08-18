@@ -54,6 +54,11 @@ spec:
             matchLabels:
               {{- include "stock-intel.selectorLabels" (dict "context" . "component" "api") | nindent 14 }}
       terminationGracePeriodSeconds: 40
+      serviceAccountName: {{ include "stock-intel.serviceAccountName.api" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api
           image: {{ include "stock-intel.image" (dict "global" .Values.global.image "component" .Values.api.image "defaultTag" .Chart.AppVersion) }}

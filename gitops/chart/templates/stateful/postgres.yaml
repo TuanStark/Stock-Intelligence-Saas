@@ -37,7 +37,10 @@ spec:
             - name: POSTGRES_USER
               value: {{ .Values.stateful.postgres.postgresUser | quote }}
             - name: POSTGRES_PASSWORD
-              value: {{ .Values.stateful.postgres.postgresPassword | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "stock-intel.secretName" . }}
+                  key: POSTGRES_PASSWORD
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           volumeMounts:

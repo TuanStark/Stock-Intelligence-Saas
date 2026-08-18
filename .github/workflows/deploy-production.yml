@@ -145,8 +145,8 @@ jobs:
         with:
           image-ref: "${{ secrets.DOCKERHUB_USERNAME }}/stock-intel-${{ matrix.service }}:sha-${{ github.sha }}"
           format: "table"
-          exit-code: "0"
-          ignore-unfixed: true
+          exit-code: "1"          # Block pipeline if CRITICAL patchable CVE found
+          ignore-unfixed: true    # Skip CVEs with no upstream fix yet
           severity: "CRITICAL"
 
   # ══════════════════════════════════════════════════════════════════
@@ -164,16 +164,25 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
+      - name: Install yq (for surgical YAML editing)
+        run: |
+          YQ_VERSION="v4.44.3"
+          wget -qO /usr/local/bin/yq \
+            "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          chmod +x /usr/local/bin/yq
+          yq --version
+
       - name: Update Image Tag in Production Helm Values
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Replace tag in values.yaml with new sha tag
-          sed -i 's/tag: .*/tag: "sha-'${{ github.sha }}'"/' gitops/envs/prod/values.yaml
-          
+
+          # Use yq to surgically update ONLY global.image.tag
+          # (sed would overwrite ALL `tag:` lines including stateful image tags)
+          yq e '.global.image.tag = "sha-${{ github.sha }}"' -i gitops/envs/prod/values.yaml
+
           git add gitops/envs/prod/values.yaml
-          
+
           # Check if there are changes before committing
           if git diff --staged --quiet; then
             echo "No changes to commit."

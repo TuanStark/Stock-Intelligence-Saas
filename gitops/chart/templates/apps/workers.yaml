@@ -35,6 +35,11 @@ spec:
             matchLabels:
               {{- include "stock-intel.selectorLabels" (dict "context" $ "component" (printf "worker-%s" $workerName)) | nindent 14 }}
       terminationGracePeriodSeconds: {{ default 60 $workerConfig.terminationGracePeriodSeconds }}
+      serviceAccountName: {{ include "stock-intel.serviceAccountName.worker" $ }}
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: worker
           image: {{ include "stock-intel.image" (dict "global" $.Values.global.image "component" $workerConfig.image "defaultTag" $.Chart.AppVersion) }}

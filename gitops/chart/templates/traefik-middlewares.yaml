@@ -1,0 +1,213 @@
+{{- if .Values.ingress.enabled }}
+# ════════════════════════════════════════════════════════════════════════
+# Traefik Middleware Stack — Stock Intelligence SaaS
+#
+# Middleware được apply theo thứ tự:
+#   1. redirect-https   : HTTP → HTTPS (301)
+#   2. security-headers : HSTS, X-Frame, CSP, XSS Protection
+#   3. ratelimit-api    : Giới hạn request cho /api/v1 (100 req/s)
+#   4. ratelimit-auth   : Giới hạn nghiêm ngặt cho /auth (10 req/s)
+#   5. compress         : gzip/brotli cho web responses
+# ════════════════════════════════════════════════════════════════════════
+
+# ─── 1. HTTP → HTTPS Redirect ────────────────────────────────────────────
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true   # 301 Moved Permanently
+
+---
+# ─── 2. Security Headers ─────────────────────────────────────────────────
+# Implements OWASP Secure Headers Project recommendations.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: security-headers
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  headers:
+    # HSTS: Enforce HTTPS for 1 year, include subdomains
+    stsSeconds: 31536000
+    stsIncludeSubdomains: true
+    stsPreload: true
+    forceSTSHeader: true
+    # Prevent iframe embedding (clickjacking protection)
+    frameDeny: true
+    customFrameOptionsValue: "SAMEORIGIN"
+    # Content type sniffing prevention
+    contentTypeNosniff: true
+    # XSS filter for older browsers
+    browserXssFilter: true
+    # Referrer policy
+    referrerPolicy: "strict-origin-when-cross-origin"
+    # Permissions policy (disable unused browser features)
+    permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=(self), fullscreen=(self)"
+    # Content Security Policy
+    contentSecurityPolicy: >-
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com;
+      img-src 'self' data: https:;
+      connect-src 'self' wss://{{ (index .Values.ingress.hosts 0).host }} https://accounts.google.com;
+      frame-src https://accounts.google.com;
+      frame-ancestors 'self';
+      form-action 'self';
+      base-uri 'self';
+      upgrade-insecure-requests;
+
+---
+# ─── 3. Rate Limit — API Endpoints ──────────────────────────────────────
+# Áp dụng cho /api/v1/* — ngăn DDoS và API abuse.
+# average: 100 req/s per source IP, burst up to 200.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ratelimit-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  rateLimit:
+    average: {{ .Values.ingress.rateLimit.api.average }}
+    burst: {{ .Values.ingress.rateLimit.api.burst }}
+    period: 1s
+    sourceCriterion:
+      ipStrategy:
+        depth: 1   # Trust first proxy (Traefik sits behind K3s LoadBalancer)
+
+---
+# ─── 4. Rate Limit — Auth Endpoints (NextAuth + Login) ──────────────────
+# Áp dụng cho /api/auth/* và /api/v1/auth/* — brute force protection.
+# Strict limit: 10 req/s per IP, burst 20.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ratelimit-auth
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  rateLimit:
+    average: {{ .Values.ingress.rateLimit.auth.average }}
+    burst: {{ .Values.ingress.rateLimit.auth.burst }}
+    period: 1s
+    sourceCriterion:
+      ipStrategy:
+        depth: 1
+
+---
+# ─── 5. Response Compression ─────────────────────────────────────────────
+# Compress web responses (gzip/brotli) — reduces bandwidth ~60-70%.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: compress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  compress:
+    excludedContentTypes:
+      - text/event-stream   # SSE — không compress real-time streams
+      - application/octet-stream
+
+---
+# ─── IngressRoute — API với Security + Rate Limiting ─────────────────────
+# Dùng IngressRoute (Traefik CRD) thay vì standard Ingress để apply
+# nhiều middlewares theo thứ tự cụ thể cho từng path.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-secure
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    # ── /api/v1/* — REST API with rate limiting ────────────────────────
+    - match: Host(`{{ (index .Values.ingress.hosts 0).host }}`) && PathPrefix(`/api/v1`)
+      kind: Rule
+      middlewares:
+        - name: security-headers
+          namespace: {{ .Release.Namespace }}
+        - name: ratelimit-api
+          namespace: {{ .Release.Namespace }}
+      services:
+        - name: {{ include "stock-intel.fullname" . }}-api
+          port: {{ .Values.api.service.port }}
+
+    # ── /api/auth/* — NextAuth endpoints with strict rate limiting ─────
+    - match: Host(`{{ (index .Values.ingress.hosts 0).host }}`) && PathPrefix(`/api/auth`)
+      kind: Rule
+      middlewares:
+        - name: security-headers
+          namespace: {{ .Release.Namespace }}
+        - name: ratelimit-auth
+          namespace: {{ .Release.Namespace }}
+      services:
+        - name: {{ include "stock-intel.fullname" . }}-web
+          port: 3000
+
+    # ── /socket.io — WebSocket (no rate limit to avoid WS drops) ──────
+    - match: Host(`{{ (index .Values.ingress.hosts 0).host }}`) && PathPrefix(`/socket.io`)
+      kind: Rule
+      middlewares:
+        - name: security-headers
+          namespace: {{ .Release.Namespace }}
+      services:
+        - name: {{ include "stock-intel.fullname" . }}-api
+          port: {{ .Values.api.service.port }}
+
+    # ── /* — Next.js Web Frontend with compression ─────────────────────
+    - match: Host(`{{ (index .Values.ingress.hosts 0).host }}`)
+      kind: Rule
+      priority: 1   # Lowest priority — catch-all
+      middlewares:
+        - name: security-headers
+          namespace: {{ .Release.Namespace }}
+        - name: compress
+          namespace: {{ .Release.Namespace }}
+      services:
+        - name: {{ include "stock-intel.fullname" . }}-web
+          port: 3000
+
+  tls:
+    secretName: {{ (index .Values.ingress.tls 0).secretName }}
+    domains:
+      - main: {{ (index .Values.ingress.hosts 0).host }}
+
+---
+# ─── IngressRoute — HTTP → HTTPS Redirect (port 80) ─────────────────────
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "stock-intel.fullname" . }}-http-redirect
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "stock-intel.labels" . | nindent 4 }}
+spec:
+  entryPoints:
+    - web   # HTTP port 80
+  routes:
+    - match: Host(`{{ (index .Values.ingress.hosts 0).host }}`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: {{ .Release.Namespace }}
+      services:
+        - name: {{ include "stock-intel.fullname" . }}-web
+          port: 3000
+
+{{- end }}

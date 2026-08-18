@@ -44,7 +44,10 @@ spec:
             - name: MINIO_ROOT_USER
               value: {{ .Values.stateful.minio.rootUser | quote }}
             - name: MINIO_ROOT_PASSWORD
-              value: {{ .Values.stateful.minio.rootPassword | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "stock-intel.secretName" . }}
+                  key: MINIO_ROOT_PASSWORD
           volumeMounts:
             - name: data
               mountPath: /data

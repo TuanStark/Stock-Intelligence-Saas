@@ -9,10 +9,21 @@ data:
   PORT: {{ .Values.config.port | quote }}
   WEB_URL: {{ .Values.config.webUrl | quote }}
   API_URL: {{ .Values.config.apiUrl | quote }}
+  INTERNAL_API_URL: {{ printf "http://%s-api:%d/api/v1" (include "stock-intel.fullname" .) (.Values.api.service.port | int) | quote }}
+  # ── NextAuth ──────────────────────────────────────────────────────────
+  NEXTAUTH_URL: {{ .Values.config.webUrl | quote }}
+  # ── Redis ─────────────────────────────────────────────────────────────
   REDIS_HOST: {{ default (printf "%s-redis" (include "stock-intel.fullname" .)) .Values.config.redisHost | quote }}
   REDIS_PORT: {{ .Values.config.redisPort | quote }}
+  # ── MinIO ─────────────────────────────────────────────────────────────
+  MINIO_ENDPOINT: {{ default (printf "%s-minio" (include "stock-intel.fullname" .)) .Values.config.minioEndpoint | quote }}
+  MINIO_PORT: {{ .Values.config.minioPort | quote }}
+  MINIO_BUCKET: {{ .Values.config.minioBucket | quote }}
+  MINIO_USE_SSL: {{ .Values.config.minioUseSsl | quote }}
+  # ── JWT ───────────────────────────────────────────────────────────────
   JWT_EXPIRES_IN: {{ .Values.config.jwtExpiresIn | quote }}
   JWT_REFRESH_EXPIRES_IN: {{ .Values.config.jwtRefreshExpiresIn | quote }}
+  # ── AI ────────────────────────────────────────────────────────────────
   OPENAI_MODEL: {{ .Values.config.openaiModel | quote }}
   {{- if .Values.config.litellmApiBase }}
   LITELLM_API_BASE: {{ .Values.config.litellmApiBase | quote }}

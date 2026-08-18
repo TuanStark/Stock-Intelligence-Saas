@@ -86,3 +86,19 @@ ConfigMap Name Helper
 {{- define "stock-intel.configMapName" -}}
 {{- printf "%s-config" (include "stock-intel.fullname" .) -}}
 {{- end }}
+
+{{/*
+ServiceAccount Name Helpers — one per component.
+automountServiceAccountToken: false enforced on all pods (zero-trust).
+*/}}
+{{- define "stock-intel.serviceAccountName.api" -}}
+{{- printf "%s-api" (include "stock-intel.fullname" .) -}}
+{{- end }}
+
+{{- define "stock-intel.serviceAccountName.web" -}}
+{{- printf "%s-web" (include "stock-intel.fullname" .) -}}
+{{- end }}
+
+{{- define "stock-intel.serviceAccountName.worker" -}}
+{{- printf "%s-worker" (include "stock-intel.fullname" .) -}}
+{{- end }}

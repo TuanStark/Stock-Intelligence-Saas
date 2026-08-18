@@ -1,15 +1,31 @@
+import axios from "axios";
+import { getInternalApiUrl } from "../env";
 import { apiClient } from "./api-client";
+
+const createServerAuthClient = () =>
+  axios.create({
+    baseURL: getInternalApiUrl(),
+    timeout: 10000,
+    headers: { "Content-Type": "application/json" },
+  });
 
 export const authApi = {
   register: async (email: string, password: string): Promise<any> => {
     return apiClient.post("/auth/register", { email, password });
   },
+
   login: async (email: string, password: string): Promise<any> => {
-    return apiClient.post("/auth/login", { email, password });
+    const client = createServerAuthClient();
+    const res = await client.post("/auth/login", { email, password });
+    return res.data;
   },
+
   googleLogin: async (idToken: string): Promise<any> => {
-    return apiClient.post("/auth/google", { idToken });
+    const client = createServerAuthClient();
+    const res = await client.post("/auth/google", { idToken });
+    return res.data;
   },
+
   upgradeSubscription: async (
     tier: string,
     provider: string = "PAYOS",
