@@ -1,0 +1,120 @@
+# ════════════════════════════════════════════════════════════════════════
+# Telegram Alertmanager Bot — nhận webhook từ Alertmanager → gửi Telegram
+# Sử dụng image: metalmatze/alertmanager-bot (open source, production-tested)
+#
+# Setup:
+#   1. Tạo Telegram bot qua @BotFather → lấy BOT_TOKEN
+#   2. Tạo group/channel → thêm bot → lấy CHAT_ID
+#   3. Tạo Kubernetes Secret chứa BOT_TOKEN và CHAT_ID (xem bên dưới)
+#   4. Apply file này: kubectl apply -f alertmanager-telegram-bot.yaml -n monitoring
+# ════════════════════════════════════════════════════════════════════════
+
+# ─── Secret chứa Telegram credentials ───────────────────────────────────
+# Tạo thủ công trên cluster (KHÔNG commit token vào Git):
+#
+#   kubectl create secret generic telegram-bot-secret \
+#     --namespace monitoring \
+#     --from-literal=TELEGRAM_ADMIN=<YOUR_CHAT_ID> \
+#     --from-literal=TELEGRAM_TOKEN=<YOUR_BOT_TOKEN>
+#
+# ─────────────────────────────────────────────────────────────────────────
+
+---
+# ─── Deployment ──────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telegram-bot-alertmanager
+  namespace: monitoring
+  labels:
+    app: telegram-bot-alertmanager
+    app.kubernetes.io/part-of: stock-intelligence-monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: telegram-bot-alertmanager
+  template:
+    metadata:
+      labels:
+        app: telegram-bot-alertmanager
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: bot
+          image: metalmatze/alertmanager-bot:0.4.3
+          imagePullPolicy: IfNotPresent
+          args:
+            - --alertmanager.url=http://monitoring-kube-prometheus-alertmanager:9093
+            - --log.level=info
+            - --store=bolt
+            - --bolt.path=/data/bot.db
+          env:
+            - name: TELEGRAM_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: telegram-bot-secret
+                  key: TELEGRAM_ADMIN
+            - name: TELEGRAM_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: telegram-bot-secret
+                  key: TELEGRAM_TOKEN
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: false  # bolt DB cần write
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir:
+            sizeLimit: 100Mi
+
+---
+# ─── Service — được Alertmanager webhook gọi vào ─────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: telegram-bot-alertmanager
+  namespace: monitoring
+  labels:
+    app: telegram-bot-alertmanager
+spec:
+  selector:
+    app: telegram-bot-alertmanager
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+  type: ClusterIP

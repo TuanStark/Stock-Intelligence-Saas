@@ -10,16 +10,32 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  description: "Stock Intelligence SaaS Production & Development Project"
+  description: "Stock Intelligence SaaS — Production, Development & Monitoring"
+
   sourceRepos:
+    # Application source
     - "https://github.com/TuanStark/Stock-Intelligence-Saas.git"
+    # Helm chart repos cho monitoring stack
+    - "https://prometheus-community.github.io/helm-charts"
+    - "https://grafana.github.io/helm-charts"
+    # Sealed Secrets controller
+    - "https://bitnami-labs.github.io/sealed-secrets"
+
   destinations:
+    # ── Application namespaces ────────────────────────────────────────
     - namespace: "stock-prod"
       name: "k3s-production"
     - namespace: "stock-dev"
       name: "k3s-production"
     - namespace: "stock-staging"
       name: "k3s-production"
+    # ── Monitoring stack ──────────────────────────────────────────────
+    - namespace: "monitoring"
+      name: "k3s-production"
+    # ── Sealed Secrets controller (deploy vào kube-system) ────────────
+    - namespace: "kube-system"
+      name: "k3s-production"
+
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
@@ -29,6 +45,15 @@ spec:
       kind: ClusterRoleBinding
     - group: "cert-manager.io"
       kind: ClusterIssuer
+    # Cần thiết cho kube-prometheus-stack CRDs
+    - group: "apiextensions.k8s.io"
+      kind: CustomResourceDefinition
+    # Prometheus Operator cluster-scoped resources
+    - group: "monitoring.coreos.com"
+      kind: Prometheus
+    - group: "monitoring.coreos.com"
+      kind: Alertmanager
+
   namespaceResourceWhitelist:
     - group: "*"
       kind: "*"
